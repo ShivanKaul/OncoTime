@@ -1,53 +1,41 @@
 module Types where
 
-data Program
-    = Program Header Docs UseList GroupList FilterList  ComputationList 
-      deriving (Show, Eq)
-      
-data Header
-    = HEmpty FName 
-    | HArgs FName ArgsList
-      deriving (Show, Eq)
-      
-type ArgsList = [String]
 
-type FName = String
+--sans annotations
+data Program = Program Header Docs UseList GroupList [Filter a] [Computations]
+      deriving (Show, Eq)
+      
+data Header = Header FileName ArgsList
+      deriving (Show, Eq)
+
+-- type?
+type ArgsList = [Var]
+data Var = String
+
+type FileName = String
 type Docs = String
 
-type UseList = [String] 
- 
-type FilterList = [Filter]      
-data Filter 
-    = PopFilter
-    | DocFilter
-    | PeriodFilter
-    | EventFilter
-    deriving (Show, Eq)
-    
+--Come back to this
+type UseStmtList = [UseStmt] 
+type UseStmt = String
+
+
 type GroupList = [GroupDefs] 
-data GroupDefs 
-    = Group Var FieldValList
+
+data GroupDefs = Group (Var) [GroupItem]
     deriving (Show, Eq)
 
--- field: {fval1,fval2}
--- |field: {fval1,<fdef1>}
---when fdef is found, merge defined group with current list?
-data FieldVal 
-     = FVal Value
-     | FDef Var
-     | FRange RangeType  
+
+data GroupItem = GroupVal String | GroupVar Var | GroupRange RangeType  
      deriving (Show, Eq)
 
-data RangeType --?
-     = Before Value
-     | After Value
-     | Between Value Value
-     deriving (Show, Eq)
-     
-type Value = String     
-type Var = String    
-type FieldValList = [FieldVal]
+--better field for GroupVal than string?
 
+data Filter a = Filter a
+
+--data Filter = PopFilter | DocFilter | PeriodFilter | EventFilter
+  --  deriving (Show, Eq)
+{-
 data PopFilter
     = PoID FieldValList
     | PoGender FieldValList
@@ -60,7 +48,6 @@ data EventFilter
     = EvName FieldValList
     deriving (Show, Eq)
 
-
 data PeriodFilter
     = PdYear FieldValList
     | PdMonth FieldValList
@@ -68,8 +55,17 @@ data PeriodFilter
     | PdHour FieldValList
     deriving (Show, Eq)
 
+-}
+-- field: {fval1,fval2}
+-- |field: {fval1,<fdef1>}
+--when fdef is found, merge defined group with current list?
 
-type ComputationList  = [Computations]
+data RangeType = Before IntValue | After IntValue | Between IntValue IntValue
+     deriving (Show, Eq)
+     
+
+type IntValue = Int 
+--type FieldValList = [FieldVal]
 
 data Computation
     = Foreach ForEacDef Computation --for nested for loops, slide 38 is confusing
@@ -81,17 +77,20 @@ data Computation
     
 data TableAction
     = TAssoc Var CompCount
-    = TNative Code --slide 41
+    | TNative Code --slide 41
     deriving (Show, Eq)
-data CompCount = CCPat PatientField |  CCDoc DoctorField | CCDiag deriving (Show, Eq)
-data PatientField = ID | Gender | Birthyear | Diagnosis | Postalcode deriving (Show, Eq)
-data DoctorField = ID | Oncologist deriving (Show, Eq)
+
+--data CompCount = CCPat PatientField |  CCDoc DoctorField | CCDiag deriving (Show, Eq)
+--data PatientField = ID | Gender | Birthyear | Diagnosis | Postalcode deriving (Show, Eq)
+--data DoctorField = ID | Oncologist deriving (Show, Eq)
+
 data PrintAction 
      = PVar Var
-     = PTimeLine Var --slide 38
-     = PLenght Var
-     = PAssoc VAr Var --like array indexing, slide 39
+     | PTimeLine Var --slide 38
+     | PLenght Var
+     | PAssoc VAr Var --like array indexing, slide 39
      deriving (Show, Eq)
+
 data SeqAction 
      = SEv Var  EventList
      | SNative Code --slide 41
@@ -99,11 +98,13 @@ data SeqAction
 type Code = String
 type EventList = [String]
      
-type ForEacDef 
-     = FAllVar CompType Var--foreach doctor d
-     = FMem CompType Var Var --foreach member d of x
+data ForEacDef 
+     = ForAll CompType Var--foreach doctor d
+     | ForMem CompType Var Var --foreach member d of x
      deriving (Show, Eq)
-type CompType = CTDiag | CTPat | CTDoc deriving (Show, Eq)
+
+
+--data CompType = CTDiag | CTPat | CTDoc deriving (Show, Eq)
 
      
      

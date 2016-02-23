@@ -18,5 +18,5 @@ import Text.ParserCombinators.Parsec.Char
 import qualified Text.ParserCombinators.Parsec.Token as Token
 
 --Our modules
---import Types 
+import Types 
 
