@@ -1,3 +1,5 @@
+module Types where
+
 data Program
     = Program Header Docs UseList GroupList FilterList  ComputationList 
       deriving (Show, Eq)
