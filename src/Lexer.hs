@@ -35,7 +35,6 @@ languageDef =
                 "element",
                 "list",
                 "end",
-                "->",
                 "timeline",
                 "barchart",
                 "of",
@@ -71,8 +70,8 @@ whiteSpace = Token.whiteSpace lexer -- parses whitespace
 parens = Token.parens lexer
 lexeme = Token.lexeme lexer
 commaSep1OrMore = Token.commaSep1 lexer
-symbol=Token.symbol  lexer
+symbol= Token.symbol  lexer
 bar = symbol "|" 
 arrow = symbol "->" 
 star = symbol "*" 
-
+equal = symbol "=" 
