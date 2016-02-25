@@ -32,7 +32,9 @@ languageDef =
                 "of",
                 "sequences",
                 "sequence",         
-                "member"
+                "member",
+                "before",
+                "after"
                 ]
           , Token.reservedOpNames = []
     }

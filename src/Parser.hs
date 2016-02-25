@@ -57,14 +57,57 @@ filename =
 
 
 groups::Parser GroupDefs
-    grpType <- 
+    grpType <- groupType
     v <- var
     grpItem <- many groupItem
     return $ Group grpType v grpItem 
 
-groupItem:: Parser GroupItem 
+groupType::Parser GroupType
+groupType =
+    do
+        gt <- many  alphaNum
+        return gt
+
+groupItem::Parser GroupItem 
 groupItem = try groupVal 
         <|> try groupVar
         <|> try groupRange
 
+groupVal::Parser GroupVal
+groupVal = 
+    do
+        gv <- many  alphaNum
+        return $ GroupVal gt
+
+groupVar::Parser GroupVar
+groupVar =
+    do
+        gv <- many  alphaNum
+        return $ GroupVal gt
+
+groupRange::Parser RangeType
+groupRange = try before <|> try after <|> try between
+
+before::Parser RangeType
+before =
+    do
+        reserved "before"
+        pre <- many digit
+        return $ Before pre
+
+
+after::Parser RangeType
+after = 
+    do
+        reseved "after"
+        post <- many digit
+        return $ Before post
+
+between::Parser RangeType
+between =
+    do
+        pre <- many digit
+        reserved "to"
+        post <- many digit
+        return $ Between pre post
 
