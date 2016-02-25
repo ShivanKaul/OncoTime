@@ -125,19 +125,108 @@ computation::Parser Computation
 computation = foreach <|> table <|> sequence <|> print <|> barchart 
 
 foreach::Parser Foreach
+foreach = forEachFilter <|> forEachTable <|> forEachSequence <|> forEachList
 
 table::Parser Table
+table = 
+    do
+        v <- var
+        fn <- filterName
+        fv <-filterVal
+        return $ TableCount v fn fv
 
-sequence::Parser sequence
 
-print:: Parser Print
-print = printvar <|> printTimeLine <|> printLength <|> printFilters <|> printElement 
+--NEEDS WORK
+sequence::Parser SeqAction
+sequence =
+    do
+        v <- var
+        e <- many stringLit --NEEdS WORK
+        return $ Seq v e
 
-
+prints:: Parser Print
+prints = printvar <|> printTimeLine <|> printLength <|> printFilters <|> printElement 
 
 barchart::Parser Barchart
 barchart = 
     do
         reserved "barchart"
         v <- var
-        return $ Var v
+        return $ v
+
+
+forEachFilter::Parser ForEachDef 
+forEachFilter = 
+    do
+        reserved "foreach"
+        f <- filterName
+        v <- var
+        return $ ForEachFilter f v
+
+
+forEachTable::Parser ForEachDef 
+forEachTable =
+    do
+        reserved "foreach"
+        reserved "element"
+        v1 <- var
+        reserved "of"
+        v2 <- var
+        return $ ForEachFilter v1 v2
+
+forEachSequence::Parser ForEachDef
+forEachSequence =
+    do
+        reserved "foreach"
+        reserved "member"
+        v1 <- var
+        reserved "in"
+        v2 <- var
+        return $ ForEachSequence v1 v2
+
+forEachList::Parser ForEachDef 
+forEachList = 
+    do
+        reserved "foreach"
+        reserved "element"
+        v1 <- var
+        reserved "of"
+        v2 <- var
+        return $ ForEachList v1 v2
+
+printvar::Parser PrintAction
+printvar =
+    do
+
+
+printTimeLine::Parser PrintAction
+printTimeLine =
+    do
+
+
+printLength::Parser PrintAction
+printLength =
+    do
+
+
+printFilters::Parser PrintAction
+printFilters =
+    do
+
+
+printElement::Parser PrintAction
+printElement = 
+    do
+
+
+filterName::Parser FilterName
+filterName =
+    do
+        f <- many alphaNum 
+        return f
+
+filterVal::Parser FilterVal
+filterVal = 
+    do
+        g <- groupItem
+        return g

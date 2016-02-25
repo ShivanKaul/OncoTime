@@ -4,7 +4,7 @@ module Types where
 --sans annotations
 data Program = Program Header Docs UseFileList GroupList [Filter] [Computation]
       deriving (Show, Eq)
-
+      
 data Header = Header FileName ArgsList
       deriving (Show, Eq)
 
@@ -16,31 +16,31 @@ type FileName = String
 type Docs = String
 
 --Come back to this
-type UseFileList = [UseFile]
+type UseFileList = [UseFile] 
 type UseFile = String
 
 
 --Group
-type GroupList = [GroupDefs]
+type GroupList = [GroupDefs] 
 data GroupDefs = Group GroupType Var [GroupItem]
     deriving (Show, Eq)
 type GroupType = String
-data GroupItem = GroupVal String | GroupVar Var | GroupRange RangeType
+data GroupItem = GroupVal String | GroupVar Var | GroupRange RangeType  
      deriving (Show, Eq)
 
 --better field for GroupVal than string?
 
-data Filter =  Filter FilterName [FilterDef] deriving (Show, Eq)
+data Filter =  Filter FilterName [FilterDef] deriving (Show, Eq) 
 data FilterDef = FilterDef FilterField [FilterVal] deriving (Show, Eq)
 type FilterName = String
 --data FilterVal = FilterString String | FilterVar Var |FilterRange RangeType  -- to be defined in config
 data FilterVal = GroupItem deriving (Show, Eq)
 type FilterField = String
 
-data RangeType = Before IntValue | After IntValue | Between IntValue IntValue
+data RangeType = Before IntValue | After IntValue | Between IntValue IntValue 
      deriving (Show, Eq)
-
-type IntValue = Int
+    
+type IntValue = Int 
 type StringValue = String
 
 --TODO:
@@ -52,12 +52,12 @@ data Computation
     | Print PrintAction
     | Barchart Var
     deriving (Show, Eq)
-
+    
 data TableAction
-    = TableCount Var FilterName FilterVal
+    = TableCount Var FilterName FilterVal 
     deriving (Show, Eq)
 
-data PrintAction
+data PrintAction 
      = PrintVar Var
      | PrintTimeLine Var --slide 38
      | PrintLength Var
@@ -66,14 +66,14 @@ data PrintAction
      deriving (Show, Eq)
 
 --TODO UNDERSTAND THIS
-data SeqAction
+data SeqAction 
      = Seq Var EventList
      deriving (Show, Eq)
 
 type EventList = [String]
-
-data ForEacDef
-     = ForEachFilter FilterName Var
+     
+data ForEachDef 
+     = ForEachFilter FilterName Var 
      | ForEachTable Var Var
      | ForEachSequence Var
      | ForEachList Var Var
