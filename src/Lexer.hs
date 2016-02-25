@@ -44,6 +44,7 @@ languageDef =
                 "sequence",         
                 "member",
                 "before",
+                "length",
                 "after"
             ]
 

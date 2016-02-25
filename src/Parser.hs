@@ -122,12 +122,15 @@ betw =
         return $ Between (read pre) (read post)
 
 computation::Parser Computation
-computation = foreach <|> table <|> sequence <|> print <|> barchart 
+--computation = try (liftM2 Foreach foreach [computation]) <|> try (liftM Table table) <|> try (liftM Sequence sequ) <|> try (liftM Print prints) <|> try (liftM Barchart barchart) 
+--
 
-foreach::Parser Foreach
+computation = try (liftM2 Foreach foreach (many computation)) <|> try (liftM Table table) <|> try (liftM Sequence sequ) <|> try (liftM Print prints) <|> try (liftM Barchart barchart) 
+
+foreach::Parser ForEachDef
 foreach = forEachFilter <|> forEachTable <|> forEachSequence <|> forEachList
 
-table::Parser Table
+table::Parser TableAction
 table = 
     do
         v <- var
@@ -137,17 +140,17 @@ table =
 
 
 --NEEDS WORK
-sequence::Parser SeqAction
-sequence =
+sequ::Parser SeqAction
+sequ=
     do
         v <- var
         e <- many stringLit --NEEdS WORK
         return $ Seq v e
 
-prints:: Parser Print
+prints:: Parser PrintAction
 prints = printvar <|> printTimeLine <|> printLength <|> printFilters <|> printElement 
 
-barchart::Parser Barchart
+barchart::Parser Var 
 barchart = 
     do
         reserved "barchart"
@@ -195,29 +198,49 @@ forEachList =
         return $ ForEachList v1 v2
 
 printvar::Parser PrintAction
-printvar =
+printvar = 
     do
-
+        reserved "print"
+        v <- var
+        return $ PrintVar v
 
 printTimeLine::Parser PrintAction
 printTimeLine =
     do
+        reserved "print"
+        reserved "timeline"
+        reserved "of"
+        v<-var
+        return $ PrintTimeLine v
 
 
 printLength::Parser PrintAction
 printLength =
     do
+        reserved "print"
+        v<-var
+        dot
+        reserved"length"
+        return $ PrintLength v 
 
 
 printFilters::Parser PrintAction
 printFilters =
     do
+        reserved "print"
+        filterList <- sepBy filterName comma
+        v <- var
+        return $ PrintFilters filterList v
+        
 
 
 printElement::Parser PrintAction
 printElement = 
     do
-
+        reserved "print"
+        v1 <-var
+        v2 <- braces $ var
+        return $ PrintElement v1 v2
 
 filterName::Parser FilterName
 filterName =

@@ -34,7 +34,7 @@ data Filter =  Filter FilterName [FilterDef] deriving (Show, Eq)
 data FilterDef = FilterDef FilterField [FilterVal] deriving (Show, Eq)
 type FilterName = String
 --data FilterVal = FilterString String | FilterVar Var |FilterRange RangeType  -- to be defined in config
-data FilterVal = GroupItem deriving (Show, Eq)
+type FilterVal = GroupItem -- deriving (Show, Eq)
 type FilterField = String
 
 data RangeType = Before IntValue | After IntValue | Between IntValue IntValue 
@@ -46,7 +46,7 @@ type StringValue = String
 --TODO:
 --IS COMPUTATION LIST MANDATORY?
 data Computation
-    = Foreach ForEacDef [Computation] --for nested for loops, slide 38 is confusing
+    = Foreach ForEachDef [Computation] --for nested for loops, slide 38 is confusing
     | Table TableAction
     | Sequence SeqAction
     | Print PrintAction
@@ -75,6 +75,6 @@ type EventList = [String]
 data ForEachDef 
      = ForEachFilter FilterName Var 
      | ForEachTable Var Var
-     | ForEachSequence Var
+     | ForEachSequence Var Var
      | ForEachList Var Var
      deriving (Show, Eq)
