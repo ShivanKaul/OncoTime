@@ -134,8 +134,8 @@ useList =
 useStatement :: Parser UseStatement
 useStatement =
     do  reserved "use"
-        names <- commaSeparated useFile
-        return stmts
+        names <- sepBy useFile comma 
+        return names
 
 useFile :: Parser UseFile
 useFile =
