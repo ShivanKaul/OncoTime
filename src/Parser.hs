@@ -20,8 +20,8 @@ oncoParser =
     do
         whiteSpace
         hdr <- header
-        docs <-
-        use <-
+        docs <- 
+        use <- 
         group <-
         filter <- 
         comp <-
@@ -36,3 +36,6 @@ header =
         fname <- filename
         args <- parens $ many var 
         return $ Header fname args
+
+var 
+
