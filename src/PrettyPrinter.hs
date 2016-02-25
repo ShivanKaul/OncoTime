@@ -47,17 +47,29 @@ pretty a = prettyPrint a
 --     prettyPrint (DecSeq a) = prettyPrint a
 --     prettyPrint (Dec a b) =  "var " ++ (a) ++ ": " ++ prettyPrint b ++ ";"
 
--- instance PrettyPrint FilterVal where
---     prettyPrint fv = prettyPrint fv
-    
--- instance PrettyPrint FilterField where
---     prettyPrint (FilterField ffield) = ffield
+instance PrettyPrint IntValue where
+    prettyPrint i = show i
 
--- instance PrettyPrint FilterDef where
---     prettyPrint (Filter fname fdefs) = fname ++ " is " ++ map (prettyPrint fdefs)
+instance PrettyPrint RangeType where
+    prettyPrint (Before i) = "Before " ++ prettyPrint i
+    prettyPrint (After i) = "After " ++ prettyPrint i
+    prettyPrint (Between i j) = prettyPrint i ++ " to " ++ prettyPrint j
 
--- instance PrettyPrint Filter where
---     prettyPrint (Filter fname fdefs) = fname ++ " is " ++ map (prettyPrint fdefs)
+instance PrettyPrint GroupItem where
+    prettyPrint (GroupVal gval) = gval
+    prettyPrint (GroupVar gvar) = prettyPrint gvar
+    prettyPrint (GroupRange grange) = prettyPrint grange
+
+instance PrettyPrint FilterField where
+    prettyPrint (FilterField ffield) = ffield
+
+instance PrettyPrint FilterDef where
+    prettyPrint (FilterDef ffield fvals) = prettyPrint ffield ++ " : " ++ 
+        (intercalate ", " (map prettyPrint fvals))
+
+instance PrettyPrint Filter where
+    prettyPrint (Filter fname fdefs) = fname ++ " is " ++ 
+        (intercalate "\n" (map prettyPrint fdefs))
 
 -- instance PrettyPrint UseFileList where
 --  prettyPrint (UseFileList u) = // change once we figure out what we want to do
