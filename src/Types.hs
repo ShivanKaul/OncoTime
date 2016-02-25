@@ -1,8 +1,10 @@
 module Types where
 
+--TEST PROGRAM
+data TestProgram = TestHeader Header | TestDocs Docs | TestUseFileList [UseFile]| TestGroupList [GroupDefs] | TestComputation [Computation] deriving(Show,Eq)
 
 --sans annotations
-data Program = Program Header Docs UseFileList  GroupList [Filter] [Computation]
+data Program = Program Header Docs [UseFile]  [GroupDefs] [Filter] [Computation]
       deriving (Show, Eq)
       
 data Header = Header FileName ArgsList
@@ -16,7 +18,7 @@ type FileName = String
 type Docs = String
 
 --Come back to this
-type UseFileList = [UseFile] 
+--type UseFileList = [UseFile] 
 type UseFile = String
 
 

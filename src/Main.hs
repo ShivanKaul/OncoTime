@@ -38,6 +38,24 @@ parseString str =
         Left e-> error$ show e
         Right r -> r
 
+tparseFile :: String ->IO ()
+tparseFile file =
+    do 
+        program <- readFile file
+        case parse (testParser <* eof) file program of
+            Left e ->
+                do
+                    putStrLn "ERROR"
+                    print e
+            Right r -> print r 
+
+tparseString :: String -> TestProgram
+tparseString str =
+    case parse (testParser <* eof) "" str of
+        Left e-> error$ show e
+        Right r -> r
+
+
 main = do
     (arg:_) <- getArgs
     parseFile arg

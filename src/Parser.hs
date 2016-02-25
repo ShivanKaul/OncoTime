@@ -20,6 +20,47 @@ import Types
 import PrettyPrinter
 import Lexer
 
+--use this Parser to test
+testParser:: Parser TestProgram
+testParser = testHeader  <|> testDocs  <|> testUse -- <|> testGroups <|> testComputation  
+
+--testProgram::Parser TestProgram
+
+
+testHeader::Parser TestProgram
+testHeader =
+    do
+        whiteSpace
+        hdr <- header
+        return $ TestHeader hdr
+
+testDocs::Parser TestProgram
+testDocs =
+    do
+        whiteSpace
+        docs <- documentation
+        return $TestDocs docs
+
+testUse::Parser TestProgram
+testUse = 
+    do
+        whiteSpace
+        use <- useList
+        return $ TestUseFileList use
+
+testGroups::Parser TestProgram
+testGroups = 
+    do
+        whiteSpace
+        grp <- many groups
+        return $ TestGroupList grp
+
+testComputation::Parser TestProgram
+testComputation =
+    do
+        whiteSpace
+        comp <- many computation
+        return $ TestComputation comp
 
 oncoParser:: Parser Program
 oncoParser = 
@@ -36,7 +77,7 @@ oncoParser =
 
 --IO to checkfilename
 header:: Parser Header
-header =
+header = lexeme $
     do
         reserved "script"
         fname <- filename
@@ -52,16 +93,19 @@ var =
         return var
 
 filename::Parser FileName
-filename =
+filename = lexeme $
     do
         fname <- many alphaNum
         return fname
 
 documentation :: Parser Docs
-documentation =
-    do  reserved "/*"
+documentation = lexeme $
+    do  
+        
+        reserved "/*"
         doc <- stringLit
         reserved "*/"
+
         return doc
 
 groups::Parser GroupDefs
@@ -265,7 +309,7 @@ filterDefs =
         return $ FilterDef ffield fval
 
 
-useList :: Parser UseFileList 
+useList :: Parser [UseFile] 
 useList =
     do  reserved "use"
         names <- sepBy useFile comma 
