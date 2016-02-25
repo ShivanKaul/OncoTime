@@ -2,7 +2,7 @@ module Types where
 
 
 --sans annotations
-data Program = Program Header Docs UseFileList GroupList [Filter] [Computation]
+data Program = Program Header Docs [UseStatement] GroupList [Filter] [Computation]
       deriving (Show, Eq)
 
 data Header = Header FileName ArgsList
@@ -16,7 +16,8 @@ type FileName = String
 type Docs = String
 
 --Come back to this
-type UseFileList = [UseFile]
+
+type UseStatement = [UseFile] 
 type UseFile = String
 
 

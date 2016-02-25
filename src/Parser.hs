@@ -26,15 +26,15 @@ import Lexer
 oncoParser:: Parser Program
 
 oncoParser = 
-    do
-        whiteSpace
+    doc whiteSpace
         hdr <- header
         doc <-docs 
-        use <- useFileList 
+        use <- useList 
         grp <- groups
         filt <- many 
         comp <- computation
         return $ Program hdr doc use grp filt comp -}
+
 
 --IO to checkfilename
 header:: Parser Header
@@ -44,6 +44,7 @@ header =
         fname <- filename
         args <- parens $ sepBy var comma
         return $ Header fname args
+
 
 --just gets the next string
 var:: Parser Var
@@ -123,3 +124,22 @@ betw =
 
 --computation::Parser Computation
 --computation = foreach <|> table <|> sequence <|> print <|> barchart 
+
+useList:: Parser [UseStatement]
+useList = 
+    do stmts <- many useStatement
+       return $ stmts
+
+
+useStatement :: Parser UseStatement
+useStatement =
+    do  reserved "use"
+        names <- commaSeparated useFile
+        return stmts
+
+useFile :: Parser UseFile
+useFile =
+    do  file <- many alphaNum
+        return file
+
+
