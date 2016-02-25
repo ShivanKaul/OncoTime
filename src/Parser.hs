@@ -27,12 +27,12 @@ oncoParser =
     do
         whiteSpace
         hdr <- header
-        docs <- many groups
-        use <- 
-        group <-
-        filter <- 
-        comp <-
-        return $ Program hdr docs use group filter comp -}
+        doc <-docs 
+        use <- useFileList 
+        grp <- groups
+        filt <- many 
+        comp <- computation
+        return $ Program hdr doc use grp filt comp -}
 
 --IO to checkfilename
 header:: Parser Header
@@ -113,3 +113,5 @@ betw =
         post <- many digit
         return $ Between (read pre) (read post)
 
+--computation::Parser Computation
+--computation = foreach <|> table <|> sequence <|> print <|> barchart 
