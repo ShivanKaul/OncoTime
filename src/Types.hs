@@ -6,7 +6,8 @@ data TestProgram = TestHeader Header | TestDocs Docs | TestUseFileList [UseFile]
 --sans annotations
 data Program = Program Header Docs [UseFile]  [GroupDefs] [Filter] [Computation]
       deriving (Show, Eq)
-      
+     
+     --TYPES
 data Header = Header FileName ArgsList
       deriving (Show, Eq)
 
@@ -15,6 +16,7 @@ type ArgsList = [Var]
 type Var = String
 
 type FileName = String
+type FileExt = String
 type Docs = String
 
 --Come back to this
@@ -27,7 +29,7 @@ type GroupList = [GroupDefs]
 data GroupDefs = Group GroupType Var [GroupItem]
     deriving (Show, Eq)
 type GroupType = String
-data GroupItem = GroupVal String | GroupVar Var | GroupRange RangeType  
+data GroupItem = GroupVal FileName FileExt | GroupVar Var | GroupRange RangeType  
      deriving (Show, Eq)
 
 --better field for GroupVal than string?

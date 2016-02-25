@@ -44,7 +44,8 @@ languageDef =
                 "member",
                 "before",
                 "length",
-                "after"
+                "after",
+                "="
             ]
 
             ,Token.reservedOpNames = []

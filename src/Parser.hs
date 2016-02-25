@@ -9,11 +9,12 @@ import System.IO
 import qualified Data.Map as M
 import Data.List
 import Control.Monad
+import Control.Applicative (some) 
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
 import Text.ParserCombinators.Parsec.Char
-import qualified Text.ParserCombinators.Parsec.Token as Tokeno
+import qualified Text.ParserCombinators.Parsec.Token as Token
 import Data.Char
 
 import Types
@@ -22,7 +23,7 @@ import Lexer
 
 --use this Parser to test
 testParser:: Parser TestProgram
-testParser = testHeader  <|> testDocs  <|> testUse -- <|> testGroups <|> testComputation  
+testParser = testHeader  <|> testDocs <|> testGroups  <|>  testUse <|>testComputation  
 
 --testProgram::Parser TestProgram
 
@@ -52,7 +53,7 @@ testGroups::Parser TestProgram
 testGroups = 
     do
         whiteSpace
-        grp <- many groups
+        grp <-  many groups
         return $ TestGroupList grp
 
 testComputation::Parser TestProgram
@@ -71,7 +72,7 @@ oncoParser =
         use <- useList 
         grp <- many groups
         filt <- many filters 
-        comp <- curlies $ many computation
+        comp <- many computation
         return $ Program hdr doc use grp filt comp 
 
 
@@ -87,9 +88,9 @@ header = lexeme $
 
 --just gets the next string
 var:: Parser Var
-var =
+var = lexeme $
     do
-        var <- many  alphaNum
+        var <- some alphaNum
         return var
 
 filename::Parser FileName
@@ -101,25 +102,26 @@ filename = lexeme $
 documentation :: Parser Docs
 documentation = lexeme $
     do  
-        
         reserved "/*"
         doc <- stringLit
         reserved "*/"
-
         return doc
 
 groups::Parser GroupDefs
-groups =
+groups = lexeme $ 
     do
+        reserved "group"
         grpType <- groupType
         v <- var
-        grpItem <- many groupItem
+        reserved "=" 
+        --grpItem <- many groupItem
+        grpItem <- some groupItem
         return $ Group grpType v grpItem
 
 groupType::Parser GroupType
-groupType =
+groupType = lexeme $
     do
-        gt <- many  alphaNum
+        gt <- some alphaNum
         return gt
 
 groupItem::Parser GroupItem
@@ -128,16 +130,20 @@ groupItem = try groupVal
         <|> try groupRange
 
 groupVal::Parser GroupItem
-groupVal =
+groupVal = lexeme $
     do
-        gv <- many  alphaNum
-        return $ GroupVal gv
+        --gv <- many alphaNum
+        gv <- some alphaNum
+        dot
+        fext <- some alphaNum
+        --fext<- many alphaNum
+        return $ GroupVal gv fext
 
 groupVar::Parser GroupItem
 groupVar =
     do
-        gv <- angles $ many alphaNum
-        return $ GroupVal gv
+        gv <- var
+        return $ GroupVar gv
 
 groupRange::Parser GroupItem
 groupRange = try (liftM GroupRange before) <|> try (liftM GroupRange after) <|> try (liftM GroupRange betw)
@@ -146,26 +152,26 @@ before::Parser RangeType
 before =
     do
         reserved "before"
-        pre <- many digit
+        pre <- some digit
         return $ Before $ read pre
 
 after::Parser RangeType
 after =
     do
         reserved "after"
-        post <- many digit
+        post <- some digit
         return $ Before $ read post
 
 betw::Parser RangeType
 betw =
     do
-        pre <- many digit
+        pre <- some digit
         reserved "to"
-        post <- many digit
+        post <- some digit
         return $ Between (read pre) (read post)
 
 computation::Parser Computation
-computation = try (liftM2 Foreach foreach ( curlies $ many computation)) <|> try (liftM Table table) <|> try (liftM Sequence sequ) <|> try (liftM Print prints) <|> try (liftM Barchart barchart) 
+computation = try (liftM2 Foreach foreach (many computation)) <|> try (liftM Table table) <|> try (liftM Sequence sequ) <|> try (liftM Print prints) <|> try (liftM Barchart barchart) 
 
 foreach::Parser ForEachDef
 foreach = forEachFilter <|> forEachTable <|> forEachSequence <|> forEachList
@@ -184,7 +190,7 @@ sequ::Parser SeqAction
 sequ=
     do
         v <- var
-        e <- many stringLit --NEEdS WORK 
+        e <- many stringLit --NEEdS WORK
         return $ Seq v e
 
 prints:: Parser PrintAction
@@ -279,7 +285,7 @@ printElement =
     do
         reserved "print"
         v1 <-var
-        v2 <- curlies $ var
+        v2 <- squares $ var
         return $ PrintElement v1 v2
 
 filterName::Parser FilterName
@@ -305,18 +311,17 @@ filterDefs :: Parser FilterDef
 filterDefs = 
     do
         ffield <- identifier
-        colon
         fval <- many filterVal
         return $ FilterDef ffield fval
 
 
 useList :: Parser [UseFile] 
-useList =
+useList = lexeme $
     do  reserved "use"
         names <- sepBy useFile comma 
         return names
 
 useFile :: Parser UseFile
-useFile =
-    do  file <- many alphaNum
+useFile = lexeme $
+    do  file <- some alphaNum 
         return file
