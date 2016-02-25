@@ -76,5 +76,5 @@ data ForEacDef
      = ForEachFilter FilterName Var 
      | ForEachTable Var Var
      | ForEachSequence Var
-     | ForEachList Var
+     | ForEachList Var Var
      deriving (Show, Eq)

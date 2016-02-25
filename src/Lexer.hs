@@ -6,13 +6,38 @@ languageDef =
             , Token.identStart = letter <|> char '_'
             ,Token.identLetter = alphaNum <|> char '_'
             ,Token.reservedNames   = [
-
+                "script",
+                "is",
+                "are",
+                "foreach",
+                "print",
+                "group",
+                "use",
+                "to",
+                "table",
+                "count",
+                "by",
+                "element",
+                "list",
+                "end",
+                "->",
+                "timeline",
+                "barchart",
+                "of",
+                "sequences",
+                "sequence",         
+                "member",
                                     ]
           , Token.reservedOpNames = []
     }
 
 
 lexer = Token.makeTokenParser languageDef
+braces = Token.braces lexer
+angles = Token.angles lexer
+parents = Token.parens lexer
+dot = Token.dot lexer
+comma = Token.comma lexer
 identifier = Token.identifier lexer -- parses an identifier
 reserved   = Token.reserved   lexer -- parses a reserved name
 reservedOp = Token.reservedOp lexer -- parses an operator
@@ -24,6 +49,5 @@ colon       =Token.colon       lexer
 whiteSpace = Token.whiteSpace lexer -- parses whitespace
 parens = Token.parens lexer
 dot = Token.dot lexer
---HAD TO CHANGE THIS
 lexeme = Token.lexeme lexer
 
