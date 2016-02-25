@@ -1,5 +1,11 @@
 module Lexer where
 
+import Text.ParserCombinators.Parsec
+import Text.ParserCombinators.Parsec.Expr
+import Text.ParserCombinators.Parsec.Language
+import Text.ParserCombinators.Parsec.Char
+import qualified Text.ParserCombinators.Parsec.Token as Token
+
 languageDef = 
     emptyDef{
            Token.commentLine     = "#"
@@ -27,7 +33,9 @@ languageDef =
                 "sequences",
                 "sequence",         
                 "member",
-                                    ]
+                "before",
+                "after"
+                ]
           , Token.reservedOpNames = []
     }
 
@@ -48,6 +56,5 @@ semi      = Token.semi       lexer -- parses a semicolon
 colon       =Token.colon       lexer
 whiteSpace = Token.whiteSpace lexer -- parses whitespace
 parens = Token.parens lexer
-dot = Token.dot lexer
 lexeme = Token.lexeme lexer
 
