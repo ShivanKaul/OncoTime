@@ -81,8 +81,16 @@ header = lexeme $
     do
         reserved "script"
         fname <- filename
-        args <- parens $ sepBy var comma
+        args <- parens $ sepBy arg comma
         return $ Header fname args
+
+arg :: Parser Arg
+arg = 
+    do
+        t<- groupType
+        v<-var
+        return $ Arg t v
+
 
 
 --just gets the next string

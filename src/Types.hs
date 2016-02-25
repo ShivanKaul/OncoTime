@@ -7,11 +7,10 @@ data TestProgram = TestHeader Header | TestDocs Docs | TestUseFileList [UseFile]
 data Program = Program Header Docs [UseFile]  [GroupDefs] [Filter] [Computation]
       deriving (Show, Eq)
       
-data Header = Header FileName ArgsList
+data Header = Header FileName [Arg]
       deriving (Show, Eq)
 
--- type?
-type ArgsList = [Var]
+data Arg= Arg GroupType Var deriving (Show, Eq)
 type Var = String
 
 type FileName = String
