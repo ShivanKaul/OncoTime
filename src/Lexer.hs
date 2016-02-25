@@ -44,7 +44,8 @@ languageDef =
                 "member",
                 "before",
                 "length",
-                "after"
+                "after",
+                "not"
             ]
 
             ,Token.reservedOpNames = []
@@ -70,4 +71,7 @@ whiteSpace = Token.whiteSpace lexer -- parses whitespace
 parens = Token.parens lexer
 lexeme = Token.lexeme lexer
 commaSep1OrMore = Token.commaSep1 lexer
+bar = Token.symbol "|" lexer
+arrow = Token.symbol "->" lexer
+star = Token.symbol "*" lexer
 

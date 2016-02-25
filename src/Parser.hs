@@ -165,7 +165,7 @@ betw =
         return $ Between (read pre) (read post)
 
 computation::Parser Computation
-computation = try (liftM2 Foreach foreach ( curlies $ many computation)) <|> try (liftM Table table) <|> try (liftM Sequence sequ) <|> try (liftM Print prints) <|> try (liftM Barchart barchart) 
+computation = try (liftM2 Foreach foreach ( curlies $ many computation)) <|> try (liftM Table table) <|> try (list) <|> try (liftM Print prints) <|> try (liftM Barchart barchart) 
 
 foreach::Parser ForEachDef
 foreach = forEachFilter <|> forEachTable <|> forEachSequence <|> forEachList
@@ -173,19 +173,66 @@ foreach = forEachFilter <|> forEachTable <|> forEachSequence <|> forEachList
 table::Parser TableAction
 table = 
     do
-        v <- var
+        v <- varjb
         fn <- filterName
         fv <-filterVal
         return $ TableCount v fn fv
 
 
 --NEEDS WORK
-sequ::Parser SeqAction
-sequ=
+list::Parser Computation
+list=
     do
         v <- var
-        e <- many stringLit --NEEdS WORK 
-        return $ Seq v e
+        e <- seqList 
+        return $ List v e
+
+seqList::Parser [[SeqField]]
+seqList= squares $ sepBy singleSequence bar
+        
+
+singleSequence::Parser [SeqField]
+singleSequence = sepBy seqField arrow 
+
+seqField::Parser SeqField
+seqField = seqSingle <|> seqDisj <|> seqStar <|> seqNeg
+
+seqSingle::Parser SeqField
+seqSingle =
+    do
+        e <- event
+        return Single e
+seqStar::Parser SeqField
+seqStar =
+    do
+        e <- seqField
+        star
+        return Star e
+seqNeg::Parser SeqField
+seqNeg =
+    do
+        e <- parens $ seqNot --TODO: Write this better
+        return SeqField e
+seqNot::Parser SeqField
+seqNot =
+    do 
+        reserved "not"
+        s <- seqField
+        return seqField
+seqDisj :: Parser SeqField
+seqDisj = 
+    do
+        e <- curlies $ sepBy event comma
+        return Disj e
+
+event::Parser Event
+event = try (liftM EAll eventName) <|> eSome
+eSome::Parser Event
+eSome = do
+    e<-eventName
+    param<-parens $ sepBy var comma
+    return ESome e param
+
 
 prints:: Parser PrintAction
 prints = printvar <|> printTimeLine <|> printLength <|> printFilters <|> printElement 
@@ -279,7 +326,7 @@ printElement =
     do
         reserved "print"
         v1 <-var
-        v2 <- curlies $ var
+        v2 <- squares $ var
         return $ PrintElement v1 v2
 
 filterName::Parser FilterName

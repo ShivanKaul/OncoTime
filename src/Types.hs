@@ -68,7 +68,7 @@ data PrintAction
      deriving (Show, Eq)
 
 --TODO UNDERSTAND THIS
-type Sequence = [[Event{- separated by ->-}] {-separated by | -}] 
+type Sequence = [[SeqField{- separated by ->-}] {-separated by | -}] 
 
 type EventName = String
 
