@@ -57,10 +57,12 @@ filename =
 
 
 groups::Parser GroupDefs
-    grpType <- groupType
-    v <- var
-    grpItem <- many groupItem
-    return $ Group grpType v grpItem 
+groups =
+    do
+        grpType <- groupType
+        v <- var
+        grpItem <- many groupItem
+        return $ Group grpType v grpItem 
 
 groupType::Parser GroupType
 groupType =
@@ -73,20 +75,20 @@ groupItem = try groupVal
         <|> try groupVar
         <|> try groupRange
 
-groupVal::Parser GroupVal
+groupVal::Parser GroupItem
 groupVal = 
     do
         gv <- many  alphaNum
-        return $ GroupVal gt
+        return $ GroupVal gv
 
-groupVar::Parser GroupVar
+groupVar::Parser GroupItem
 groupVar =
     do
         gv <- many  alphaNum
-        return $ GroupVal gt
+        return $ GroupVal gv
 
-groupRange::Parser RangeType
-groupRange = try before <|> try after <|> try between
+groupRange::Parser GroupItem
+groupRange = try before <|> try after <|> try betw
 
 before::Parser RangeType
 before =
@@ -99,12 +101,12 @@ before =
 after::Parser RangeType
 after = 
     do
-        reseved "after"
+        reserved "after"
         post <- many digit
         return $ Before post
 
-between::Parser RangeType
-between =
+betw::Parser RangeType
+betw =
     do
         pre <- many digit
         reserved "to"
