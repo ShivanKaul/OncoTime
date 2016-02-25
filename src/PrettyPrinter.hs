@@ -47,31 +47,44 @@ pretty a = prettyPrint a
 --     prettyPrint (DecSeq a) = prettyPrint a
 --     prettyPrint (Dec a b) =  "var " ++ (a) ++ ": " ++ prettyPrint b ++ ";"
 
+-- instance PrettyPrint FilterVal where
+--     prettyPrint fv = prettyPrint fv
+    
+-- instance PrettyPrint FilterField where
+--     prettyPrint (FilterField ffield) = ffield
 
+-- instance PrettyPrint FilterDef where
+--     prettyPrint (Filter fname fdefs) = fname ++ " is " ++ map (prettyPrint fdefs)
 
 -- instance PrettyPrint Filter where
--- 	prettyPrint (Filter fname fdefs) = fname ++ " is " ++ map (prettyPrint fdefs)
+--     prettyPrint (Filter fname fdefs) = fname ++ " is " ++ map (prettyPrint fdefs)
 
 -- instance PrettyPrint UseFileList where
--- 	prettyPrint (UseFileList u) = // change once we figure out what we want to do
+--  prettyPrint (UseFileList u) = // change once we figure out what we want to do
 -- with usefilelist
 
 instance PrettyPrint (Docs) where
-	prettyPrint (Docs docs) = "/* " ++ docs ++ " */"
+    prettyPrint (Docs docs) = "/*\n" ++ docs ++ "\n*/"
 
 instance PrettyPrint (Var) where
-	prettyPrint (Var v) = v
+    prettyPrint (Var v) = v
 
 instance PrettyPrint ([Arg]) where
     prettyPrint (varlist) = intercalate ", " (map prettyPrint varlist)
+instance PrettyPrint GroupType where
+    prettyPrint (GroupType g) = g
+
+instance PrettyPrint Arg where
+    prettyPrint (Arg groupType var) = prettyPrint groupType ++ " " ++ prettyPrint var
 
 instance PrettyPrint Header where
-    prettyPrint (Header fname argslist) = "script " ++ fname ++ "(" ++ prettyPrint argslist ++ ")"
+    prettyPrint (Header fname argslist) = "script " ++ fname ++ "(" ++ 
+        (intercalate ", " (map prettyPrint argslist)) ++ ")"
 
 -- instance PrettyPrint a => (PrettyPrint [a]) where
 --     prettyPrint a = map prettyPrint a
 
 -- instance PrettyPrint Program where
 --     prettyPrint (Program header docs usefilelist  grouplist [filt] [comps]) 
---     	= (prettyPrint header) ++ (prettyPrint docs) ++ (prettyPrint usefilelist) ++ (prettyPrint [filt])
---     	 ++ (prettyPrint grouplist) ++ (prettyPrint [comps])
+--      = (prettyPrint header) ++ (prettyPrint docs) ++ (prettyPrint usefilelist) ++ (prettyPrint [filt])
+--       ++ (prettyPrint grouplist) ++ (prettyPrint [comps])

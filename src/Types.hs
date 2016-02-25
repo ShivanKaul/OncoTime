@@ -28,7 +28,7 @@ data GroupDefs = Group GroupType Var [GroupItem]
     deriving (Show, Eq)
 
 data GroupType = GroupType String deriving (Show, Eq)
-data GroupItem = GroupVal String | GroupVar Var | GroupRange RangeType  
+data GroupItem = GroupVal FileName FileExt | GroupVar Var | GroupRange RangeType  
      deriving (Show, Eq)
 
 --better field for GroupVal than string?
