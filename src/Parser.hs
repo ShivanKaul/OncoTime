@@ -20,19 +20,18 @@ import Types
 import PrettyPrinter
 import Lexer
 
-{--
 
 oncoParser:: Parser Program
-
 oncoParser = 
-    doc whiteSpace
+    do
+        whiteSpace
         hdr <- header
-        doc <-docs 
+        doc <-documentation 
         use <- useList 
-        grp <- groups
-        filt <- filter 
-        comp <- computation
-        return $ Program hdr doc use grp filt comp -}
+        grp <- many groups
+        filt <- many filters 
+        comp <- many computation
+        return $ Program hdr doc use grp filt comp 
 
 
 --IO to checkfilename
@@ -251,8 +250,8 @@ filterVal =
         g <- groupItem
         return g
 
-filter :: Parser Filter
-filter =
+filters :: Parser Filter
+filters =
     do
         fname <- identifier
         filterDs <- many filterDefs

@@ -21,6 +21,23 @@ import Types
 import Parser
 import PrettyPrinter
 
-main =
+parseFile :: String ->IO ()
+parseFile file =
     do 
-        print "Compiled"
+        program <- readFile file
+        case parse (oncoParser <* eof) file program of
+            Left e ->
+                do
+                    putStrLn "ERROR"
+                    print e
+            Right r -> print r 
+
+parseString :: String -> Program
+parseString str =
+    case parse (oncoParser <* eof) "" str of
+        Left e-> error$ show e
+        Right r -> r
+
+main = do
+    (arg:_) <- getArgs
+    parseFile arg
