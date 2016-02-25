@@ -92,7 +92,7 @@ groupVal =
 groupVar::Parser GroupItem
 groupVar =
     do
-        gv <- many  alphaNum
+        gv <- angles $ many alphaNum
         return $ GroupVal gv
 
 groupRange::Parser GroupItem
@@ -121,7 +121,7 @@ betw =
         return $ Between (read pre) (read post)
 
 computation::Parser Computation
-computation = try (liftM2 Foreach foreach (many computation)) <|> try (liftM Table table) <|> try (liftM Sequence sequ) <|> try (liftM Print prints) <|> try (liftM Barchart barchart) 
+computation = curlies $ try (liftM2 Foreach foreach (many computation)) <|> try (liftM Table table) <|> try (liftM Sequence sequ) <|> try (liftM Print prints) <|> try (liftM Barchart barchart) 
 
 foreach::Parser ForEachDef
 foreach = forEachFilter <|> forEachTable <|> forEachSequence <|> forEachList
@@ -140,7 +140,7 @@ sequ::Parser SeqAction
 sequ=
     do
         v <- var
-        e <- many stringLit --NEEdS WORK
+        e <- many stringLit --NEEdS WORK 
         return $ Seq v e
 
 prints:: Parser PrintAction
@@ -235,7 +235,7 @@ printElement =
     do
         reserved "print"
         v1 <-var
-        v2 <- braces $ var
+        v2 <- curlies $ var
         return $ PrintElement v1 v2
 
 filterName::Parser FilterName

@@ -52,7 +52,8 @@ languageDef =
 
 
 lexer = Token.makeTokenParser languageDef
-braces = Token.braces lexer
+curlies = Token.braces lexer
+squares = Token.brackets lexer
 angles = Token.angles lexer
 parents = Token.parens lexer
 dot = Token.dot lexer
