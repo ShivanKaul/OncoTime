@@ -30,7 +30,7 @@ oncoParser =
         use <- useList 
         grp <- many groups
         filt <- many filters 
-        comp <- many computation
+        comp <- curlies $ many computation
         return $ Program hdr doc use grp filt comp 
 
 
@@ -121,7 +121,7 @@ betw =
         return $ Between (read pre) (read post)
 
 computation::Parser Computation
-computation = curlies $ try (liftM2 Foreach foreach (many computation)) <|> try (liftM Table table) <|> try (liftM Sequence sequ) <|> try (liftM Print prints) <|> try (liftM Barchart barchart) 
+computation = try (liftM2 Foreach foreach ( curlies $ many computation)) <|> try (liftM Table table) <|> try (liftM Sequence sequ) <|> try (liftM Print prints) <|> try (liftM Barchart barchart) 
 
 foreach::Parser ForEachDef
 foreach = forEachFilter <|> forEachTable <|> forEachSequence <|> forEachList
@@ -261,6 +261,7 @@ filterDefs :: Parser FilterDef
 filterDefs = 
     do
         ffield <- identifier
+        colon
         fval <- many filterVal
         return $ FilterDef ffield fval
 

@@ -69,4 +69,5 @@ colon = Token.colon       lexer
 whiteSpace = Token.whiteSpace lexer -- parses whitespace
 parens = Token.parens lexer
 lexeme = Token.lexeme lexer
+commaSep1OrMore = Token.commaSep1 lexer
 
