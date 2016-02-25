@@ -1,0 +1,34 @@
+
+package: oncotime-0.1.0.0
+os: linux
+arch: i386
+compiler: ghc-7.10.3
+client: cabal-install-1.22.7.0
+dependencies: base-4.8.2.0
+install-outcome: BuildFailed
+docs-outcome: NotTried
+tests-outcome: NotTried
+
+package: parsec-3.1.9
+os: linux
+arch: i386
+compiler: ghc-7.10.3
+client: cabal-install-1.22.7.0
+flags: base4
+dependencies: text-1.2.2.0 mtl-2.2.1 bytestring-0.10.6.0
+              base-4.8.2.0
+install-outcome: InstallOk
+docs-outcome: NotTried
+tests-outcome: NotTried
+
+package: text-1.2.2.0
+os: linux
+arch: i386
+compiler: ghc-7.10.3
+client: cabal-install-1.22.7.0
+flags: -integer-pure -developer
+dependencies: integer-gmp-1.0.0.0 ghc-prim-0.4.0.0 deepseq-1.4.1.1
+              bytestring-0.10.6.0 binary-0.7.5.0 base-4.8.2.0 array-0.5.1.0
+install-outcome: InstallOk
+docs-outcome: NotTried
+tests-outcome: NotTried

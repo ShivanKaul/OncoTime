@@ -20,3 +20,6 @@ import qualified Text.ParserCombinators.Parsec.Token as Token
 --Our modules
 import Types 
 
+main =
+    do 
+        print "Compiled"

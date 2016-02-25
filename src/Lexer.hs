@@ -3,9 +3,9 @@ module Lexer where
 languageDef = 
     emptyDef{
            Token.commentLine     = "#"
-           , Token.identStart = letter <|> char '_'
-           ,Token.identLetter = alphaNum <|> char '_'
-          , Token.reservedNames   = [
+            , Token.identStart = letter <|> char '_'
+            ,Token.identLetter = alphaNum <|> char '_'
+            ,Token.reservedNames   = [
 
                                     ]
           , Token.reservedOpNames = []
