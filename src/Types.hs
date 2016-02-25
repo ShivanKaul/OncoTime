@@ -50,7 +50,7 @@ type StringValue = String
 data Computation
     = Foreach ForEachDef [Computation] --for nested for loops, slide 38 is confusing
     | Table TableAction
-    | Sequence SeqAction
+    | Sequence Var Sequence
     | Print PrintAction
     | Barchart Var
     deriving (Show, Eq)
@@ -68,15 +68,28 @@ data PrintAction
      deriving (Show, Eq)
 
 --TODO UNDERSTAND THIS
-data SeqAction 
-     = Seq Var EventList
-     deriving (Show, Eq)
+type Sequence = [[Event{- separated by ->-}] {-separated by | -}] 
 
-type EventList = [String]
+type EventName = String
+
+data Event 
+    = EAll EventName
+    | ESome EventName [Var]
+    deriving(Show,Eq)
+
+data SeqField
+    = Single Event
+    | Disj [Event]
+    | Star SeqField
+    | Neg SeqField
+    deriving(Show,Eq)
+
+
      
 data ForEachDef 
      = ForEachFilter FilterName Var 
      | ForEachTable Var Var
      | ForEachSequence Var Var
+     | ForEachSequenceNoDef Var Sequence
      | ForEachList Var Var
      deriving (Show, Eq)
