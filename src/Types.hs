@@ -80,7 +80,7 @@ data SeqField
     = Single Event
     | Disj [Event]
     | Star SeqField
-    | Neg SeqField
+    | Neg Event
     deriving(Show,Eq)
 
 

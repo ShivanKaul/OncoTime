@@ -229,11 +229,11 @@ seqNeg =
     do
         e <- parens $ seqNot --TODO: Write this better
         return $ Neg e
-seqNot::Parser SeqField
+seqNot::Parser Event
 seqNot =
     do 
         reserved "not"
-        seqField
+        event
 
 seqDisj :: Parser SeqField
 seqDisj = 
