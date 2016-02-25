@@ -113,5 +113,23 @@ betw =
         post <- many digit
         return $ Between (read pre) (read post)
 
---computation::Parser Computation
---computation = foreach <|> table <|> sequence <|> print <|> barchart 
+computation::Parser Computation
+computation = foreach <|> table <|> sequence <|> print <|> barchart 
+
+foreach::Parser Foreach
+
+table::Parser Table
+
+sequence::Parser sequence
+
+print:: Parser Print
+print = printvar <|> printTimeLine <|> printLength <|> printFilters <|> printElement 
+
+
+
+barchart::Parser Barchart
+barchart = 
+    do
+        reserved "barchart"
+        v <- var
+        return $ Var v
