@@ -173,7 +173,7 @@ foreach = forEachFilter <|> forEachTable <|> forEachSequence <|> forEachList
 table::Parser TableAction
 table = 
     do
-        v <- varjb
+        v <- var
         fn <- filterName
         fv <-filterVal
         return $ TableCount v fn fv
@@ -201,29 +201,29 @@ seqSingle::Parser SeqField
 seqSingle =
     do
         e <- event
-        return Single e
+        return $ Single e
 seqStar::Parser SeqField
 seqStar =
     do
         e <- seqField
         star
-        return Star e
+        return $ Star e
 seqNeg::Parser SeqField
 seqNeg =
     do
         e <- parens $ seqNot --TODO: Write this better
-        return SeqField e
+        return $ Neg e
 seqNot::Parser SeqField
 seqNot =
     do 
         reserved "not"
-        s <- seqField
-        return seqField
+        seqField
+
 seqDisj :: Parser SeqField
 seqDisj = 
     do
         e <- curlies $ sepBy event comma
-        return Disj e
+        return $ Disj e
 
 event::Parser Event
 event = try (liftM EAll eventName) <|> eSome
@@ -231,7 +231,13 @@ eSome::Parser Event
 eSome = do
     e<-eventName
     param<-parens $ sepBy var comma
-    return ESome e param
+    return $ ESome e param
+
+eventName :: Parser EventName
+eventName =
+    do
+        ename <- identifier
+        return $ ename 
 
 
 prints:: Parser PrintAction

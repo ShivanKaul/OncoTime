@@ -50,7 +50,7 @@ type StringValue = String
 data Computation
     = Foreach ForEachDef [Computation] --for nested for loops, slide 38 is confusing
     | Table TableAction
-    | Sequence Var Sequence
+    | List Var Sequence
     | Print PrintAction
     | Barchart Var
     deriving (Show, Eq)
