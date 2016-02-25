@@ -1,6 +1,8 @@
 module Parser where
 
+import Lexer
 import System.FilePath
+import Types
 import System.Exit
 import System.Environment
 import System.IO
@@ -56,6 +58,11 @@ filename =
         fname <- many alphaNum
         return fname
 
+documentation :: Parser Docs
+documentation = 
+    do
+    doc <- stringLit
+    return $ Docs
 
 groups::Parser GroupDefs
 groups =
