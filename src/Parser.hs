@@ -98,7 +98,7 @@ arg =
 var:: Parser Var
 var = lexeme $
     do
-        var <- many alphaNum
+        var <- some alphaNum
         return $ Var var
 
 filename::Parser FileName
@@ -129,7 +129,7 @@ groups = lexeme $
 groupType::Parser GroupType
 groupType = lexeme $
     do
-        gt <- many alphaNum
+        gt <- some alphaNum
         return $ GroupType gt
 
 groupItem::Parser GroupItem
