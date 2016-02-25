@@ -35,7 +35,7 @@ data Filter =  Filter FilterName [FilterDef] deriving (Show, Eq)
 data FilterDef = FilterDef FilterField [FilterVal] deriving (Show, Eq)
 type FilterName = String
 --data FilterVal = FilterString String | FilterVar Var |FilterRange RangeType  -- to be defined in config
-data FilterVal = GroupItem deriving (Show, Eq)
+type FilterVal = GroupItem
 type FilterField = String
 
 data RangeType = Before IntValue | After IntValue | Between IntValue IntValue

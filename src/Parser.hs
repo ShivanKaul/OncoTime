@@ -9,7 +9,6 @@ import System.IO
 import qualified Data.Map as M
 import Data.List
 import Control.Monad
-import Control.Monad.Error
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
@@ -31,7 +30,7 @@ oncoParser =
         doc <-docs 
         use <- useList 
         grp <- groups
-        filt <- many 
+        filt <- filter 
         comp <- computation
         return $ Program hdr doc use grp filt comp -}
 
@@ -121,6 +120,27 @@ betw =
         reserved "to"
         post <- many digit
         return $ Between (read pre) (read post)
+
+filter :: Parser Filter
+filter =
+    do
+        fname <- identifier
+        filterDs <- many filterDefs
+        return $ Filter fname filterDs
+
+filterDefs :: Parser FilterDef
+filterDefs = 
+    do
+        ffield <- identifier
+        fval <- many filterVal
+        return $ FilterDef ffield fval
+
+filterVal :: Parser FilterVal
+filterVal =
+    do
+        fval <- groupItem
+        return fval
+
 
 --computation::Parser Computation
 --computation = foreach <|> table <|> sequence <|> print <|> barchart 
