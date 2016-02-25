@@ -9,7 +9,6 @@ import System.IO
 import qualified Data.Map as M
 import Data.List
 import Control.Monad
-import Control.Monad.Error
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
@@ -26,15 +25,15 @@ import Lexer
 oncoParser:: Parser Program
 
 oncoParser = 
-    do
-        whiteSpace
+    doc whiteSpace
         hdr <- header
         doc <-docs 
-        use <- useFileList 
+        use <- useList 
         grp <- groups
-        filt <- many 
+        filt <- filter 
         comp <- computation
         return $ Program hdr doc use grp filt comp -}
+
 
 --IO to checkfilename
 header:: Parser Header
@@ -44,6 +43,7 @@ header =
         fname <- filename
         args <- parens $ sepBy var comma
         return $ Header fname args
+
 
 --just gets the next string
 var:: Parser Var
@@ -122,9 +122,6 @@ betw =
         return $ Between (read pre) (read post)
 
 computation::Parser Computation
---computation = try (liftM2 Foreach foreach [computation]) <|> try (liftM Table table) <|> try (liftM Sequence sequ) <|> try (liftM Print prints) <|> try (liftM Barchart barchart) 
---
-
 computation = try (liftM2 Foreach foreach (many computation)) <|> try (liftM Table table) <|> try (liftM Sequence sequ) <|> try (liftM Print prints) <|> try (liftM Barchart barchart) 
 
 foreach::Parser ForEachDef
@@ -253,3 +250,40 @@ filterVal =
     do
         g <- groupItem
         return g
+
+filter :: Parser Filter
+filter =
+    do
+        fname <- identifier
+        filterDs <- many filterDefs
+        return $ Filter fname filterDs
+
+filterDefs :: Parser FilterDef
+filterDefs = 
+    do
+        ffield <- identifier
+        fval <- many filterVal
+        return $ FilterDef ffield fval
+
+filterVal :: Parser FilterVal
+filterVal =
+    do
+        fval <- groupItem
+        return fval
+
+useList:: Parser [UseStatement]
+useList = 
+    do stmts <- many useStatement
+       return $ stmts
+
+
+useStatement :: Parser UseStatement
+useStatement =
+    do  reserved "use"
+        names <- sepBy useFile comma 
+        return names
+
+useFile :: Parser UseFile
+useFile =
+    do  file <- many alphaNum
+        return file

@@ -10,7 +10,6 @@ import System.IO
 import qualified Data.Map as M
 import Data.List
 import Control.Monad
-import Control.Monad.Error
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
