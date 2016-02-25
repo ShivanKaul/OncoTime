@@ -67,7 +67,7 @@ oncoParser =
     do
         whiteSpace
         hdr <- header
-        doc <-documentation 
+        doc <- documentation 
         use <- useList 
         grp <- many groups
         filt <- many filters 
@@ -97,8 +97,8 @@ arg =
 var:: Parser Var
 var =
     do
-        var <- many  alphaNum
-        return var
+        var <- many alphaNum
+        return $ Var var
 
 filename::Parser FileName
 filename = lexeme $
@@ -113,8 +113,7 @@ documentation = lexeme $
         reserved "/*"
         doc <- stringLit
         reserved "*/"
-
-        return doc
+        return $ Docs doc
 
 groups::Parser GroupDefs
 groups =
@@ -127,8 +126,8 @@ groups =
 groupType::Parser GroupType
 groupType =
     do
-        gt <- many  alphaNum
-        return gt
+        gt <- many alphaNum
+        return $ GroupType gt
 
 groupItem::Parser GroupItem
 groupItem = try groupVal
@@ -284,7 +283,7 @@ forEachTable =
         v1 <- var
         reserved "of"
         v2 <- var
-        return $ ForEachFilter v1 v2
+        return $ ForEachTable v1 v2
 
 forEachSequence::Parser ForEachDef
 forEachSequence =
@@ -338,7 +337,7 @@ printLength =
         reserved "print"
         v<-var
         dot
-        reserved"length"
+        reserved "length"
         return $ PrintLength v 
 
 
@@ -376,6 +375,7 @@ filters :: Parser Filter
 filters =
     do
         fname <- identifier
+        choice $ [reserved "is", reserved "are"]
         filterDs <- many filterDefs
         return $ Filter fname filterDs
 
@@ -385,7 +385,7 @@ filterDefs =
         ffield <- identifier
         colon
         fval <- many filterVal
-        return $ FilterDef ffield fval
+        return $ FilterDef (FilterField ffield) fval
 
 
 useList :: Parser [UseFile] 
@@ -397,4 +397,4 @@ useList =
 useFile :: Parser UseFile
 useFile =
     do  file <- many alphaNum
-        return file
+        return $ UseFile file

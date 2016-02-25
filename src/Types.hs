@@ -10,22 +10,21 @@ data Program = Program Header Docs [UseFile]  [GroupDefs] [Filter] [Computation]
 data Header = Header FileName [Arg]
       deriving (Show, Eq)
 
-data Arg= Arg GroupType Var deriving (Show, Eq)
-type Var = String
+data Arg = Arg GroupType Var deriving (Show, Eq)
+data Var = Var String deriving (Show, Eq)
 
 type FileName = String
-type Docs = String
+data Docs = Docs String deriving (Show, Eq)
 
 --Come back to this
---type UseFileList = [UseFile] 
-type UseFile = String
-
+type UseFileList = [UseFile] 
+data UseFile = UseFile String deriving (Show, Eq)
 
 --Group
 type GroupList = [GroupDefs] 
 data GroupDefs = Group GroupType Var [GroupItem]
     deriving (Show, Eq)
-type GroupType = String
+data GroupType = GroupType String deriving (Show, Eq)
 data GroupItem = GroupVal String | GroupVar Var | GroupRange RangeType  
      deriving (Show, Eq)
 
@@ -36,7 +35,7 @@ data FilterDef = FilterDef FilterField [FilterVal] deriving (Show, Eq)
 type FilterName = String
 --data FilterVal = FilterString String | FilterVar Var |FilterRange RangeType  -- to be defined in config
 type FilterVal = GroupItem -- deriving (Show, Eq)
-type FilterField = String
+data FilterField = FilterField String deriving (Show, Eq)
 
 data RangeType = Before IntValue | After IntValue | Between IntValue IntValue 
      deriving (Show, Eq)
@@ -56,7 +55,7 @@ data Computation
     
 data TableAction
     = TableCount Var FilterName FilterVal 
-    deriving (Show, Eq)
+    deriving (Show, Eq) 
 
 data PrintAction 
      = PrintVar Var
