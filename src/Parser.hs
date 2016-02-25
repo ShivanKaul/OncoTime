@@ -13,6 +13,7 @@ import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
 import Text.ParserCombinators.Parsec.Char
 import qualified Text.ParserCombinators.Parsec.Token as Tokeno
+import Data.Char
 
 import Types
 import PrettyPrinter
@@ -88,22 +89,21 @@ groupVar =
         return $ GroupVal gv
 
 groupRange::Parser GroupItem
-groupRange = try before <|> try after <|> try betw
+groupRange = try (liftM GroupRange before) <|> try (liftM GroupRange after) <|> try (liftM GroupRange betw)
 
 before::Parser RangeType
 before =
     do
         reserved "before"
         pre <- many digit
-        return $ Before pre
-
+        return $ Before $ read pre
 
 after::Parser RangeType
 after = 
     do
         reserved "after"
         post <- many digit
-        return $ Before post
+        return $ Before $ read post
 
 betw::Parser RangeType
 betw =
@@ -111,5 +111,5 @@ betw =
         pre <- many digit
         reserved "to"
         post <- many digit
-        return $ Between pre post
+        return $ Between (read pre) (read post)
 
