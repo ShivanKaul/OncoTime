@@ -38,31 +38,32 @@ oncoParser =
 
 --IO to checkfilename
 header:: Parser Header
-header = 
-    do 
+header =
+    do
         reserved "script"
         fname <- filename
-        args <- parens $ sepBy var comma 
+        args <- parens $ sepBy var comma
         return $ Header fname args
 
 --just gets the next string
 var:: Parser Var
 var =
     do
-    var <- many  alphaNum
-    return var
+        var <- many  alphaNum
+        return var
 
 filename::Parser FileName
 filename =
-    do 
+    do
         fname <- many alphaNum
         return fname
 
 documentation :: Parser Docs
-documentation = 
-    do
-    doc <- stringLit
-    return $ Docs
+documentation =
+    do  reserved "/*"
+        doc <- stringLit
+        reserved "*/"
+        return doc
 
 groups::Parser GroupDefs
 groups =
@@ -70,7 +71,7 @@ groups =
         grpType <- groupType
         v <- var
         grpItem <- many groupItem
-        return $ Group grpType v grpItem 
+        return $ Group grpType v grpItem
 
 groupType::Parser GroupType
 groupType =
@@ -78,13 +79,13 @@ groupType =
         gt <- many  alphaNum
         return gt
 
-groupItem::Parser GroupItem 
-groupItem = try groupVal 
+groupItem::Parser GroupItem
+groupItem = try groupVal
         <|> try groupVar
         <|> try groupRange
 
 groupVal::Parser GroupItem
-groupVal = 
+groupVal =
     do
         gv <- many  alphaNum
         return $ GroupVal gv
@@ -106,7 +107,7 @@ before =
         return $ Before $ read pre
 
 after::Parser RangeType
-after = 
+after =
     do
         reserved "after"
         post <- many digit
