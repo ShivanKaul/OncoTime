@@ -265,20 +265,9 @@ filterDefs =
         fval <- many filterVal
         return $ FilterDef ffield fval
 
-filterVal :: Parser FilterVal
-filterVal =
-    do
-        fval <- groupItem
-        return fval
 
-useList:: Parser [UseStatement]
-useList = 
-    do stmts <- many useStatement
-       return $ stmts
-
-
-useStatement :: Parser UseStatement
-useStatement =
+useList :: Parser UseFileList 
+useList =
     do  reserved "use"
         names <- sepBy useFile comma 
         return names
