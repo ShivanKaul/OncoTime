@@ -19,4 +19,9 @@ import qualified Text.ParserCombinators.Parsec.Token as Token
 
 --Our modules
 import Types 
+import Parser
+import PrettyPrinter
 
+main =
+    do 
+        print "Compiled"
