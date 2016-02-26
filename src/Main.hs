@@ -26,11 +26,11 @@ import Parser
 import PrettyPrinter
 import Formatter
 
-parseFile :: String ->IO ()
-parseFile file =
+parseFile :: String->[Conf]->IO ()
+parseFile file groupFileList confList =
     do 
         program <- readFile file
-        case parse (oncoParser <* eof) file (formatFile program) of
+        case parse ((oncoParser  )<* eof) file (formatFile program) of
             Left e ->
                 do
                     putStrLn "ERROR"
@@ -70,16 +70,18 @@ tparseString str =
 
 main = 
     do
-        readData <- readFile "config.conf"
-        --(arg:_) <- getArgs
-        let l= lines readData
         
-        --BEHOLD: A CONF LIST. FROM THIS DATA STRUCTURE WE CAN EXPLOIT A WORLD OF AMAZING THINGS
+        readData <- readFile "config.conf"
+        (args:_) <- getArgs 
+        --args <- getArgs
+        let l= lines readData
         let listOfMaps =  map makeConf l
+        
         dirContents <- getDirectoryContents "." 
         let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
-        args <- getArgs
-        mapM parseFile args
+        
+        --mapM 
+        parseFile args listOfMaps
        
         
         print listOfMaps

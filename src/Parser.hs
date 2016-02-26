@@ -1,6 +1,7 @@
 module Parser where
 
 import Lexer
+import System.Directory
 import System.FilePath
 import Types
 import System.Exit
@@ -20,6 +21,16 @@ import Data.Char
 import Types
 -- import PrettyPrinter
 import Lexer
+
+verifyGroupFiles::[String]->IO ()
+verifyGroupFiles providedList =
+    do
+        dirContents <- getDirectoryContents "."
+        let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
+        listNames <- map takeExtension grpFiles 
+        
+
+
 
 --use this Parser to test
 testParser :: Parser TestProgram
