@@ -11,7 +11,9 @@ import Parser
 
 class PrettyPrint a where
     prettyPrint :: a -> String
+    prettyPrint _ = ""
     prettyIndent :: String -> a -> String
+    prettyIndent _ _ = ""
 
 pretty :: (PrettyPrint a) => a -> String
 pretty a = prettyPrint a
