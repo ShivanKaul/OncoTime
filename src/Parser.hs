@@ -130,8 +130,17 @@ filename = lexeme $
 documentation :: Parser Docs
 documentation = lexeme $
     do  
-        doc <- between (symbol "/*") (symbol "*/") (many charLit)
+        doc <- docLiteral
         return $ Docs doc
+docLiteral   = lexeme (
+    do{ str <- between (symbol "/*")
+        (symbol "*/" <?> "end of string")
+        (many stringChar)
+        ; return (foldr (maybe id (:)) "" str)
+    }  <?> "literal string")
+
+stringChar      =   do{ c <- stringLetter; return (Just c) }  <?> "string character"
+stringLetter    = satisfy (\c -> (c /= '*'))
 
 groups::Parser GroupDefs
 groups = lexeme $ 
