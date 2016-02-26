@@ -27,35 +27,3 @@ Doctor are
 	Id : 300,3000,00000
 	Sex : M, F
 	Dates : 1900 to 2000
-
-
-
-
-	
-
-{
-	foreach Patient p 
-	{
-		print p
-	}
-	foreach Patient p 
-	{
-		print p
-		foreach Doctor D
-		{
-			print hi
-		}
-		foreach Doctor D
-		{
-			print hi
-			foreach Doctor D
-			{
-				print hello
-			}
-		}
-		
-	}
-
-	table t = count Patients by Birthyear
-	print t
-}

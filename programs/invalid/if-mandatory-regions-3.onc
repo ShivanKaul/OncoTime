@@ -1,5 +1,3 @@
-script a(a a, b b)
-/* test */
 use a.grp, b.grp
 use t.grp
 
