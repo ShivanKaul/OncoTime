@@ -39,11 +39,11 @@ testParser =
     do
         whiteSpace
         --try testHeader <|>testUse <|> testGroups <|> try testComputation <|>  try testDocs 
-        testHeader 
+        --testHeader 
         -- testUse
         -- testDocs
-        -- testGroups
-        -- testFilters
+        --testGroups
+        testFilters
         -- testComputation
 
 --testProgram::Parser TestProgram
@@ -414,6 +414,7 @@ filters =
         choice $ [reserved "is", reserved "are"]
         semi
         filterDs <- many filterDefs
+        semi
         return $ Filter fname filterDs
 
 filterDefs :: Parser FilterDef
@@ -422,7 +423,7 @@ filterDefs =
         ffield <- identifier
         colon
         fval <- sepBy filterVal comma 
-        semi
+        --semi
         return $ FilterDef (FilterField ffield) fval
 
 useList :: Parser UseFile 
