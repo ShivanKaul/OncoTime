@@ -47,6 +47,14 @@ pretty a = prettyPrint a
 --     prettyPrint (DecSeq a) = prettyPrint a
 --     prettyPrint (Dec a b) =  "var " ++ (a) ++ ": " ++ prettyPrint b ++ ";"
 
+instance PrettyPrint GroupType where
+    prettyPrint (GroupType g) = g
+
+instance PrettyPrint GroupDefs where
+    prettyPrint (Group gtype gvar gitems) = "group " ++ prettyPrint gtype ++ 
+        (prettyPrint gvar) ++ " " ++ " = " ++ "{ " ++
+        (intercalate ", " (map prettyPrint gitems)) ++ " }"
+
 instance PrettyPrint IntValue where
     prettyPrint i = show i
 
@@ -57,7 +65,7 @@ instance PrettyPrint RangeType where
 
 instance PrettyPrint GroupItem where
     prettyPrint (GroupVal gval) = gval
-    prettyPrint (GroupVar gvar) = prettyPrint gvar
+    prettyPrint (GroupVar gvar) = "<" ++ prettyPrint gvar ++ ">"
     prettyPrint (GroupRange grange) = prettyPrint grange
 
 instance PrettyPrint FilterField where
@@ -71,20 +79,18 @@ instance PrettyPrint Filter where
     prettyPrint (Filter fname fdefs) = fname ++ " is " ++ 
         (intercalate "\n" (map prettyPrint fdefs))
 
--- instance PrettyPrint UseFileList where
---  prettyPrint (UseFileList u) = // change once we figure out what we want to do
--- with usefilelist
+instance PrettyPrint UseFile where
+    prettyPrint (UseFile u) = u
+
+-- change once we figure out what we want to do
+instance PrettyPrint UseFileList where
+ prettyPrint (ulist) = "use " ++ (intercalate ", " (map prettyPrint ulist))
 
 instance PrettyPrint (Docs) where
     prettyPrint (Docs docs) = "/*\n" ++ docs ++ "\n*/"
 
 instance PrettyPrint (Var) where
     prettyPrint (Var v) = v
-
-instance PrettyPrint ([Arg]) where
-    prettyPrint (varlist) = intercalate ", " (map prettyPrint varlist)
-instance PrettyPrint GroupType where
-    prettyPrint (GroupType g) = g
 
 instance PrettyPrint Arg where
     prettyPrint (Arg groupType var) = prettyPrint groupType ++ " " ++ prettyPrint var
@@ -93,10 +99,7 @@ instance PrettyPrint Header where
     prettyPrint (Header fname argslist) = "script " ++ fname ++ "(" ++ 
         (intercalate ", " (map prettyPrint argslist)) ++ ")"
 
--- instance PrettyPrint a => (PrettyPrint [a]) where
---     prettyPrint a = map prettyPrint a
-
 -- instance PrettyPrint Program where
---     prettyPrint (Program header docs usefilelist  grouplist [filt] [comps]) 
+--     prettyPrint (Program header docs usefilelist  [groups] [filt] [comps]) 
 --      = (prettyPrint header) ++ (prettyPrint docs) ++ (prettyPrint usefilelist) ++ (prettyPrint [filt])
---       ++ (prettyPrint grouplist) ++ (prettyPrint [comps])
+--       ++ (prettyPrint groups) ++ (prettyPrint [comps])
