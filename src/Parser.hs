@@ -23,50 +23,46 @@ import Lexer
 
 --use this Parser to test
 testParser:: Parser TestProgram
-testParser = testHeader  <|> testDocs <|> testUse <|>  testGroups  <|>testComputation  
-
+testParser = 
+    do
+        whiteSpace
+        try testHeader <|>testUse <|> testGroups <|> try testComputation <|>  try testDocs 
 --testProgram::Parser TestProgram
 
 
 testHeader::Parser TestProgram
 testHeader =
     do
-        whiteSpace
         hdr <- header
         return $ TestHeader hdr
 
 testDocs::Parser TestProgram
 testDocs =
     do
-        whiteSpace
         docs <- documentation
         return $TestDocs docs
 
 testUse::Parser TestProgram
 testUse = 
     do
-        whiteSpace
         use <- many useList
         return $ TestUseFileList use
 
 testGroups::Parser TestProgram
 testGroups = 
     do
-        whiteSpace
-        grp <-  many groups
+        grp <- many groups
         return $ TestGroupList grp
 
 testComputation::Parser TestProgram
 testComputation =
     do
-        whiteSpace
         comp <- many computation
         return $ TestComputation comp
 
 oncoParser:: Parser Program
 oncoParser = 
     do
-        whiteSpace
         hdr <- header
         doc <- documentation 
         use <- many useSection
@@ -78,7 +74,7 @@ oncoParser =
 
 --IO to checkfilename
 header:: Parser Header
-header = lexeme $
+header = 
     do
         reserved "script"
         fname <- filename
@@ -121,7 +117,7 @@ groups = lexeme $
         reserved "group"
         grpType <- groupType
         v <- var
-        reserved "=" 
+        reserved "="  
         --grpItem <- many groupItem
         grpItem <- some groupItem
         return $ Group grpType v grpItem
@@ -179,10 +175,17 @@ betw =
         return $ Between (read pre) (read post)
 
 computation::Parser Computation
-computation = try (liftM2 Foreach foreach ( curlies $ many computation)) <|> try (liftM Table table) <|> try (list) <|> try (liftM Print prints) <|> try (liftM Barchart barchart) 
+computation = 
+    try (liftM2 Foreach foreach ( curlies $ many computation)) 
+    <|> try (liftM Table table) 
+    <|> try (list) --STILL NEED TO DO
+    <|> try (liftM Print prints) 
+    <|> try (liftM Barchart barchart) 
 
 foreach::Parser ForEachDef
-foreach = forEachFilter <|> forEachTable <|> forEachSequence <|> forEachSequenceNoDef <|> forEachList
+foreach = 
+    do
+        forEachFilter <|> forEachTable <|> forEachSequence <|> forEachSequenceNoDef <|> forEachList
 
 table::Parser TableAction
 table = 
@@ -203,7 +206,7 @@ list=
     do
         reserved "list"
         v <- var
-        equal --equal
+        reserved "=" --equal --equal
         reserved "sequences"
         reserved "like"
         e <- seqList 
@@ -262,11 +265,11 @@ eventName =
 
 
 prints:: Parser PrintAction
-prints = printvar <|> printTimeLine <|> printLength <|> printFilters <|> printElement 
+prints = try printvar <|> try printTimeLine <|> try printLength <|> try printFilters <|> printElement 
 
 barchart::Parser Var 
-barchart = 
-    do
+barchart =  lexeme $
+    do 
         reserved "barchart"
         v <- var
         return $ v
@@ -300,6 +303,7 @@ forEachSequence =
         reserved "in"
         v2 <- var
         return $ ForEachSequence v1 v2
+
 forEachSequenceNoDef::Parser ForEachDef
 forEachSequenceNoDef =
     do
