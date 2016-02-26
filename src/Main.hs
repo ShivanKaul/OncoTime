@@ -35,7 +35,7 @@ parseFile file groupFileList =
                 do
                     putStrLn "ERROR"
                     print e
-            Right r -> print r >> writeFile ((reverse (drop 4 (reverse file))) ++ ".pretty.onc") (pretty r)
+            Right r -> print r
 
 parseString :: String -> Program
 parseString str =
@@ -68,22 +68,54 @@ tparseString str =
         Left e-> error$ show e
         Right r -> r
 
+--util functions for checking parts of a conf
+fieldExists::[Conf]->FieldName->Bool
+fieldExists [] _ = False
+fieldExists ((Conf (name, mapping)):xs) f = 
+    if f == name then True else fieldExists xs f
+
+
+subFieldExists::[Conf]->FieldName->SubFieldName->Bool
+subFieldExists [] _ _ = False
+subFieldExists ((Conf (name, mapping)):xs) f sf = 
+    case name == f of
+        True -> if M.member sf mapping then True else False
+        False -> subFieldExists xs f sf
+
+    --if M.member sf mapping then True else subFieldExists xs sf
+
+--subFieldTypeCheck::[Conf]->FieldName->SubFieldName->->Bool
+
+
+--subFieldValCheck::Conf->SubField->Bool
+
+testFieldStuff::IO()
+testFieldStuff = 
+    do
+        readData <-readFile "config.conf"
+        let l = lines readData
+        let listOfMaps = map makeConf l
+        print listOfMaps
+        print $ fieldExists listOfMaps "Population" 
+        print $ subFieldExists listOfMaps "Population" "Sex"
+
+
 main = 
     do
-        
         readData <- readFile "config.conf"
         (args:_) <- getArgs 
         --args <- getArgs
         let l= lines readData
         let listOfMaps =  map makeConf l
         
-        dirContents <- getDirectoryContents "." 
-        let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
-        
         --mapM 
         parseFile args listOfMaps
-       
-        
+        --parseFile grpFiles
+
+        --let m =  M.fromList listOfMaps
+    --print m 
+    --  
         print listOfMaps
+        --print $ M.fromList listOfMaps
         --print reconstructed 
         --parseFile arg
