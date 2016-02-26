@@ -35,7 +35,7 @@ parseFile file =
                 do
                     putStrLn "ERROR"
                     print e
-            Right r -> print r 
+            Right r -> print r
 
 parseString :: String -> Program
 parseString str =

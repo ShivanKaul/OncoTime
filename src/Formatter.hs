@@ -24,7 +24,7 @@ formatFile contents =
     let (h,d,p) = removeDocs contents
     in  let h1 = removeNewLines h
             p1 = removeNewLines p
-        in   (h1 ++ d++ p1)
+        in   (h1 ++ d++ "\n" ++ p1)
 
 
 testFormatter = putStrLn $ formatFile "\

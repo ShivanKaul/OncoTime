@@ -92,6 +92,7 @@ header =
         reserved "script"
         fname <- filename
         args <- parens $ arg `sepBy` comma
+        semi
         return $ Header fname args
 
 arg :: Parser Arg
@@ -117,7 +118,7 @@ filename = lexeme $
 documentation :: Parser Docs
 documentation = lexeme $
     do  
-        reserved "/**"
+        reserved "/*"
         doc <- stringLit
         reserved "*/"
         return $ Docs doc
@@ -128,10 +129,9 @@ groups = lexeme $
         reserved "group"
         grpType <- groupType
         v <- var
-        reserved "="  
-        --grpItem <- many groupItem
-
+        reserved "="
         grpItem <- curlies $ sepBy groupItem comma 
+        semi
         return $ Group grpType v grpItem
 
 groupType::Parser GroupType
@@ -154,12 +154,8 @@ groupVar =
 groupVal::Parser GroupItem
 groupVal = lexeme $
     do
-        --gv <- many alphaNum
         gv <- some alphaNum
-        --fext<- many alphaNum
         return $ GroupVal gv
-
-
 
 groupRange::Parser GroupItem
 groupRange = try (liftM GroupRange betw) <|> try (liftM GroupRange before) <|> try (liftM GroupRange after)
@@ -209,10 +205,9 @@ table =
         fn <- filterName
         reserved "by"
         fv <-filterVal
+        semi
         return $ TableCount v fn fv
 
-
---NEEDS WORK
 list::Parser Computation
 list=
     do
@@ -222,6 +217,7 @@ list=
         reserved "sequences"
         reserved "like"
         e <- seqList 
+        semi
         return $ List v e
 
 seqList::Parser [[SeqField]]
@@ -284,6 +280,7 @@ barchart =  lexeme $
     do 
         reserved "barchart"
         v <- var
+        semi
         return $ v
 
 
@@ -293,6 +290,7 @@ forEachFilter =
         reserved "foreach"
         f <- lexeme filterName
         v <- var
+        semi
         return $ ForEachFilter f v
 
 
@@ -304,6 +302,7 @@ forEachTable =
         v1 <- var
         reserved "of"
         v2 <- var
+        semi
         return $ ForEachTable v1 v2
 
 forEachSequence::Parser ForEachDef
@@ -314,6 +313,7 @@ forEachSequence =
         v1 <- var
         reserved "like"
         e <- seqList
+        semi
         return $ ForEachSequence v1 e
 
 forEachList::Parser ForEachDef 
@@ -324,6 +324,7 @@ forEachList =
         v1 <- var
         reserved "of"
         v2 <- var
+        semi
         return $ ForEachList v1 v2
 
 printvar::Parser PrintAction
@@ -331,6 +332,7 @@ printvar =
     do
         reserved "print"
         v <- var
+        semi
         return $ PrintVar v
 
 printTimeLine::Parser PrintAction
@@ -340,6 +342,7 @@ printTimeLine =
         reserved "timeline"
         reserved "of"
         v<-var
+        semi
         return $ PrintTimeLine v
 
 
@@ -350,6 +353,7 @@ printLength =
         v<-var
         dot
         reserved "length"
+        semi
         return $ PrintLength v 
 
 
@@ -359,6 +363,7 @@ printFilters =
         reserved "print"
         filterList <- sepBy filterName comma
         v <- var
+        semi
         return $ PrintFilters filterList v
         
 
@@ -369,6 +374,7 @@ printElement =
         reserved "print"
         v1 <-var
         v2 <- squares $ var
+        semi
         return $ PrintElement v1 v2
 
 filterName::Parser FilterName
@@ -388,6 +394,7 @@ filters =
     do
         fname <- lexeme $ identifier
         choice $ [reserved "is", reserved "are"]
+        semi
         filterDs <- many filterDefs
         return $ Filter fname filterDs
 
@@ -397,13 +404,15 @@ filterDefs =
         ffield <- identifier
         colon
         fval <- sepBy filterVal comma 
+        semi
         return $ FilterDef (FilterField ffield) fval
 
 useList :: Parser UseFile 
 useList = lexeme $
     do 
         reserved "use"
-        names <- sepBy grpFile comma 
+        names <- sepBy grpFile comma
+        semi
         return $ UseManyFile names
 
 --Not used
