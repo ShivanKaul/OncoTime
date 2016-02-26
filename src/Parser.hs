@@ -26,7 +26,9 @@ testParser:: Parser TestProgram
 testParser = 
     do
         whiteSpace
-        try testHeader <|>testUse <|> testGroups <|> try testComputation <|>  try testDocs 
+        --try testHeader <|>testUse <|> testGroups <|> try testComputation <|>  try testDocs 
+        --testUse
+        testDocs
 --testProgram::Parser TestProgram
 
 
@@ -185,7 +187,7 @@ computation =
 foreach::Parser ForEachDef
 foreach = 
     do
-        forEachFilter <|> forEachTable <|> forEachSequence <|> forEachSequenceNoDef <|> forEachList
+        forEachFilter <|> forEachTable <|> forEachSequence <|>forEachList
 
 table::Parser TableAction
 table = 

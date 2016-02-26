@@ -119,6 +119,8 @@ instance PrettyPrint [Filter] where
 
 
 instance PrettyPrint Program where
-    prettyPrint (Program header docs usefilelist  [groups] [filt] [comps]) 
+    prettyPrint (Program header docs usefilelist [groups] [filt] [comps]) 
      = (prettyPrint header) ++ (prettyPrint docs) ++ (prettyPrint usefilelist) ++ (prettyPrint [filt])
       ++ (prettyPrint groups) ++ ("{\n" ++ prettyPrint [comps] ++ "\n}")
+    prettyPrint (Program header docs _ _ _ _) = (prettyPrint header) ++ (prettyPrint docs)
+    --TODO: Other instances

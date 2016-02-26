@@ -1,2 +1,2 @@
-script a(ab)
-/*comment*/
+script a(a a, b b)
+/* "test" */
