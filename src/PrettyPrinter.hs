@@ -76,7 +76,7 @@ instance PrettyPrint RangeType where
     prettyPrint (Between i j) = prettyPrint i ++ " to " ++ prettyPrint j
 
 instance PrettyPrint GroupItem where
-    prettyPrint (GroupVal gval) = gval
+    prettyPrint (GroupVal gval gext) = gval ++ "." ++ gext
     prettyPrint (GroupVar gvar) = "<" ++ prettyPrint gvar ++ ">"
     prettyPrint (GroupRange grange) = prettyPrint grange
 
