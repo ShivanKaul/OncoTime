@@ -5,7 +5,7 @@ import Text.Regex
 import Debug.Trace
 
 
-occupiedLineRegex =  mkRegex "[^ \t\n][^\n]*\n" 
+occupiedLineRegex =  mkRegex "[^ \t\n][^\n(//)]*\n" 
 docStringRegex =  "(/\\*(.|\n)*\\*/)" :: String
 commentRegex =  mkRegex "//.*"
 removeDocs :: String -> (String, String,String)
@@ -19,10 +19,12 @@ handleLineComments line =
   let (stmnt,comm) = case matchRegexAll commentRegex line of
           Nothing -> (line,"")
           Just(withoutComment, comm,_,_)-> (withoutComment,comm)
-      stmntWithoutNewline = if ((stmnt/="")&&(last stmnt == '\n') )
-              then init stmnt 
-              else stmnt
-      in stmntWithoutNewline++";"++comm++"\n"
+  in if stmnt =="" 
+     then "\n"
+     else let stmntWithoutNewline = if (last stmnt == '\n') 
+                                then init stmnt 
+                                else stmnt
+          in stmntWithoutNewline++";"++comm++"\n"
 
 removeNewLines :: String -> String
 removeNewLines prog =

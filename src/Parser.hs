@@ -415,7 +415,7 @@ printElement =
 filterName::Parser FilterName
 filterName = lexeme $
     do
-        f <- many alphaNum 
+        f <- identifier 
         return f
 
 filterVal::Parser FilterVal
@@ -427,11 +427,11 @@ filterVal =
 filters :: Parser Filter
 filters =
     do
-        fname <- lexeme $ identifier
+        filterName <- lexeme $ identifier
         choice $ [reserved "is", reserved "are"]
         semi
-        filterDs <- lexeme $ many filterDefs
-        return $ Filter fname filterDs
+        filterDs <- lexeme $ some fD
+        return $ Filter filterName filterDs
 
 manyFilters :: Parser [Filter]
 manyFilters =
@@ -439,7 +439,7 @@ manyFilters =
         f <- many filters
         return $ f
 
-
+fD = try(filterDefs)
 
 filterDefs :: Parser FilterDef
 filterDefs = 
@@ -447,7 +447,7 @@ filterDefs =
         ffield <- identifier
         colon
         fval <- sepBy filterVal comma 
-        --semi
+        semi
         return $ FilterDef (FilterField ffield) fval
 
 useList :: Parser UseFile 

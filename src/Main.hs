@@ -18,7 +18,7 @@ import Text.ParserCombinators.Parsec.Language
 import Text.ParserCombinators.Parsec.Char
 
 import qualified Text.ParserCombinators.Parsec.Token as Token
-
+import Debug.Trace
 
 --Our modules
 import Types 
@@ -30,7 +30,7 @@ parseFile :: String->[Conf]->IO ()
 parseFile file groupFileList =
     do 
         program <- readFile file
-        case parse ((oncoParser  )<* eof) file (formatFile program) of
+        case parse ((oncoParser  )<* eof) file (trace (formatFile program) (formatFile program) )of
             Left e ->
                 do
                     putStrLn "ERROR"
