@@ -16,7 +16,7 @@ import Text.ParserCombinators.Parsec.Language
 import Text.ParserCombinators.Parsec.Char
 import qualified Text.ParserCombinators.Parsec.Token as Token
 import Data.Char
-
+import Debug.Trace
 import Types
 -- import PrettyPrinter
 import Lexer
@@ -181,11 +181,16 @@ betw = lexeme $
         reserved "to"
         post <- lexeme $ some digit
         return $ Between (read pre) (read post)
+
 manyComp ::Parser [Computation]
 manyComp = 
     do 
         c <- curlies $ (optional semi) >> (many computation)
-        semi
+        if (null c) 
+            then trace ("WARNING: Computation list is empty.") semi
+        else semi
+        -- print c
+        -- semi
         return c
 
 computation::Parser Computation
