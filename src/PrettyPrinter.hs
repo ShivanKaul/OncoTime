@@ -6,6 +6,7 @@ module PrettyPrinter where
 import Types
 import Lexer
 import Data.List
+import Parser
 
 
 class PrettyPrint a where
@@ -51,7 +52,7 @@ instance PrettyPrint [SeqField] where
     prettyPrint seqs = (intercalate " -> " (map prettyPrint seqs))
 
 instance PrettyPrint Computation where
-    prettyPrint (Foreach foreachdef comps) = prettyPrint foreachdef ++ "{\n" ++
+    prettyPrint (Foreach foreachdef comps) = prettyPrint foreachdef ++ " " ++ "{\n" ++
         (intercalate "\n" (map prettyPrint comps)) ++ "\n}"
     prettyPrint (Table taction) = prettyPrint taction
     prettyPrint (List var seq) = "list " ++ prettyPrint var ++ " = " ++ "sequences like " 
@@ -64,7 +65,7 @@ instance PrettyPrint GroupType where
 
 instance PrettyPrint GroupDefs where
     prettyPrint (Group gtype gvar gitems) = "group " ++ prettyPrint gtype ++ 
-        (prettyPrint gvar) ++ " " ++ " = " ++ "{ " ++
+        " " ++ (prettyPrint gvar) ++ " " ++ " = " ++ "{ " ++
         (intercalate ", " (map prettyPrint gitems)) ++ " }"
 
 instance PrettyPrint IntValue where
@@ -76,7 +77,7 @@ instance PrettyPrint RangeType where
     prettyPrint (Between i j) = prettyPrint i ++ " to " ++ prettyPrint j
 
 instance PrettyPrint GroupItem where
-    prettyPrint (GroupVal gval gext) = gval ++ "." ++ gext
+    prettyPrint (GroupVal gval) = show gval
     prettyPrint (GroupVar gvar) = "<" ++ prettyPrint gvar ++ ">"
     prettyPrint (GroupRange grange) = prettyPrint grange
 
@@ -92,11 +93,7 @@ instance PrettyPrint Filter where
         (intercalate "\n" (map prettyPrint fdefs))
 
 instance PrettyPrint UseFile where
-    prettyPrint (UseFile u) = u
-
--- change once we figure out what we want to do
-instance PrettyPrint UseFileList where
- prettyPrint (ulist) = "use " ++ (intercalate ", " (map prettyPrint ulist))
+    prettyPrint (UseManyFile us) = "use " ++ (intercalate ", " (map (\x -> x ++ ".grp") us))
 
 instance PrettyPrint (Docs) where
     prettyPrint (Docs docs) = "/*\n" ++ docs ++ "\n*/"
@@ -117,6 +114,12 @@ instance PrettyPrint [Computation] where
 instance PrettyPrint [Filter] where
     prettyPrint filts = (intercalate "\n" (map prettyPrint filts))
 
+instance PrettyPrint [UseFile] where
+    prettyPrint ufiles = (intercalate "\n" (map prettyPrint ufiles))
+
+instance PrettyPrint [GroupDefs] where
+    prettyPrint groups = (intercalate "\n" (map prettyPrint groups))
+
 
 instance PrettyPrint Program where
     prettyPrint (Program header docs usefilelist [groups] [filt] [comps]) 
@@ -124,3 +127,13 @@ instance PrettyPrint Program where
       ++ (prettyPrint groups) ++ ("{\n" ++ prettyPrint [comps] ++ "\n}")
     prettyPrint (Program header docs _ _ _ _) = (prettyPrint header) ++ (prettyPrint docs)
     --TODO: Other instances
+
+instance PrettyPrint TestProgram where
+    -- prettyPrint (TestProgram2 header docs [usefiles] [groups] [filt] [comps]) = (prettyPrint header) ++ (prettyPrint docs) ++ (prettyPrint usefiles)
+    prettyPrint (TestHeader header) = prettyPrint header
+    prettyPrint (TestUseFileList usefilelist) = prettyPrint usefilelist
+    prettyPrint (TestDocs docs) = prettyPrint docs
+    prettyPrint (TestGroupList groups) = prettyPrint groups
+    prettyPrint (TestComputation comps) = prettyPrint comps
+    prettyPrint (TestFiltersList filters) = prettyPrint filters
+    -- prettyPrint (TestHeader header) = prettyPrint header
