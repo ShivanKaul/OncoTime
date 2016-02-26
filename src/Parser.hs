@@ -16,12 +16,13 @@ import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
 import Text.ParserCombinators.Parsec.Char
 import qualified Text.ParserCombinators.Parsec.Token as Token
+
+import TypeUtils
 import Data.Char
 import Debug.Trace
 import Types
 -- import PrettyPrinter
 import Lexer
-
 
 verifyGroupFiles::[String]->IO ()
 verifyGroupFiles providedList =
@@ -95,7 +96,6 @@ oncoParser =
         filt <- manyFilters
         comp <- manyComp
         return $ Program hdr doc use grp filt comp 
-
 
 --IO to checkfilename
 header:: Parser Header
@@ -297,7 +297,6 @@ eventName =
         ename <- identifier
         return $ ename 
 
-
 prints:: Parser PrintAction
 prints = try printvar <|> try printTimeLine <|> try printLength <|> try printFilters <|> printElement 
 
@@ -371,7 +370,6 @@ printTimeLine =
         semi
         return $ PrintTimeLine v
 
-
 printLength::Parser PrintAction
 printLength =
     do
@@ -391,8 +389,6 @@ printFilters =
         v <- var
         semi
         return $ PrintFilters filterList v
-        
-
 
 printElement::Parser PrintAction
 printElement = 
@@ -430,8 +426,6 @@ manyFilters =
         f <- many filters
         return $ f
 
-
-
 filterDefs :: Parser FilterDef
 filterDefs = 
     do
@@ -448,59 +442,6 @@ useList = lexeme $
         names <- sepBy grpFile comma
         semi
         return $ UseManyFile names
-
-
-
---TypesMap First elemento
---How the Maps work:
---high level: fields: Population, Doctor, ID. Each of these has a map attached.
---i.e. FieldName, subFieldMap 
---That map is ANOTHER map of the possible fields it can have, and what they are allowed to have.
---
-
---data Conf = Conf (M.Map FieldName (SubField))
---data Conf = Conf String (M.Map String (SubField))
-
-data Conf = Conf (FieldName, (M.Map SubFieldName (SubField))) deriving(Eq, Show)
-type SubField = (AllowedType, [AllowedVal])
-
-
-data TypesMap = TypesMap FieldName (M.Map AllowedType [AllowedVal])
-type FieldName = String
-type AllowedType = String
-type AllowedVal = String
-type SubFieldName = String
-
---SubFieldName (AllowedType, AllowedVal)
-typeMapMaker::Parser (String, (String, [String])) 
-typeMapMaker =
-    do
-        name <- stringLit 
-        colon
-        tup <- parens $ typeTuple
-        return (name, tup) 
-
-typeTuple::Parser (AllowedType, [AllowedVal])
-typeTuple =
-    do
-        alType <- identifier
-        comma
-        alVals <- squares $ sepBy identifier comma
-        return (alType, alVals)
-
-confParser::Parser Conf
-confParser =
-    do
-        whiteSpace
-        fieldName <- identifier
-        colon
-        --reserved "["
-        typeMapList <- squares $ sepBy typeMapMaker comma
-        --reserved "]"
-        semi
-        --M.fromList typeMapList
-        return $ Conf (fieldName,  M.fromList typeMapList) --maps
-        --Each FieldName is part of a tuple between  between SubField:(AllowedType, AllowedVals)
 
 grpFile::Parser String
 grpFile = lexeme $

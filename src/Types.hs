@@ -91,3 +91,5 @@ data ForEachDef
      | ForEachSequence Var Sequence
      | ForEachList Var Var
      deriving (Show, Eq)
+
+data LexError = FieldNameError String | SubFieldNameError String | AllowedTypeError String | AllowedValError String | FieldNotFoundError String deriving (Show, Eq)
