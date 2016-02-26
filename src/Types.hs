@@ -20,7 +20,7 @@ data Docs = Docs String deriving (Show, Eq)
 
 --Come back to this
 type UseFileList = [UseFile] 
-data UseFile = UseFile String deriving (Show, Eq)
+data UseFile = UseFile String | UseManyFile [String] deriving (Show, Eq)
 
 --Group
 type GroupList = [GroupDefs] 

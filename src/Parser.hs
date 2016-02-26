@@ -23,7 +23,7 @@ import Lexer
 
 --use this Parser to test
 testParser:: Parser TestProgram
-testParser = testHeader  <|> testDocs <|> testGroups  <|>  testUse <|>testComputation  
+testParser = testHeader  <|> testDocs <|> testUse <|>  testGroups  <|>testComputation  
 
 --testProgram::Parser TestProgram
 
@@ -46,7 +46,7 @@ testUse::Parser TestProgram
 testUse = 
     do
         whiteSpace
-        use <- useList
+        use <- many useList
         return $ TestUseFileList use
 
 testGroups::Parser TestProgram
@@ -69,7 +69,7 @@ oncoParser =
         whiteSpace
         hdr <- header
         doc <- documentation 
-        use <- useList 
+        use <- many useSection
         grp <- many groups
         filt <- many filters 
         comp <- many computation
@@ -82,14 +82,14 @@ header = lexeme $
     do
         reserved "script"
         fname <- filename
-        args <- parens $ sepBy arg comma
+        args <- parens $ arg `sepBy` comma
         return $ Header fname args
 
 arg :: Parser Arg
 arg = 
     do
-        t<- groupType
-        v<-var
+        t <- groupType
+        v <- var
         return $ Arg t v
 
 
@@ -392,14 +392,31 @@ filterDefs =
         fval <- many filterVal
         return $ FilterDef (FilterField ffield) fval
 
-
-useList :: Parser [UseFile] 
+useList :: Parser UseFile 
 useList = lexeme $
-    do  reserved "use"
-        names <- sepBy useFile comma 
-        return names
+    do 
+        reserved "use"
+        names <- sepBy grpFile comma 
+        return $ UseManyFile names
+
+--Not used
+useSection::Parser UseFile
+useSection = useFile <|> try useList
 
 useFile :: Parser UseFile
 useFile =
-    do  file <- many alphaNum
+    do  
+        reserved "use"
+        --file <- some alphaNum
+        --dot
+        --string "grp"
+        file <- grpFile
         return $ UseFile file
+
+grpFile::Parser String
+grpFile = lexeme $
+    do
+        file <- some alphaNum
+        dot
+        string "grp"
+        return file

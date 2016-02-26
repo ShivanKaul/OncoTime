@@ -3,6 +3,7 @@
 
 module Main where
 
+import System.Directory
 import System.FilePath
 import System.Exit
 import System.Environment
@@ -58,5 +59,8 @@ tparseString str =
 
 
 main = do
-    (arg:_) <- getArgs
-    parseFile arg
+    --(arg:_) <- getArgs
+    dirContents <- getDirectoryContents "." 
+    let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
+    print grpFiles 
+    --parseFile arg
