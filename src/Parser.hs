@@ -298,21 +298,11 @@ forEachSequence::Parser ForEachDef
 forEachSequence =
     do
         reserved "foreach"
-        reserved "member"
-        v1 <- var
-        reserved "in"
-        v2 <- var
-        return $ ForEachSequence v1 v2
-
-forEachSequenceNoDef::Parser ForEachDef
-forEachSequenceNoDef =
-    do
-        reserved "foreach"
         reserved "sequence"
         v1 <- var
         reserved "like"
         e <- seqList
-        return $ ForEachSequenceNoDef v1 e
+        return $ ForEachSequence v1 e
 
 forEachList::Parser ForEachDef 
 forEachList = 

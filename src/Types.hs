@@ -46,8 +46,6 @@ data RangeType = Before IntValue | After IntValue | Between IntValue IntValue
 type IntValue = Int 
 type StringValue = String
 
---TODO:
---IS COMPUTATION LIST MANDATORY?
 data Computation
     = Foreach ForEachDef [Computation] --for nested for loops, slide 38 is confusing
     | Table TableAction
@@ -68,7 +66,6 @@ data PrintAction
      | PrintElement Var Var --like array indexing, slide 39
      deriving (Show, Eq)
 
---TODO UNDERSTAND THIS
 type Sequence = [[SeqField{- separated by ->-}] {-separated by | -}] 
 
 type EventName = String
@@ -84,13 +81,10 @@ data SeqField
     | Star SeqField
     | Neg Event
     deriving(Show,Eq)
-
-
      
 data ForEachDef 
      = ForEachFilter FilterName Var 
      | ForEachTable Var Var
-     | ForEachSequence Var Var
-     | ForEachSequenceNoDef Var Sequence
+     | ForEachSequence Var Sequence
      | ForEachList Var Var
      deriving (Show, Eq)
