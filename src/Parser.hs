@@ -142,7 +142,8 @@ groupType = lexeme $
 
 groupItem::Parser GroupItem
 groupItem = try groupRange
-        <|> try groupVal
+        <|> try groupValInt
+        <|> try groupValString
         <|> try groupVar
 
 groupVar::Parser GroupItem
@@ -151,11 +152,17 @@ groupVar =
         gv <- angles $ var
         return $ GroupVar gv
 
-groupVal::Parser GroupItem
-groupVal = lexeme $
+groupValString::Parser GroupItem
+groupValString = lexeme $
     do
-        gv <- some alphaNum
-        return $ GroupVal gv
+        gv <- some letter
+        return $ GroupValString gv
+
+groupValInt::Parser GroupItem
+groupValInt = lexeme $
+    do
+        gd <- some digit
+        return $ GroupValInt $ read gd
 
 groupRange::Parser GroupItem
 groupRange = try (liftM GroupRange betw) <|> try (liftM GroupRange before) <|> try (liftM GroupRange after)
@@ -406,7 +413,7 @@ filters =
         semi
         filterDs <- lexeme $ many filterDefs
         return $ Filter fname filterDs
-        
+
 manyFilters :: Parser [Filter]
 manyFilters =
     do
