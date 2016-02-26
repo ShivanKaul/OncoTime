@@ -7,7 +7,7 @@ group Id x = {1, 2, <x>, 1200 to 123123}
 group Id x = {1, 2, <x>, 1200 to 123123}
 
 Patient are
-	Id : 300,3000,00000
+	Id : 300,3000,0
 	Sex : M, F
 
 Doctor are
@@ -19,11 +19,11 @@ Doctor are
 	Id : 300,3000,00000
 	Sex : M, F
 	Dates : 1900 to 2000
-	Doctor are
+Doctor are
 	Id : 300,3000,00000
 	Sex : M, F
 	Dates : 1900 to 2000
-	Doctor are
+Doctor are
 	Id : 300,3000,00000
 	Sex : M, F
 	Dates : 1900 to 2000

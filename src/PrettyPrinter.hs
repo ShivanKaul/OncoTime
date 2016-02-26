@@ -80,7 +80,7 @@ instance PrettyPrint RangeType where
     prettyPrint (Between i j) = prettyPrint i ++ " to " ++ prettyPrint j
 
 instance PrettyPrint GroupItem where
-    prettyPrint (GroupValString gval) = show gval
+    prettyPrint (GroupValString gval) = gval
     prettyPrint (GroupValInt gval) = prettyPrint gval
     prettyPrint (GroupVar gvar) = "<" ++ prettyPrint gvar ++ ">"
     prettyPrint (GroupRange grange) = prettyPrint grange
@@ -93,7 +93,7 @@ instance PrettyPrint FilterDef where
         (intercalate ", " (map prettyPrint fvals))
 
 instance PrettyPrint Filter where
-    prettyPrint (Filter fname fdefs) = fname ++ " is " ++ "\n" ++
+    prettyPrint (Filter fname fdefs) = fname ++ " are " ++ "\n" ++
         (intercalate "\n" (map prettyPrint fdefs))
 
 instance PrettyPrint UseFile where

@@ -30,7 +30,8 @@ parseFile :: String->[Conf]->IO ()
 parseFile file groupFileList =
     do 
         program <- readFile file
-        case parse ((oncoParser  )<* eof) file (trace (formatFile program) (formatFile program) )of
+        --case parse ((oncoParser  )<* eof) file (trace (formatFile program) (formatFile program) )of --debugging
+        case parse ((oncoParser  )<* eof) file (formatFile program) of
             Left e ->
                 do
                     putStrLn "ERROR"
