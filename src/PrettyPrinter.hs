@@ -6,6 +6,7 @@ module PrettyPrinter where
 import Types
 import Lexer
 import Data.List
+import Parser
 
 
 class PrettyPrint a where
@@ -92,11 +93,8 @@ instance PrettyPrint Filter where
         (intercalate "\n" (map prettyPrint fdefs))
 
 instance PrettyPrint UseFile where
-    prettyPrint (UseFile u) = u
-
--- change once we figure out what we want to do
-instance PrettyPrint UseFileList where
- prettyPrint (ulist) = "use " ++ (intercalate ", " (map prettyPrint ulist))
+    prettyPrint (UseFile u) = "use " ++ u ++ ".grp"
+    prettyPrint (UseManyFile us) = "use " ++ (intercalate ", " (map (\x -> x ++ ".grp") us))
 
 instance PrettyPrint (Docs) where
     prettyPrint (Docs docs) = "/*\n" ++ docs ++ "\n*/"
@@ -117,6 +115,9 @@ instance PrettyPrint [Computation] where
 instance PrettyPrint [Filter] where
     prettyPrint filts = (intercalate "\n" (map prettyPrint filts))
 
+instance PrettyPrint [UseFile] where
+    prettyPrint ufiles = (intercalate "\n" (map prettyPrint ufiles))
+
 
 instance PrettyPrint Program where
     prettyPrint (Program header docs usefilelist [groups] [filt] [comps]) 
@@ -124,3 +125,10 @@ instance PrettyPrint Program where
       ++ (prettyPrint groups) ++ ("{\n" ++ prettyPrint [comps] ++ "\n}")
     prettyPrint (Program header docs _ _ _ _) = (prettyPrint header) ++ (prettyPrint docs)
     --TODO: Other instances
+
+instance PrettyPrint TestProgram where
+    -- prettyPrint (TestProgram2 header docs [usefiles] [groups] [filt] [comps]) = (prettyPrint header) ++ (prettyPrint docs) ++ (prettyPrint usefiles)
+    prettyPrint (TestHeader header) = prettyPrint header
+    prettyPrint (TestUseFileList usefilelist) = prettyPrint usefilelist
+    prettyPrint (TestDocs docs) = prettyPrint docs
+    -- prettyPrint (TestHeader header) = prettyPrint header

@@ -40,7 +40,7 @@ parseString str =
         Left e-> error$ show e
         Right r -> r
 
-tparseFile :: String ->IO ()
+tparseFile :: String -> IO ()
 tparseFile file =
     do 
         program <- readFile file
@@ -62,7 +62,5 @@ main = do
     --(arg:_) <- getArgs
     dirContents <- getDirectoryContents "." 
     let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
-    let configFile = filter (\x->takeExtension x == ".conf") dirContents
     print grpFiles 
-    print configFile
     --parseFile arg

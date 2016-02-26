@@ -18,17 +18,19 @@ import qualified Text.ParserCombinators.Parsec.Token as Token
 import Data.Char
 
 import Types
-import PrettyPrinter
+-- import PrettyPrinter
 import Lexer
 
 --use this Parser to test
-testParser:: Parser TestProgram
+testParser :: Parser TestProgram
 testParser = 
     do
         whiteSpace
         --try testHeader <|>testUse <|> testGroups <|> try testComputation <|>  try testDocs 
-        --testUse
-        testDocs
+        -- testHeader 
+        testUse
+        -- testDocs
+
 --testProgram::Parser TestProgram
 
 

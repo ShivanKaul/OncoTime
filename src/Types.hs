@@ -1,12 +1,15 @@
 module Types where
 
 --TEST PROGRAM
-data TestProgram = TestHeader Header | TestDocs Docs | TestUseFileList [UseFile]| TestGroupList [GroupDefs] | TestComputation [Computation] deriving(Show,Eq)
+data TestProgram = TestHeader Header | TestDocs Docs | TestUseFileList [UseFile]
+    | TestGroupList [GroupDefs] | TestComputation [Computation] deriving(Show,Eq)
 
 --sans annotations
 data Program = Program Header Docs [UseFile]  [GroupDefs] [Filter] [Computation]
-      deriving (Show, Eq)
-     
+      deriving (Show, Eq)   
+
+data TestProgram2 = TestProgram2 Header Docs [UseFile]  [GroupDefs] [Filter] [Computation]
+      deriving (Show, Eq)     
       
 data Header = Header FileName [Arg]
       deriving (Show, Eq)
@@ -18,8 +21,7 @@ type FileName = String
 type FileExt = String
 data Docs = Docs String deriving (Show, Eq)
 
---Come back to this
-type UseFileList = [UseFile] 
+--Use
 data UseFile = UseFile String | UseManyFile [String] deriving (Show, Eq)
 
 --Group
