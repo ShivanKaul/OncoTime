@@ -121,7 +121,7 @@ groups = lexeme $
         v <- var
         reserved "="  
         --grpItem <- many groupItem
-        grpItem <- some groupItem
+        grpItem <- curlies $ some groupItem
         return $ Group grpType v grpItem
 
 groupType::Parser GroupType
@@ -385,6 +385,7 @@ filterDefs :: Parser FilterDef
 filterDefs = 
     do
         ffield <- identifier
+        colon
         fval <- many filterVal
         return $ FilterDef (FilterField ffield) fval
 
