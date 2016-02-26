@@ -52,7 +52,7 @@ instance PrettyPrint [SeqField] where
     prettyPrint seqs = (intercalate " -> " (map prettyPrint seqs))
 
 instance PrettyPrint Computation where
-    prettyPrint (Foreach foreachdef comps) = prettyPrint foreachdef ++ "{\n" ++
+    prettyPrint (Foreach foreachdef comps) = prettyPrint foreachdef ++ " " ++ "{\n" ++
         (intercalate "\n" (map prettyPrint comps)) ++ "\n}"
     prettyPrint (Table taction) = prettyPrint taction
     prettyPrint (List var seq) = "list " ++ prettyPrint var ++ " = " ++ "sequences like " 

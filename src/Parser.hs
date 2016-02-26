@@ -31,7 +31,8 @@ testParser =
         -- testUse
         -- testDocs
         -- testGroups
-        testFilters
+        -- testFilters
+        testComputation
 
 --testProgram::Parser TestProgram
 
@@ -189,7 +190,7 @@ computation::Parser Computation
 computation = 
     try (liftM2 Foreach foreach ( curlies $ many computation)) 
     <|> try (liftM Table table) 
-    <|> try (list) --STILL NEED TO DO
+    <|> try (list)
     <|> try (liftM Print prints) 
     <|> try (liftM Barchart barchart) 
 
@@ -290,7 +291,7 @@ forEachFilter::Parser ForEachDef
 forEachFilter = 
     do
         reserved "foreach"
-        f <- filterName
+        f <- lexeme filterName
         v <- var
         return $ ForEachFilter f v
 
