@@ -80,7 +80,7 @@ oncoParser =
         doc <- documentation 
         use <- many useList
         grp <- many groups
-        filt <- many filters 
+        filt <- manyFilters
         comp <- manyComp
         return $ Program hdr doc use grp filt comp 
 
@@ -404,8 +404,16 @@ filters =
         fname <- lexeme $ identifier
         choice $ [reserved "is", reserved "are"]
         semi
-        filterDs <- many filterDefs
+        filterDs <- lexeme $ many filterDefs
         return $ Filter fname filterDs
+        
+manyFilters :: Parser [Filter]
+manyFilters =
+    do
+        f <- many filters
+        return $ f
+
+
 
 filterDefs :: Parser FilterDef
 filterDefs = 

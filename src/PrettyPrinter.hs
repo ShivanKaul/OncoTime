@@ -85,18 +85,18 @@ instance PrettyPrint FilterField where
     prettyPrint (FilterField ffield) = ffield
 
 instance PrettyPrint FilterDef where
-    prettyPrint (FilterDef ffield fvals) = prettyPrint ffield ++ " : " ++ 
+    prettyPrint (FilterDef ffield fvals) = "\t" ++ prettyPrint ffield ++ " : " ++ 
         (intercalate ", " (map prettyPrint fvals))
 
 instance PrettyPrint Filter where
-    prettyPrint (Filter fname fdefs) = fname ++ " is " ++ 
+    prettyPrint (Filter fname fdefs) = fname ++ " is " ++ "\n" ++
         (intercalate "\n" (map prettyPrint fdefs))
 
 instance PrettyPrint UseFile where
     prettyPrint (UseManyFile us) = "use " ++ (intercalate ", " (map (\x -> x ++ ".grp") us))
 
 instance PrettyPrint (Docs) where
-    prettyPrint (Docs docs) = "/*\n" ++ docs ++ "\n*/"
+    prettyPrint (Docs docs) = "\n/*\n" ++ docs ++ "\n*/\n"
 
 instance PrettyPrint (Var) where
     prettyPrint (Var v) = v
@@ -109,23 +109,26 @@ instance PrettyPrint Header where
         (intercalate ", " (map prettyPrint argslist)) ++ ")"
 
 instance PrettyPrint [Computation] where
-    prettyPrint comps = (intercalate "\n" (map prettyPrint comps))
+    prettyPrint comps = (intercalate "\n" (map prettyPrint comps)) ++ "\n"
 
 instance PrettyPrint [Filter] where
-    prettyPrint filts = (intercalate "\n" (map prettyPrint filts))
+    prettyPrint filts = (intercalate "\n" (map prettyPrint filts)) ++ "\n"
 
 instance PrettyPrint [UseFile] where
-    prettyPrint ufiles = (intercalate "\n" (map prettyPrint ufiles))
+    prettyPrint ufiles = (intercalate "\n" (map prettyPrint ufiles)) ++ "\n"
 
 instance PrettyPrint [GroupDefs] where
-    prettyPrint groups = (intercalate "\n" (map prettyPrint groups))
+    prettyPrint groups = (intercalate "\n" (map prettyPrint groups)) ++ "\n"
 
 
 instance PrettyPrint Program where
-    prettyPrint (Program header docs usefilelist [groups] [filt] [comps]) 
-     = (prettyPrint header) ++ (prettyPrint docs) ++ (prettyPrint usefilelist) ++ (prettyPrint [filt])
-      ++ (prettyPrint groups) ++ ("{\n" ++ prettyPrint [comps] ++ "\n}")
-    prettyPrint (Program header docs _ _ _ _) = (prettyPrint header) ++ (prettyPrint docs)
+    prettyPrint (Program header docs usefilelist groups filt comps) 
+     = (prettyPrint header) ++ (prettyPrint docs) ++ (prettyPrint usefilelist) ++ (prettyPrint groups)
+     ++ (prettyPrint filt) ++ ("{\n" ++ prettyPrint comps ++ "\n}")
+    -- prettyPrint (Program header docs _ _ _ _) = (prettyPrint header) ++ (prettyPrint docs)
+    -- prettyPrint (Program header docs _ _ _ _) = (prettyPrint header) ++ (prettyPrint docs)
+    -- prettyPrint (Program header docs _ _ _ _) = (prettyPrint header) ++ (prettyPrint docs)
+    -- prettyPrint (Program header docs _ _ _ _) = (prettyPrint header) ++ (prettyPrint docs)
     --TODO: Other instances
 
 instance PrettyPrint TestProgram where
