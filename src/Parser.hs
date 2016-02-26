@@ -206,7 +206,7 @@ table =
     do
         reserved "table"
         v <- var
-        equal
+        reserved "="
         reserved "count"
         fn <- filterName
         reserved "by"
@@ -233,7 +233,7 @@ singleSequence::Parser [SeqField]
 singleSequence = sepBy seqField arrow 
 
 seqField::Parser SeqField
-seqField = try(seqSingle) <|> try(seqDisj) <|> try(seqStar) <|> try(seqNeg)
+seqField = try(seqSingle) <|> try(seqDisj) <|> try(seqNeg) <|> try(seqStar) 
 
 seqSingle::Parser SeqField
 seqSingle =
@@ -326,7 +326,7 @@ forEachList::Parser ForEachDef
 forEachList = 
     do
         reserved "foreach"
-        reserved "element"
+        reserved "member"
         v1 <- var
         reserved "of"
         v2 <- var
@@ -384,7 +384,7 @@ printElement =
         return $ PrintElement v1 v2
 
 filterName::Parser FilterName
-filterName =
+filterName = lexeme $
     do
         f <- many alphaNum 
         return f
