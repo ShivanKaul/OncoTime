@@ -13,18 +13,18 @@ removeDocs fileContents =
 
 removeNewLines :: String -> String
 removeNewLines prog =
-  let matches = (prog =~ occupiedLineRegex :: [[String]])
-  in foldr  (\s p -> let r = 
-  					if (last s == '\n') 
-  						then init s 
-  						else s
-  				in p++r++";\n") "" (concat matches)
+    let matches = (prog =~ occupiedLineRegex :: [[String]])
+    in foldr  (\s p -> 
+        let r = if (last s == '\n') 
+                then init s 
+                else s
+        in p++r++";\n") "" (concat matches)
 
 formatFile contents =
-	let (h,d,p) = removeDocs contents
-	in 	let	h1 = removeNewLines h
-			p1 = removeNewLines p
-		in   (h1 ++ d++ p1)
+    let (h,d,p) = removeDocs contents
+    in  let h1 = removeNewLines h
+            p1 = removeNewLines p
+        in   (h1 ++ d++ p1)
 
 
 testFormatter = putStrLn $ formatFile "\
