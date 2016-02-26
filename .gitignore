@@ -1,3 +1,5 @@
+*.pretty.onc
+oncotime
 *.config
 dist
 dist-*
