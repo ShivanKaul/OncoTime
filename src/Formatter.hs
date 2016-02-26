@@ -4,7 +4,7 @@ import Text.Regex.Posix
 
 occupiedLineRegex =  "[^ \t\n][^\n]*\n" :: String
 docStringRegex =  "(/\\*(.|\n)*\\*/)" :: String
-
+commentRegex =  "//.*" :: String
 removeDocs :: String -> (String, String,String)
 removeDocs fileContents =
   let matches = fileContents =~ docStringRegex :: MatchResult String
@@ -13,19 +13,21 @@ removeDocs fileContents =
 
 removeNewLines :: String -> String
 removeNewLines prog =
-    let matches = (prog =~ occupiedLineRegex :: [[String]])
+    let matches = (prog =~ occupiedLineRegex ::[[MatchResult String]])
     in foldr  (\s p -> 
-        let r = if (last s == '\n') 
-                then init s 
-                else s
-        in r++";\n"++p) "" (concat matches)
+        let match =  s =~ commentRegex :: MatchResult String
+            s1 = mrBefore match
+            comm = mrMatch match
+            r = if (last s1 == '\n') 
+                then init s1 
+                else s1
+        in r++";"++comm++"\n"++p) "" (map mrMatch $concat matches)
 
 formatFile contents =
-    let (h,d,p) = removeDocs contents
-    in  let h1 = removeNewLines h
-            p1 = removeNewLines p
-
-        in   (h1 ++ d++ "\n" ++ p1)
+    let y@(h,d,p) = removeDocs contents
+        h1 = removeNewLines h
+        p1 = removeNewLines p
+    in   (h1 ++ d++ "\n" ++ p1)
 
 
 testFormatter = putStrLn $ formatFile "\
