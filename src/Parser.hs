@@ -424,14 +424,18 @@ type SubFieldName = String
 typeMapMaker::Parser (String, (String, [String])) 
 typeMapMaker =
     do
-        name <- identifier
+        name <- stringLit 
         colon
-        reserved "("
+        tup <- parens $ typeTuple
+        return (name, tup) 
+
+typeTuple::Parser (AllowedType, [AllowedVal])
+typeTuple =
+    do
         alType <- identifier
         comma
-        alVal <- squares $ sepBy identifier comma
-        reserved ")"
-        return (name, (alType, alVal)) 
+        alVals <- squares $ sepBy identifier comma
+        return (alType, alVals)
 
 confParser::Parser Conf
 confParser =
@@ -439,9 +443,9 @@ confParser =
         whiteSpace
         fieldName <- identifier
         colon
-        reserved "["
-        typeMapList <- sepBy typeMapMaker comma
-        reserved "]"
+        --reserved "["
+        typeMapList <- squares $ sepBy typeMapMaker comma
+        --reserved "]"
         semi
         --M.fromList typeMapList
         return $ Conf fieldName $ M.fromList typeMapList --maps

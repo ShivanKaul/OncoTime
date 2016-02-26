@@ -75,7 +75,7 @@ main =
         --BEHOLD: A CONF LIST. FROM THIS DATA STRUCTURE WE CAN EXPLOIT A WORLD OF AMAZING THINGS
         let listOfMaps =  map makeConf l
         
-
+        
         print listOfMaps
         --print reconstructed 
         --parseFile arg
