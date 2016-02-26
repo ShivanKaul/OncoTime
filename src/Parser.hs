@@ -27,12 +27,12 @@ testParser =
     do
         whiteSpace
         --try testHeader <|>testUse <|> testGroups <|> try testComputation <|>  try testDocs 
-        -- testHeader 
+        testHeader 
         -- testUse
         -- testDocs
         -- testGroups
         -- testFilters
-        testComputation
+        -- testComputation
 
 --testProgram::Parser TestProgram
 

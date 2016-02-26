@@ -93,7 +93,6 @@ instance PrettyPrint Filter where
         (intercalate "\n" (map prettyPrint fdefs))
 
 instance PrettyPrint UseFile where
-    prettyPrint (UseFile u) = "use " ++ u ++ ".grp"
     prettyPrint (UseManyFile us) = "use " ++ (intercalate ", " (map (\x -> x ++ ".grp") us))
 
 instance PrettyPrint (Docs) where
