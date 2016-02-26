@@ -17,7 +17,7 @@ import Text.ParserCombinators.Parsec.Language
 import Text.ParserCombinators.Parsec.Char
 import qualified Text.ParserCombinators.Parsec.Token as Token
 import Data.Char
-
+import Debug.Trace
 import Types
 -- import PrettyPrinter
 import Lexer
@@ -92,7 +92,7 @@ oncoParser =
         doc <- documentation 
         use <- many useList
         grp <- many groups
-        filt <- many filters 
+        filt <- manyFilters
         comp <- manyComp
         return $ Program hdr doc use grp filt comp 
 
@@ -130,9 +130,7 @@ filename = lexeme $
 documentation :: Parser Docs
 documentation = lexeme $
     do  
-        reserved "/*"
-        doc <- stringLit
-        reserved "*/"
+        doc <- between (symbol "/*") (symbol "*/") (many charLit)
         return $ Docs doc
 
 groups::Parser GroupDefs
@@ -154,7 +152,8 @@ groupType = lexeme $
 
 groupItem::Parser GroupItem
 groupItem = try groupRange
-        <|> try groupVal
+        <|> try groupValInt
+        <|> try groupValString
         <|> try groupVar
 
 groupVar::Parser GroupItem
@@ -163,11 +162,17 @@ groupVar =
         gv <- angles $ var
         return $ GroupVar gv
 
-groupVal::Parser GroupItem
-groupVal = lexeme $
+groupValString::Parser GroupItem
+groupValString = lexeme $
     do
-        gv <- some alphaNum
-        return $ GroupVal gv
+        gv <- some letter
+        return $ GroupValString gv
+
+groupValInt::Parser GroupItem
+groupValInt = lexeme $
+    do
+        gd <- some digit
+        return $ GroupValInt $ read gd
 
 groupRange::Parser GroupItem
 groupRange = try (liftM GroupRange betw) <|> try (liftM GroupRange before) <|> try (liftM GroupRange after)
@@ -193,11 +198,14 @@ betw = lexeme $
         reserved "to"
         post <- lexeme $ some digit
         return $ Between (read pre) (read post)
+
 manyComp ::Parser [Computation]
 manyComp = 
     do 
         c <- curlies $ (optional semi) >> (many computation)
-        semi
+        if (null c) 
+            then trace ("WARNING: Computation list is empty.") semi
+        else semi
         return c
 
 computation::Parser Computation
@@ -252,10 +260,10 @@ seqSingle =
     do
         e <- event
         return $ Single e
-seqStar::Parser SeqField
-seqStar =
+seqStar :: Parser SeqField
+seqStar = 
     do
-        e <- seqField
+        e <- curlies $ sepBy event comma
         star
         return $ Star e
 seqNeg::Parser SeqField
@@ -413,9 +421,16 @@ filters =
         fname <- lexeme $ identifier
         choice $ [reserved "is", reserved "are"]
         semi
-        filterDs <- many filterDefs
-        semi
+        filterDs <- lexeme $ many filterDefs
         return $ Filter fname filterDs
+
+manyFilters :: Parser [Filter]
+manyFilters =
+    do
+        f <- many filters
+        return $ f
+
+
 
 filterDefs :: Parser FilterDef
 filterDefs = 

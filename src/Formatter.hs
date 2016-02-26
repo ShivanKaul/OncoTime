@@ -1,39 +1,48 @@
 module Formatter(formatFile) where
 
 import Text.Regex.Posix
+import Text.Regex
+import Debug.Trace
 
 
-occupiedLineRegex =  "[^ \t\n][^\n]*\n" :: String
+occupiedLineRegex =  mkRegex "[^ \t\n][^\n]*\n" 
 docStringRegex =  "(/\\*(.|\n)*\\*/)" :: String
-
+commentRegex =  mkRegex "//.*"
 removeDocs :: String -> (String, String,String)
 removeDocs fileContents =
   let matches = fileContents =~ docStringRegex :: MatchResult String
       
   in ((mrBefore matches),(mrMatch matches), (mrAfter matches))
 
+
+handleLineComments line = 
+  let (stmnt,comm) = case matchRegexAll commentRegex line of
+          Nothing -> (line,"")
+          Just(withoutComment, comm,_,_)-> (withoutComment,comm)
+      stmntWithoutNewline = if (last stmnt == '\n') 
+              then init stmnt 
+              else stmnt
+      in stmntWithoutNewline++";"++comm++"\n"
+
 removeNewLines :: String -> String
 removeNewLines prog =
-    let matches = (prog =~ occupiedLineRegex :: [[String]])
-    in foldr  (\s p -> 
-        let r = if (last s == '\n') 
-                then init s 
-                else s
-        in r++";\n"++p) "" (concat matches)
+  case matchRegexAll occupiedLineRegex prog of
+    Nothing -> prog
+    Just(before, matched,after,_)-> before++(handleLineComments matched) ++(removeNewLines  after) 
+
 
 formatFile contents =
-    let (h,d,p) = removeDocs contents
-    in  let h1 = removeNewLines h
-            p1 = removeNewLines p
-
-        in   (h1 ++ d++ "\n" ++ p1)
+    let y@(h,d,p) = removeDocs contents
+        h1 = removeNewLines h 
+        p1 = removeNewLines p 
+    in   (h1 ++ d++ "\n" ++ p1)
 
 
 testFormatter = putStrLn $ formatFile "\
 \File()\n\
 \/* ohai \n\
 \tutta*/\n\
-\hello!\n\
+\hello!//kites\n\
 \\n\
 \\n\
 \\n\

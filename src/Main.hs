@@ -35,7 +35,7 @@ parseFile file groupFileList =
                 do
                     putStrLn "ERROR"
                     print e
-            Right r -> print r
+            Right r -> print r >> writeFile ((reverse (drop 4 (reverse file))) ++ ".pretty.onc") (pretty r)
 
 parseString :: String -> Program
 parseString str =

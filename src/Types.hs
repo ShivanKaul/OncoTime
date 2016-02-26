@@ -31,8 +31,8 @@ data GroupDefs = Group GroupType Var [GroupItem]
     deriving (Show, Eq)
 
 data GroupType = GroupType String deriving (Show, Eq)
-data GroupItem = GroupVal String | GroupVar Var | GroupRange RangeType  
-     deriving (Show, Eq)
+data GroupItem = GroupValString String | GroupVar Var | GroupRange RangeType | GroupValInt IntValue 
+    deriving (Show, Eq)
 
 --better field for GroupVal than string?
 
@@ -81,7 +81,7 @@ data Event
 data SeqField
     = Single Event
     | Disj [Event]
-    | Star SeqField
+    | Star [Event]
     | Neg Event
     deriving(Show,Eq)
      
