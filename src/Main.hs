@@ -64,7 +64,5 @@ main = do
     --(arg:_) <- getArgs
     dirContents <- getDirectoryContents "." 
     let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
-    print grpFiles 
-    testFormatter
-
-    --parseFile arg
+    args <- getArgs
+    mapM parseFile args

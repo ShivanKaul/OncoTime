@@ -1,4 +1,4 @@
-module Formatter(testFormatter,formatFile) where
+module Formatter(formatFile) where
 import Text.Regex.Posix
 
 
@@ -25,22 +25,3 @@ formatFile contents =
     in  let h1 = removeNewLines h
             p1 = removeNewLines p
         in   (h1 ++ d++ "\n" ++ p1)
-
-
-testFormatter = putStrLn $ formatFile "\
-\File()\n\
-\/* ohai \n\
-\tutta*/\n\
-\hello!\n\
-\\n\
-\\n\
-\\n\
-\bye\n\
-\\n\
-\kettle\n"
-
-
-
-
-
---let caselessRegex = makeRegexOpts compilationOptions defaultExecOpt "[^ \t\n][^\n]*\n" 

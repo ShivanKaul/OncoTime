@@ -415,20 +415,6 @@ useList = lexeme $
         semi
         return $ UseManyFile names
 
---Not used
--- useSection::Parser UseFile
--- useSection = useFile <|> try useList
-
--- useFile :: Parser UseFile
--- useFile =
---     do  
---         reserved "use"
---         --file <- some alphaNum
---         --dot
---         --string "grp"
---         file <- grpFile
---         return $ UseFile file
-
 grpFile::Parser String
 grpFile = lexeme $
     do
