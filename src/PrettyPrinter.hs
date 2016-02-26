@@ -93,7 +93,7 @@ instance PrettyPrint FilterDef where
         (intercalate ", " (map prettyPrint fvals))
 
 instance PrettyPrint Filter where
-    prettyPrint (Filter fname fdefs) = fname ++ " are " ++ "\n" ++
+    prettyPrint (Filter fname fdefs) = fname ++ " is" ++ "\n" ++
         (intercalate "\n" (map prettyPrint fdefs))
 
 instance PrettyPrint UseFile where
