@@ -27,7 +27,7 @@ import PrettyPrinter
 import Formatter
 
 parseFile :: String->[Conf]->IO ()
-parseFile file groupFileList confList =
+parseFile file groupFileList =
     do 
         program <- readFile file
         case parse ((oncoParser  )<* eof) file (formatFile program) of
