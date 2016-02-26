@@ -28,7 +28,9 @@ testParser =
         whiteSpace
         --try testHeader <|>testUse <|> testGroups <|> try testComputation <|>  try testDocs 
         --testUse
-        testDocs
+        --testDocs
+        testGroups
+        testComputation
 --testProgram::Parser TestProgram
 
 
@@ -67,7 +69,7 @@ oncoParser =
     do
         hdr <- header
         doc <- documentation 
-        use <- many useSection
+        use <- many useList 
         grp <- many groups
         filt <- many filters 
         comp <- many computation
@@ -396,19 +398,38 @@ useList = lexeme $
         names <- sepBy grpFile comma 
         return $ UseManyFile names
 
---Not used
-useSection::Parser UseFile
-useSection = useFile <|> try useList
 
-useFile :: Parser UseFile
-useFile =
-    do  
-        reserved "use"
-        --file <- some alphaNum
-        --dot
-        --string "grp"
-        file <- grpFile
-        return $ UseFile file
+
+--TypesMap First elemento
+--How the Maps work:
+--high level: fields: Population, Doctor, ID. Each of these has a map attached.
+--i.e. FieldName, subFieldMap 
+--That map is ANOTHER map of the possible fields it can have, and what they are allowed to have.
+--
+
+data Conf = Conf IdName AllowedTypes 
+data TypesMap = TypesMap FieldName (M.Map AllowedType [AllowedVal])
+type FieldName = String
+type AllowedType = String
+type AllowedVal = String
+type IdName = String
+type OtherType = String -- defines what other type we allow. String, int etc. 
+data TypesAllowed = StringTypes [String] | IntTypes [Int]
+
+
+confParser::Parser Conf
+confParser =
+    do
+        whiteSpace
+        name <- identifier
+        colon
+        reserved "Type"
+        colon
+        nType<- identifier
+        reserved "Fields"
+        colon
+        types <- squares $ sepBy identifier comma
+        return $ Conf name typeMaps
 
 grpFile::Parser String
 grpFile = lexeme $

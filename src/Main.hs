@@ -40,6 +40,16 @@ parseString str =
         Left e-> error$ show e
         Right r -> r
 
+
+
+--pass in a list of strings and watch it become something amazing!!!
+--ConfMap
+makeConf:: [String] -> (M.Map String Conf) 
+makeConf str =
+    case parse (confParser <* eof) "" str of
+        Left e-> error$ show e
+        Right r -> r
+
 tparseFile :: String ->IO ()
 tparseFile file =
     do 
@@ -58,11 +68,20 @@ tparseString str =
         Right r -> r
 
 
-main = do
-    --(arg:_) <- getArgs
-    dirContents <- getDirectoryContents "." 
-    let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
-    let configFile = filter (\x->takeExtension x == ".conf") dirContents
-    print grpFiles 
-    print configFile
-    --parseFile arg
+
+main = 
+    do
+        --(arg:_) <- getArgs
+        --dirContents <- getDirectoryContents "." 
+        --let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
+        --let configFile = filter (\x->takeExtension x == ".conf") dirContents
+        --print grpFiles 
+        --print configFile
+        
+        readData <- readFile "config.conf"
+--        let reconstructed = read readData ::M.Map 
+        let l= lines readData
+        --let a =  map (read::String->Mapping) l
+        print l
+        --print reconstructed 
+        --parseFile arg

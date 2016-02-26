@@ -45,7 +45,10 @@ languageDef =
                 "length",
                 "after",
                 "=",
-                "not"
+                "not",
+                "Type",
+                "Fields"
+
             ]
 
             ,Token.reservedOpNames = []
