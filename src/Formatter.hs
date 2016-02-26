@@ -1,19 +1,20 @@
 module Formatter(formatFile) where
 import Text.Regex.Posix
+import Text.Regex
 
 
-occupiedLineRegex =  "[^ \t\n][^\n]*\n" :: String
+occupiedLineRegex =  mkRegex "[^ \t\n][^\n]*\n" 
 docStringRegex =  "(/\\*(.|\n)*\\*/)" :: String
-commentRegex =  "//.*" :: String
+commentRegex =  mkRegex "//.*" :: String
 removeDocs :: String -> (String, String,String)
 removeDocs fileContents =
   let matches = fileContents =~ docStringRegex :: MatchResult String
       
   in ((mrBefore matches),(mrMatch matches), (mrAfter matches))
 
-removeNewLines :: String -> String
+{-removeNewLines :: String -> String
 removeNewLines prog =
-    let matches = (prog =~ occupiedLineRegex ::[[MatchResult String]])
+    let matches = (prog =~ occupiedLineRegex :: [[String]])
     in foldr  (\s p -> 
         let match =  s =~ commentRegex :: MatchResult String
             s1 = mrBefore match
@@ -21,7 +22,21 @@ removeNewLines prog =
             r = if (last s1 == '\n') 
                 then init s1 
                 else s1
-        in r++";"++comm++"\n"++p) "" (map mrMatch $concat matches)
+        in r++";"++comm++"\n"++p) "" (concat matches)-}
+handleLineComments line = 
+  case matchRegexAll commentRegex line of
+    Nothing -> prog
+    Just(s1, comm,_,_)-> 
+      let r = if (last s1 == '\n') 
+              then init s1 
+              else s1
+      in r++";"++comm++"\n"
+removeNewLines :: String -> String
+removeNewLines prog =
+  case matchRegexAll occupiedLineRegex prog of
+    Nothing -> prog
+    Just(before, matched,after,_)-> before++(handleLineComments matched) ++(removeNewLines  after)
+
 
 formatFile contents =
     let y@(h,d,p) = removeDocs contents
