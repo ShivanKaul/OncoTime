@@ -63,6 +63,7 @@ identifier = Token.identifier lexer -- parses an identifier
 reserved = Token.reserved lexer -- parses a reserved name
 reservedOp = Token.reservedOp lexer -- parses an operator
 stringLit = Token.stringLiteral lexer
+charLit = Token.charLiteral lexer
 integer = Token.integer lexer -- parses an integer
 float = Token.float lexer
 semi = Token.semi lexer -- parses a semicolon

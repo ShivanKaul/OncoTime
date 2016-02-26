@@ -118,9 +118,7 @@ filename = lexeme $
 documentation :: Parser Docs
 documentation = lexeme $
     do  
-        reserved "/*"
-        doc <- stringLit
-        reserved "*/"
+        doc <- between (symbol "/*") (symbol "*/") (many charLit)
         return $ Docs doc
 
 groups::Parser GroupDefs
