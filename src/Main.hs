@@ -43,7 +43,6 @@ parseString str =
         Left e-> error $ show e
         Right r -> r
 
-<<<<<<< HEAD
 --pass in a list of strings and watch it become something amazing!!!
 --ConfMap
 makeConf:: String -> Conf 
