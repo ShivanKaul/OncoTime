@@ -182,7 +182,7 @@ computation::Parser Computation
 computation = try (liftM2 Foreach foreach ( curlies $ many computation)) <|> try (liftM Table table) <|> try (list) <|> try (liftM Print prints) <|> try (liftM Barchart barchart) 
 
 foreach::Parser ForEachDef
-foreach = forEachFilter <|> forEachTable <|> forEachSequence <|> forEachSequenceNoDef <|> forEachList
+foreach = forEachFilter <|> forEachTable <|> forEachSequence <|> forEachList
 
 table::Parser TableAction
 table = 
@@ -295,20 +295,11 @@ forEachSequence::Parser ForEachDef
 forEachSequence =
     do
         reserved "foreach"
-        reserved "member"
-        v1 <- var
-        reserved "in"
-        v2 <- var
-        return $ ForEachSequence v1 v2
-forEachSequenceNoDef::Parser ForEachDef
-forEachSequenceNoDef =
-    do
-        reserved "foreach"
         reserved "sequence"
         v1 <- var
         reserved "like"
         e <- seqList
-        return $ ForEachSequenceNoDef v1 e
+        return $ ForEachSequence v1 e
 
 forEachList::Parser ForEachDef 
 forEachList = 
