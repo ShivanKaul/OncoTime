@@ -40,11 +40,9 @@ parseString str =
         Left e-> error$ show e
         Right r -> r
 
-
-
 --pass in a list of strings and watch it become something amazing!!!
 --ConfMap
-makeConf:: [String] -> (M.Map String Conf) 
+makeConf:: String -> Conf 
 makeConf str =
     case parse (confParser <* eof) "" str of
         Left e-> error$ show e
@@ -71,17 +69,13 @@ tparseString str =
 
 main = 
     do
-        --(arg:_) <- getArgs
-        --dirContents <- getDirectoryContents "." 
-        --let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
-        --let configFile = filter (\x->takeExtension x == ".conf") dirContents
-        --print grpFiles 
-        --print configFile
-        
         readData <- readFile "config.conf"
---        let reconstructed = read readData ::M.Map 
         let l= lines readData
-        --let a =  map (read::String->Mapping) l
-        print l
+        
+        --BEHOLD: A CONF LIST. FROM THIS DATA STRUCTURE WE CAN EXPLOIT A WORLD OF AMAZING THINGS
+        let listOfMaps =  map makeConf l
+        
+
+        print listOfMaps
         --print reconstructed 
         --parseFile arg

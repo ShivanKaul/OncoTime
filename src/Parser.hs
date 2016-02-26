@@ -408,10 +408,10 @@ useList = lexeme $
 --
 
 --data Conf = Conf (M.Map FieldName (SubField))
-data Conf = Conf String (M.Map String (SubField))
---data Conf = Conf (M.Map String (SubField))
-data SubField = SubField (String, [String])
---data SubField = SubField (AllowedType, [AllowedVal])
+--data Conf = Conf String (M.Map String (SubField))
+
+data Conf = Conf FieldName (M.Map SubFieldName (SubField)) deriving(Eq, Show)
+type SubField = (AllowedType, [AllowedVal])
 
 
 data TypesMap = TypesMap FieldName (M.Map AllowedType [AllowedVal])
@@ -433,7 +433,6 @@ typeMapMaker =
         reserved ")"
         return (name, (alType, alVal)) 
 
-
 confParser::Parser Conf
 confParser =
     do
@@ -444,8 +443,8 @@ confParser =
         typeMapList <- sepBy typeMapMaker comma
         reserved "]"
         semi
-        maps <- M.fromList typeMapList
-        return $ Conf fieldName maps
+        --M.fromList typeMapList
+        return $ Conf fieldName $ M.fromList typeMapList --maps
         --Each FieldName is part of a tuple between  between SubField:(AllowedType, AllowedVals)
 
 grpFile::Parser String
