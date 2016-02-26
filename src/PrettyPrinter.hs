@@ -11,6 +11,7 @@ import Parser
 
 class PrettyPrint a where
     prettyPrint :: a -> String
+    prettyIndent :: String -> a -> String
 
 pretty :: (PrettyPrint a) => a -> String
 pretty a = prettyPrint a
@@ -52,13 +53,13 @@ instance PrettyPrint [SeqField] where
     prettyPrint seqs = (intercalate " -> " (map prettyPrint seqs))
 
 instance PrettyPrint Computation where
-    prettyPrint (Foreach foreachdef comps) = prettyPrint foreachdef ++ " " ++ "{\n" ++
-        (intercalate "\n" (map prettyPrint comps)) ++ "\n}"
-    prettyPrint (Table taction) = prettyPrint taction
-    prettyPrint (List var seq) = "list " ++ prettyPrint var ++ " = " ++ "sequences like " 
+    prettyIndent  (indent) (Foreach foreachdef comps) = indent ++ prettyPrint foreachdef ++ 
+        " " ++ "\n" ++ indent ++ "{\n" ++ (intercalate "\n" (map (prettyIndent (indent ++ "\t")) comps)) ++ "\n" ++ indent ++ "}"
+    prettyIndent (indent) (Table taction) = indent ++ prettyPrint taction
+    prettyIndent (indent) (List var seq) = indent ++ "list " ++ prettyPrint var ++ " = " ++ "sequences like " 
         ++ prettyPrint seq
-    prettyPrint (Print p) = prettyPrint p
-    prettyPrint (Barchart bchart) = "barchart " ++ prettyPrint bchart
+    prettyIndent (indent) (Print p) = indent ++ prettyPrint p
+    prettyIndent (indent) (Barchart bchart) = indent ++ "barchart " ++ prettyPrint bchart
 
 instance PrettyPrint GroupType where
     prettyPrint (GroupType g) = g
@@ -109,7 +110,7 @@ instance PrettyPrint Header where
         (intercalate ", " (map prettyPrint argslist)) ++ ")"
 
 instance PrettyPrint [Computation] where
-    prettyPrint comps = (intercalate "\n" (map prettyPrint comps)) ++ "\n"
+    prettyIndent indent comps = ((intercalate "\n" (map (prettyIndent indent) comps)) ++ "\n")
 
 instance PrettyPrint [Filter] where
     prettyPrint filts = (intercalate "\n" (map prettyPrint filts)) ++ "\n"
@@ -124,12 +125,7 @@ instance PrettyPrint [GroupDefs] where
 instance PrettyPrint Program where
     prettyPrint (Program header docs usefilelist groups filt comps) 
      = (prettyPrint header) ++ (prettyPrint docs) ++ (prettyPrint usefilelist) ++ (prettyPrint groups)
-     ++ (prettyPrint filt) ++ ("{\n" ++ prettyPrint comps ++ "\n}")
-    -- prettyPrint (Program header docs _ _ _ _) = (prettyPrint header) ++ (prettyPrint docs)
-    -- prettyPrint (Program header docs _ _ _ _) = (prettyPrint header) ++ (prettyPrint docs)
-    -- prettyPrint (Program header docs _ _ _ _) = (prettyPrint header) ++ (prettyPrint docs)
-    -- prettyPrint (Program header docs _ _ _ _) = (prettyPrint header) ++ (prettyPrint docs)
-    --TODO: Other instances
+     ++ (prettyPrint filt) ++ ("{\n" ++ (prettyIndent "\t" comps) ++ "}\n")
 
 instance PrettyPrint TestProgram where
     -- prettyPrint (TestProgram2 header docs [usefiles] [groups] [filt] [comps]) = (prettyPrint header) ++ (prettyPrint docs) ++ (prettyPrint usefiles)
