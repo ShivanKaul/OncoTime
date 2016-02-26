@@ -42,7 +42,7 @@ instance PrettyPrint Event where
 instance PrettyPrint SeqField where
     prettyPrint (Single event) = prettyPrint event
     prettyPrint (Disj events) = "{" ++ (intercalate ", " (map prettyPrint events)) ++ "}"
-    prettyPrint (Star seqfield) = "{" ++ prettyPrint seqfield ++ "}" ++ "*"
+    prettyPrint (Star events) = "{" ++ (intercalate ", " (map prettyPrint events)) ++ "}" ++ "*"
     prettyPrint (Neg event) = "(not" ++ prettyPrint event ++ ")"
 
 instance PrettyPrint Sequence where

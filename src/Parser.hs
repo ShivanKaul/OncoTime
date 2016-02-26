@@ -189,8 +189,6 @@ manyComp =
         if (null c) 
             then trace ("WARNING: Computation list is empty.") semi
         else semi
-        -- print c
-        -- semi
         return c
 
 computation::Parser Computation
@@ -245,10 +243,10 @@ seqSingle =
     do
         e <- event
         return $ Single e
-seqStar::Parser SeqField
-seqStar =
+seqStar :: Parser SeqField
+seqStar = 
     do
-        e <- seqField
+        e <- curlies $ sepBy event comma
         star
         return $ Star e
 seqNeg::Parser SeqField
