@@ -16,18 +16,21 @@ import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
 import Text.ParserCombinators.Parsec.Char
+
 import qualified Text.ParserCombinators.Parsec.Token as Token
+
 
 --Our modules
 import Types 
 import Parser
 import PrettyPrinter
+import Formatter
 
 parseFile :: String ->IO ()
 parseFile file =
     do 
         program <- readFile file
-        case parse (oncoParser <* eof) file program of
+        case parse (oncoParser <* eof) file (formatFile program) of
             Left e ->
                 do
                     putStrLn "ERROR"
@@ -37,7 +40,7 @@ parseFile file =
 parseString :: String -> Program
 parseString str =
     case parse (oncoParser <* eof) "" str of
-        Left e-> error$ show e
+        Left e-> error $ show e
         Right r -> r
 
 tparseFile :: String -> IO ()
@@ -57,10 +60,11 @@ tparseString str =
         Left e-> error$ show e
         Right r -> r
 
-
 main = do
     --(arg:_) <- getArgs
     dirContents <- getDirectoryContents "." 
     let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
     print grpFiles 
+    testFormatter
+
     --parseFile arg
