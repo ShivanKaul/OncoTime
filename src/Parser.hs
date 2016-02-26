@@ -28,8 +28,10 @@ testParser =
         whiteSpace
         --try testHeader <|>testUse <|> testGroups <|> try testComputation <|>  try testDocs 
         -- testHeader 
-        testUse
+        -- testUse
         -- testDocs
+        -- testGroups
+        testFilters
 
 --testProgram::Parser TestProgram
 
@@ -58,6 +60,12 @@ testGroups =
         grp <- many groups
         return $ TestGroupList grp
 
+testFilters::Parser TestProgram
+testFilters = 
+    do
+        filters <- many filters
+        return $ TestFiltersList filters
+
 testComputation::Parser TestProgram
 testComputation =
     do
@@ -69,7 +77,7 @@ oncoParser =
     do
         hdr <- header
         doc <- documentation 
-        use <- many useSection
+        use <- many useList
         grp <- many groups
         filt <- many filters 
         comp <- many computation
@@ -92,8 +100,6 @@ arg =
         v <- var
         return $ Arg t v
 
-
-
 --just gets the next string
 var:: Parser Var
 var = lexeme $
@@ -110,7 +116,7 @@ filename = lexeme $
 documentation :: Parser Docs
 documentation = lexeme $
     do  
-        reserved "/*"
+        reserved "/**"
         doc <- stringLit
         reserved "*/"
         return $ Docs doc
@@ -123,7 +129,8 @@ groups = lexeme $
         v <- var
         reserved "="  
         --grpItem <- many groupItem
-        grpItem <- curlies $ some groupItem
+
+        grpItem <- curlies $ sepBy groupItem comma 
         return $ Group grpType v grpItem
 
 groupType::Parser GroupType
@@ -133,28 +140,28 @@ groupType = lexeme $
         return $ GroupType gt
 
 groupItem::Parser GroupItem
-groupItem = try groupVal
+groupItem = try groupRange
+        <|> try groupVal
         <|> try groupVar
-        <|> try groupRange
+
+groupVar::Parser GroupItem
+groupVar =
+    do
+        gv <- angles $ var
+        return $ GroupVar gv
 
 groupVal::Parser GroupItem
 groupVal = lexeme $
     do
         --gv <- many alphaNum
         gv <- some alphaNum
-        dot
-        fext <- some alphaNum
         --fext<- many alphaNum
-        return $ GroupVal gv fext
+        return $ GroupVal gv
 
-groupVar::Parser GroupItem
-groupVar =
-    do
-        gv <- var
-        return $ GroupVar gv
+
 
 groupRange::Parser GroupItem
-groupRange = try (liftM GroupRange before) <|> try (liftM GroupRange after) <|> try (liftM GroupRange betw)
+groupRange = try (liftM GroupRange betw) <|> try (liftM GroupRange before) <|> try (liftM GroupRange after)
 
 before::Parser RangeType
 before =
@@ -168,14 +175,14 @@ after =
     do
         reserved "after"
         post <- some digit
-        return $ Before $ read post
+        return $ After $ read post
 
 betw::Parser RangeType
-betw =
+betw = lexeme $
     do
-        pre <- some digit
+        pre <- lexeme $ some digit
         reserved "to"
-        post <- some digit
+        post <- lexeme $ some digit
         return $ Between (read pre) (read post)
 
 computation::Parser Computation
@@ -378,7 +385,7 @@ filterVal =
 filters :: Parser Filter
 filters =
     do
-        fname <- identifier
+        fname <- lexeme $ identifier
         choice $ [reserved "is", reserved "are"]
         filterDs <- many filterDefs
         return $ Filter fname filterDs
@@ -388,7 +395,7 @@ filterDefs =
     do
         ffield <- identifier
         colon
-        fval <- many filterVal
+        fval <- sepBy filterVal comma 
         return $ FilterDef (FilterField ffield) fval
 
 useList :: Parser UseFile 
@@ -399,18 +406,18 @@ useList = lexeme $
         return $ UseManyFile names
 
 --Not used
-useSection::Parser UseFile
-useSection = useFile <|> try useList
+-- useSection::Parser UseFile
+-- useSection = useFile <|> try useList
 
-useFile :: Parser UseFile
-useFile =
-    do  
-        reserved "use"
-        --file <- some alphaNum
-        --dot
-        --string "grp"
-        file <- grpFile
-        return $ UseFile file
+-- useFile :: Parser UseFile
+-- useFile =
+--     do  
+--         reserved "use"
+--         --file <- some alphaNum
+--         --dot
+--         --string "grp"
+--         file <- grpFile
+--         return $ UseFile file
 
 grpFile::Parser String
 grpFile = lexeme $

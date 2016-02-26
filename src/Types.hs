@@ -2,7 +2,8 @@ module Types where
 
 --TEST PROGRAM
 data TestProgram = TestHeader Header | TestDocs Docs | TestUseFileList [UseFile]
-    | TestGroupList [GroupDefs] | TestComputation [Computation] deriving(Show,Eq)
+    | TestGroupList [GroupDefs] | TestComputation [Computation] 
+    | TestFiltersList [Filter] deriving(Show,Eq)
 
 --sans annotations
 data Program = Program Header Docs [UseFile]  [GroupDefs] [Filter] [Computation]
@@ -30,7 +31,7 @@ data GroupDefs = Group GroupType Var [GroupItem]
     deriving (Show, Eq)
 
 data GroupType = GroupType String deriving (Show, Eq)
-data GroupItem = GroupVal FileName FileExt | GroupVar Var | GroupRange RangeType  
+data GroupItem = GroupVal String | GroupVar Var | GroupRange RangeType  
      deriving (Show, Eq)
 
 --better field for GroupVal than string?
