@@ -69,7 +69,6 @@ tparseString str =
         Left e-> error$ show e
         Right r -> r
 
-<<<<<<< HEAD
 main = 
     do
         readData <- readFile "config.conf"

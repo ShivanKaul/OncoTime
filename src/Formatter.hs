@@ -1,4 +1,5 @@
 module Formatter(formatFile) where
+
 import Text.Regex.Posix
 
 
