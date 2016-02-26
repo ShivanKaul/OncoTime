@@ -47,7 +47,11 @@ languageDef =
                 "=",
                 "not",
                 "Type",
-                "Fields"
+                "Fields",
+                "[",
+                "]",
+                "(",
+                ")"
 
             ]
 

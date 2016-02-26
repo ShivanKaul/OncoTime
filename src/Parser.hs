@@ -407,29 +407,46 @@ useList = lexeme $
 --That map is ANOTHER map of the possible fields it can have, and what they are allowed to have.
 --
 
-data Conf = Conf IdName AllowedTypes 
+--data Conf = Conf (M.Map FieldName (SubField))
+data Conf = Conf String (M.Map String (SubField))
+--data Conf = Conf (M.Map String (SubField))
+data SubField = SubField (String, [String])
+--data SubField = SubField (AllowedType, [AllowedVal])
+
+
 data TypesMap = TypesMap FieldName (M.Map AllowedType [AllowedVal])
 type FieldName = String
 type AllowedType = String
 type AllowedVal = String
-type IdName = String
-type OtherType = String -- defines what other type we allow. String, int etc. 
-data TypesAllowed = StringTypes [String] | IntTypes [Int]
+type SubFieldName = String
+
+--SubFieldName (AllowedType, AllowedVal)
+typeMapMaker::Parser (String, (String, [String])) 
+typeMapMaker =
+    do
+        name <- identifier
+        colon
+        reserved "("
+        alType <- identifier
+        comma
+        alVal <- squares $ sepBy identifier comma
+        reserved ")"
+        return (name, (alType, alVal)) 
 
 
 confParser::Parser Conf
 confParser =
     do
         whiteSpace
-        name <- identifier
+        fieldName <- identifier
         colon
-        reserved "Type"
-        colon
-        nType<- identifier
-        reserved "Fields"
-        colon
-        types <- squares $ sepBy identifier comma
-        return $ Conf name typeMaps
+        reserved "["
+        typeMapList <- sepBy typeMapMaker comma
+        reserved "]"
+        semi
+        maps <- M.fromList typeMapList
+        return $ Conf fieldName maps
+        --Each FieldName is part of a tuple between  between SubField:(AllowedType, AllowedVals)
 
 grpFile::Parser String
 grpFile = lexeme $
