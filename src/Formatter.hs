@@ -18,10 +18,25 @@ removeNewLines prog =
         let r = if (last s == '\n') 
                 then init s 
                 else s
-        in p++r++";\n") "" (concat matches)
+        in r++";\n"++p) "" (concat matches)
 
 formatFile contents =
     let (h,d,p) = removeDocs contents
     in  let h1 = removeNewLines h
             p1 = removeNewLines p
+
         in   (h1 ++ d++ "\n" ++ p1)
+
+
+testFormatter = putStrLn $ formatFile "\
+\File()\n\
+\/* ohai \n\
+\tutta*/\n\
+\hello!\n\
+\\n\
+\\n\
+\\n\
+\bye\n\
+\\n\
+\kettle\n"
+

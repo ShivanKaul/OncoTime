@@ -81,7 +81,7 @@ oncoParser =
         use <- many useList
         grp <- many groups
         filt <- many filters 
-        comp <- many computation
+        comp <- manyComp
         return $ Program hdr doc use grp filt comp 
 
 
@@ -106,7 +106,7 @@ arg =
 var:: Parser Var
 var = lexeme $
     do
-        var <- some alphaNum
+        var <- identifier--some alphaNum
         return $ Var var
 
 filename::Parser FileName
@@ -181,10 +181,16 @@ betw = lexeme $
         reserved "to"
         post <- lexeme $ some digit
         return $ Between (read pre) (read post)
+manyComp ::Parser [Computation]
+manyComp = 
+    do 
+        c <- curlies $ (optional semi) >> (many computation)
+        semi
+        return c
 
 computation::Parser Computation
 computation = 
-    try (liftM2 Foreach foreach ( curlies $ many computation)) 
+    try (liftM2 Foreach foreach manyComp) 
     <|> try (liftM Table table) 
     <|> try (list)
     <|> try (liftM Print prints) 
@@ -193,7 +199,7 @@ computation =
 foreach::Parser ForEachDef
 foreach = 
     do
-        forEachFilter <|> forEachTable <|> forEachSequence <|>forEachList
+        try(forEachFilter) <|> try(forEachTable) <|> try(forEachSequence) <|> try(forEachList)
 
 table::Parser TableAction
 table = 
@@ -227,7 +233,7 @@ singleSequence::Parser [SeqField]
 singleSequence = sepBy seqField arrow 
 
 seqField::Parser SeqField
-seqField = seqSingle <|> seqDisj <|> seqStar <|> seqNeg
+seqField = try(seqSingle) <|> try(seqDisj) <|> try(seqStar) <|> try(seqNeg)
 
 seqSingle::Parser SeqField
 seqSingle =
@@ -258,7 +264,7 @@ seqDisj =
         return $ Disj e
 
 event::Parser Event
-event = try (liftM EAll eventName) <|> eSome
+event =  try (eSome) <|> try (liftM EAll eventName) 
 eSome::Parser Event
 eSome = do
     e<-eventName
