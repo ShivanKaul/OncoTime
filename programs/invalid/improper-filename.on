@@ -1,0 +1,29 @@
+script a(a a, b b)
+/* test */
+
+{
+	foreach Patient p 
+	{
+		print p
+	}
+	foreach Patient p 
+	{
+		print p
+		foreach Doctor D
+		{
+			print hi
+		}
+		foreach Doctor D
+		{
+			print hi
+			foreach Doctor D
+			{
+				print hello
+			}
+		}
+		
+	}
+
+	table t = count Patients by Birthyear
+	print t
+}

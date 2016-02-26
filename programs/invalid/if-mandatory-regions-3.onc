@@ -1,0 +1,59 @@
+use a.grp, b.grp
+use t.grp
+
+group Id x = {1, 2, <x>, 1200 to 123123}
+group Id x = {1, 2, <x>, 1200 to 123123}
+
+Patient are
+	Id : 300,3000,0
+	Sex : M, F
+
+Doctor are
+	Id : 300,3000,00000
+	Sex : M, F
+	Dates : 1900 to 2000
+
+Doctor are
+	Id : 300,3000,00000
+	Sex : M, F
+	Dates : 1900 to 2000
+Doctor are
+	Id : 300,3000,00000
+	Sex : M, F
+	Dates : 1900 to 2000
+Doctor are
+	Id : 300,3000,00000
+	Sex : M, F
+	Dates : 1900 to 2000
+
+
+
+
+	
+
+{
+	foreach Patient p 
+	{
+		print p
+	}
+	foreach Patient p 
+	{
+		print p
+		foreach Doctor D
+		{
+			print hi
+		}
+		foreach Doctor D
+		{
+			print hi
+			foreach Doctor D
+			{
+				print hello
+			}
+		}
+		
+	}
+
+	table t = count Patients by Birthyear
+	print t
+}
