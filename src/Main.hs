@@ -29,14 +29,18 @@ import Formatter
 parseFile :: String->[Conf]->IO ()
 parseFile file groupFileList =
     do 
-        program <- readFile file
-        --case parse ((oncoParser  )<* eof) file (trace (formatFile program) (formatFile program) )of --debugging
-        case parse ((oncoParser  )<* eof) file (formatFile program) of
-            Left e ->
-                do
-                    putStrLn "ERROR"
-                    print e
-            Right r -> print r >> writeFile ((reverse (drop 4 (reverse file))) ++ ".pretty.onc") (pretty r)
+        -- Check if file ends with .onc
+        if takeExtension file /= ".onc" 
+            then do die ("ERROR: while reading " ++ file ++ ": File extension not .onc")
+            else do
+                program <- readFile file
+                --case parse ((oncoParser  )<* eof) file (trace (formatFile program) (formatFile program) )of --debugging
+                case parse ((oncoParser  )<* eof) file (formatFile program) of
+                    Left e ->
+                        do
+                            putStrLn "ERROR"
+                            print e
+                    Right r -> print r >> writeFile ((reverse (drop 4 (reverse file))) ++ ".pretty.onc") (pretty r)
 
 parseString :: String -> Program
 parseString str =
