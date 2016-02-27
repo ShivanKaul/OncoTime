@@ -46,9 +46,50 @@ testParser =
         --testGroups
         testFilters
         -- testComputation
+--
+--
+--Check tester
+--
+--
 
---testProgram::Parser TestProgram
+--testProgram::Parser TestProgram -}
+testParserCheck ::[Conf]-> Parser TestProgram
+testParserCheck c = 
+    do
+        whiteSpace
+        --try testHeader <|>testUse <|> testGroups <|> try testComputation <|>  try testDocs 
+        --testHeader 
+        --testUse
+        -- testDocs
+        --testGroups
+        testFiltersCheck c
+        -- testComputation
 
+testFiltersCheck::[Conf]->Parser TestProgram
+testFiltersCheck c=
+    do
+        --filters <- many (filtersCheck c)
+        filters <- many filters
+        return $ TestFiltersList filters
+
+{-
+filtersCheck ::[Conf]-> Either LexError (Parser Filter)
+filtersCheck c =
+    do
+        filterName <- lexeme $ identifier
+        let a = read identifier
+        case fieldExists $ a of
+           False -> Left $ FieldNameError "ERROR: FIELD DOESN'T EXIST"
+           True -> 
+                do
+                    choice $ [reserved "is", reserved "are"]
+                    semi
+                    filterDs <- lexeme $ some fD
+                    Right $ Filter filterName filterDs -}
+--
+--
+--
+--
 
 testHeader::Parser TestProgram
 testHeader =
@@ -77,8 +118,8 @@ testGroups =
 testFilters::Parser TestProgram
 testFilters = 
     do
-        filters <- many filters
-        return $ TestFiltersList filters
+        filt <- many filters
+        return $ TestFiltersList filt
 
 testComputation::Parser TestProgram
 testComputation =

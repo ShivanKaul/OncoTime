@@ -92,4 +92,4 @@ data ForEachDef
      | ForEachList Var Var
      deriving (Show, Eq)
 
-data LexError = FieldNameError String | SubFieldNameError String | AllowedTypeError String | AllowedValError String | FieldNotFoundError String deriving (Show, Eq)
+data LexError = FieldNameError String | SubFieldNameError String | AllowedTypeError String | AllowedValError String | FieldNotFoundError String | GenError String  deriving (Show, Eq)
