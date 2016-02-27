@@ -20,7 +20,7 @@ languageDef =
             ,Token.identLetter = alphaNum <|> char '_'
             ,Token.reservedNames = [
                 "script",
-                "/*",
+                "/**",
                 "*/",
                 "is",
                 "are",

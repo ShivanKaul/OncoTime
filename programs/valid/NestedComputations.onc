@@ -1,0 +1,35 @@
+script NestedComputations()
+/**
+This file checks that computations that are nested work as intended. 
+ */
+
+// We use simple filters so as not to generate too much. 
+population is
+	Sex: M
+	Birthyear: 1951, 1952, 1953, 1954, 1955
+
+doctors are
+	Id: 1000		// TODO: We want this to be a proper Doctors ID, to properly test.
+
+{
+	// Simple nested loop. This should print the patient information for each doctor with our ID's
+	foreach Doctor d
+	{
+		foreach Patient p
+		{
+			print p
+		}
+	}
+
+	// Foreach patient, we want to print some specific information
+	foreach Patient p
+	{
+		print Sex, Birthyear, Id of p
+	}
+
+	// Foreach patient, we want to get the timeline 
+	foreach Patient p
+	{
+		print timeline of p
+	}
+}

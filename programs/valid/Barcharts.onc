@@ -1,0 +1,26 @@
+script Barcharts()
+/**
+ Generates barcharts. 
+ */
+
+// ---- Change data in this group file ----
+use vikramPatientData.grp
+
+// ---- We can incorporate more groups if need be ----
+
+
+// ---- Filters ----
+population is
+	Id: <patientGroupOne>
+	Birthyear: <patientBirthyearRange>
+	Sex: M, F
+
+{
+	table t = count Patients by Birthyear
+	table s = count Patients by Diagnosis
+	table v = count Doctors by Id
+
+	print t
+	print s 
+	print v
+}

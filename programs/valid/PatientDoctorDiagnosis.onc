@@ -1,0 +1,34 @@
+script PatientDoctorDiagnosis()
+/**
+ Prints all the informations for male patients who came in between 2010 and 2015. 
+ Everythng except for December. 
+ */
+
+group Months myWorkMonths = {01, 02, 03 to 10}
+
+population is
+	Sex: M
+	Id: 1 to 2500
+	Birthyear: 1950 to 1970
+
+period is
+	Months: <myWorkMonths>, 11
+	Years : 2010 to 2015
+
+{
+	foreach Patient p
+	{
+		print p
+
+		foreach Doctor d
+		{
+			print d
+
+			foreach Diagnosis diag
+			{
+				print diag
+			}
+		}
+
+	}
+}

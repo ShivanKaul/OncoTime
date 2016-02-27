@@ -1,7 +1,5 @@
-script a(a a, b b)
-/* test */
-use a.grp, b.grp
-use t.grp
+script noUselist(a a, b b)
+/** test */
 
 {
 	foreach Patient p 

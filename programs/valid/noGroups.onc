@@ -1,5 +1,7 @@
-script a(a a, b b)
-/* test */
+script noGroups(a a, b b)
+/** test */
+use a.grp, b.grp
+use t.grp
 
 {
 	foreach Patient p 

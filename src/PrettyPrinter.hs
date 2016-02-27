@@ -100,7 +100,7 @@ instance PrettyPrint UseFile where
     prettyPrint (UseFile us) = "use " ++ (intercalate ", " (map (\x -> x ++ ".grp") us))
 
 instance PrettyPrint (Docs) where
-    prettyPrint (Docs docs) = "\n/*\n" ++ docs ++ "\n*/\n"
+    prettyPrint (Docs docs) = "\n/**\n" ++ docs ++ "\n*/\n"
 
 instance PrettyPrint (Var) where
     prettyPrint (Var v) = v

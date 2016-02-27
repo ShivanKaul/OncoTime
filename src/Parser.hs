@@ -16,7 +16,7 @@ import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
 import Text.ParserCombinators.Parsec.Char
 import qualified Text.ParserCombinators.Parsec.Token as Token
-
+import Data.Char(isAlphaNum)
 import TypeUtils
 import Data.Char
 import Debug.Trace
@@ -150,6 +150,14 @@ header =
         semi
         return $ Header fname args
 
+getFileName :: Parser String
+getFileName = 
+    do
+        whiteSpace
+        reserved "script"
+        fname <- filename
+        return fname
+
 arg :: Parser Arg
 arg = 
     do
@@ -176,7 +184,7 @@ documentation = lexeme $
         doc <- docLiteral
         return $ Docs doc
 docLiteral   = lexeme (
-    do{ str <- between (symbol "/*")
+    do{ str <- between (symbol "/**")
         (symbol "*/" <?> "end of string")
         (many stringChar)
         ; return (foldr (maybe id (:)) "" str)
@@ -185,6 +193,12 @@ docLiteral   = lexeme (
 stringChar      =   do{ c <- stringLetter; return (Just c) }  <?> "string character"
 stringLetter    = satisfy (\c -> (c /= '*'))
 
+
+
+--stringEnd = satisfy (\c -> (c /= '/'))
+wordChar = (satisfy (\c -> (isAlphaNum c) || (c=='-' )||(c=='_') ))
+
+
 groups::Parser GroupDefs
 groups = lexeme $ 
     do
@@ -192,9 +206,18 @@ groups = lexeme $
         grpType <- groupType
         v <- var
         reserved "="
-        grpItem <- curlies $ sepBy groupItem comma 
+        grpItem <- curlies $ sepBy formattedGroup comma 
         semi
         return $ Group grpType v grpItem
+
+
+formattedGroup::Parser GroupItem
+formattedGroup = 
+    do
+      (optional semi)
+      z<-groupItem
+      (optional semi)  
+      return z
 
 groupType::Parser GroupType
 groupType = lexeme $
@@ -217,7 +240,7 @@ groupVar =
 groupValString::Parser GroupItem
 groupValString = lexeme $
     do
-        gv <- some alphaNum
+        gv <- some wordChar
         return $ GroupValString gv
 
 groupValInt::Parser GroupItem
@@ -448,6 +471,7 @@ printFilters =
     do
         reserved "print"
         filterList <- sepBy filterName comma
+        reserved "of"
         v <- var
         semi
         return $ PrintFilters filterList v

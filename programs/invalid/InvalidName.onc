@@ -1,0 +1,16 @@
+script InvalidNam()
+/**
+ * Throws an error because the name of the script does not match the name of the file.  
+ */
+
+// ---- Change data in this group file ----
+
+// ---- We can add or change Filters here ---- 
+
+// --- Computations --- 
+{
+	foreach Patient p
+	{
+		print p
+	}
+}

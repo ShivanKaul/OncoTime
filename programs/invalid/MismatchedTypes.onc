@@ -1,0 +1,21 @@
+script MismatchedTypes(Sex g)
+/**
+ * Throws an error because of incorrect types in groups and filters. 
+ */
+
+// ---- Change data in this group file ----
+
+group Id moreIds = {1000, M}
+group Id moreIds = {2000}
+
+// ---- We can add or change Filters here ---- 
+population is
+	Id:  <moreIds>, breast
+
+// --- Computations --- 
+{
+	foreach Patient p
+	{
+		print p
+	}
+}

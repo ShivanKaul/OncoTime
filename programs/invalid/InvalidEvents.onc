@@ -1,0 +1,20 @@
+script InvalidEvents()
+/**
+ * We use this file to check throw error messages if events are incorrectly typed. 
+ */
+
+// ---- Change data in this group file ----
+
+group Events myEvents = {ct_sim_booke, patient_seen_by_physcisan}
+
+// ---- We can add or change Filters here ---- 
+events are
+	Events: <myEvents> 
+
+// --- Computations --- 
+{
+	foreach Patient p
+	{
+		print p
+	}
+}

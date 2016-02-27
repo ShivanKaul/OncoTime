@@ -1,0 +1,38 @@
+script SequenceTest()
+/**
+This file tests sequences in a variety of manners
+ */
+
+// We use simple filters so as not to generate too much. 
+population is
+	Sex: M
+	Birthyear: 1951, 1952, 1953, 1954, 1955
+
+{
+	// Normal Sequence
+	list s = sequences like [ct_sim_booked -> ct_sim_completed -> end]
+
+	// More complicated sequence, including nots. 
+	list s1 = sequences like [ct_sim_booked -> (not ct_sim_completed) -> end]
+
+	// Slightly more complicated sequence, including more events and in any order operator. 
+	list s2 = sequences like [ct_sim_booked -> {ct_sim_completed, patient_scheduled} -> end]
+
+	// Very complicated sequence including a variety of transitions. 
+	list s3 = sequences like [(not ct_sim_booked) -> (not ct_sim_completed) -> treatment_began | patient_scheduled -> end]
+
+	// We want to see all the elements in our complicated sequence. 
+	foreach member seq in s3
+	{
+		print seq
+	}
+
+	// Testing inline sequence foreaching 
+	foreach sequence s like [ct_sim_booked -> ct_sim_completed -> end]
+	{
+		print s 
+	}
+
+	// IDEA: Do we want to allow some function that gives us the time each sequence took?
+	// for example, foreach sequence s like [ct_sim_booked -> ct_sim_completed -> end] print time of s
+}

@@ -1,0 +1,23 @@
+script DailyPatientHistory()
+/**
+  Generates my patient Timelines. 
+ */
+
+// ---- Change data in this group file ----
+use vikramPatientData.grp
+
+// ---- We can incorporate more groups if need be ----
+
+
+// ---- Filters ----
+population is
+	Id: <patientGroupOne>
+	Birthyear: <patientBirthyearRange>
+	Sex: M, F
+
+// ---- Computations ----
+{
+	foreach Patient p
+	{	print p
+	}
+}

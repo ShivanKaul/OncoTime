@@ -1,0 +1,28 @@
+// Hey
+
+script example4()
+
+/**
+Generates my patient Timelines.
+*/
+
+// ---- Change data in this group file ----
+use vikramPatientData.grp
+// ---- Filters ----
+
+population is
+	Id: <patientGroupOne>
+	Birthyear: <patientBirthyearRange>
+	Sex: M, F
+{ 
+	list s = sequences like [ct_sim_booked -> ct_sim_completed | patient_arrives -> end]
+	foreach member i in s
+	{
+		print i
+	}
+}
+
+// Error messages talk about semicolons - they shouldn't
+// Can we not have asterisks in doc comments?
+// there shouldn't be a new line after sequences like
+// end should not be a keyword

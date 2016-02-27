@@ -1,0 +1,19 @@
+script InvalidGroupNotDeclared()
+/**
+ * The we are trying to use a group that does not already exist. 
+ */
+
+// ---- Change data in this group file ----
+group Id myId = {10,20,30}
+
+// ---- We can add or change Filters here ---- 
+population is
+	Id: <myIds>
+
+// --- Computations --- 
+{
+	foreach Patient p
+	{
+		print p
+	}
+}

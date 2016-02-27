@@ -1,0 +1,33 @@
+script TableTest()
+/**
+This very simple file tests that tables work correctly. 
+ */
+
+
+// We use simple filters so as not to generate too much. 
+population is
+	Sex: M
+	Birthyear: 1951, 1952, 1953, 1954, 1955
+
+doctors are
+	Id: 10001		// TODO: We want this to be a proper Doctors ID, to properly test.
+
+{
+	// First definition of t
+	table t = count Patients by Birthyear
+
+	// We want the length of our table at first. 
+	print length of t
+
+	foreach element i of t
+	{
+		print t[i]
+	}
+
+	// Second definitions of t. Currently we allow this, since they have the same type.
+	// I think we should force the user to re-write table. 
+	table t2 = count Patients by Sex
+
+	// Display the chart information, for the definition of t. 
+	barchart t
+}

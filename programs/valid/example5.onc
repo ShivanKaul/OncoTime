@@ -1,0 +1,24 @@
+script example5(Sex s, Birthyear b1, Birthyear b2, Events e)
+// Example 5 from Reference Compiler
+/**
+Parameter example.
+*/
+group Birthyear myBirthyears = {<b1>, 1993, 2012, <b2>}
+population is
+	Id: 13456, 134, 2455
+	Sex: M, F
+	Birthyear: <myBirthyears>
+	Diagnosis: breast, prostate, <e> // Hi
+	PostalCode: H4X
+period is
+	Years: 2012, 2012, 2014
+	Months: 01, 02, 03
+	Days: Mon, Tues, Wed, Thurs, Fri, Sat, Sun
+events are
+	Events: <e>
+{ 
+	foreach Doctor d
+	{
+		print d
+	}
+}
