@@ -31,7 +31,7 @@ verifyGroupFiles providedList =
         dirContents <- getDirectoryContents "."
         let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
         let listNames = map dropExtension grpFiles 
-        if (sort listNames) == (sort providedList) then putStrLn "GroupFiles Exist" else putStrLn "SOME GROUP FILES MISSING"
+        if (sort listNames) == (sort providedList) then putStrLn "GroupFiles Exist" else putStrLn "SOME GROUP FILES MISSING" >> exitFailure
             -- -> putStrLn "ERROR" 
             --Right r -> putStrLn "All Group Files Exist"
 
@@ -509,7 +509,7 @@ useList = lexeme $
           --  False -> fail
         let t = verifyGroupFiles names
         semi
-        return $ UseManyFile names
+        return $ UseFile names
 
 grpFile::Parser String
 grpFile = lexeme $

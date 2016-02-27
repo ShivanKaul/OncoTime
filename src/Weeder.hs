@@ -71,11 +71,31 @@ weed grpFileList conf prg@(Program hdr docs useList groupDefs filter comps) =
 weedProgram::[String]->[Conf]->Program->Either LexError Program
 weedProgram grpFiles conf (Program hdr docs useList groupDefs filter comps) =
     do
-       
- --       testForGroups useList
+        testGroupFiles useList grpFiles
         --test Group Files
         --test Conf
+        verifyFilters conf filter
 
         --pure $
         return (Program hdr docs useList groupDefs filter comps)
+
+testGroupFiles::[UseFile]->[String]->Either LexError [UseFile]
+testGroupFiles g@((UseFile x):xs) grpFiles =
+--testGroupFiles g@[(UseFile x)] grpFiles = 
+    do
+        --useList to group names 
+        let a = verifyGroupFiles x 
+        return g
+
+--checkAll
+
+
+verifyFilters::[Conf]->[Filter]->Either LexError [Filter]
+verifyFilters conf whole@(el@(Filter fname ((FilterDef (FilterField fieldName) filterVal):ys)):xs)= 
+    do 
+
+        Right whole
+        --Left $ GenError "e"
+        --go over the list of filters and make sure they are all in.
+        --
 

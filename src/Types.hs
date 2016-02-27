@@ -23,7 +23,7 @@ type FileExt = String
 data Docs = Docs String deriving (Show, Eq)
 
 --Use
-data UseFile = UseManyFile [String] deriving (Show, Eq)
+data UseFile = UseFile [String] deriving (Show, Eq)
 
 --Group
 type GroupList = [GroupDefs] 
