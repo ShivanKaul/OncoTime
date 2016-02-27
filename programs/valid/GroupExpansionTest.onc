@@ -1,7 +1,7 @@
 script GroupExpansionTest(Sex g)
 /**
- * We use this test file to make sure that groups are properly used and expanded 
- * This file also shows off type inferencing. 
+We use this test file to make sure that groups are properly used and expanded 
+This file also shows off type inferencing. 
  */
 
 // ---- Change data in this group file ----
@@ -32,5 +32,7 @@ period is
 // --- Computations --- 
 {
 	foreach Patient p
+	{
 		print p
+	}
 }

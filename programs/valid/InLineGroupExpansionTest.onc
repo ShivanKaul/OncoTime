@@ -1,8 +1,8 @@
 script InLineGroupExpansionTest()
 /**
- * This file checks to see if groups are properly expanded within the program itself. 
- * Are they (1) Expanded? (2) Redundencies eliminated? (3) Redefinitions handled properly?
- * Currently redefinitions take the most recent. Do we want to change this?
+This file checks to see if groups are properly expanded within the program itself. 
+Are they (1) Expanded? (2) Redundencies eliminated? (3) Redefinitions handled properly?
+Currently redefinitions take the most recent. Do we want to change this?
  */
 
 use ExtraGroups.grp 
@@ -31,5 +31,7 @@ events are
 
 {
 	foreach Doctor d
+	{
 		print d
+	}
 }

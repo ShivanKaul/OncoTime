@@ -1,6 +1,6 @@
 script example5(Sex s, Birthyear b1, Birthyear b2, Events e)
 // Example 5 from Reference Compiler
-/*
+/**
 Parameter example.
 */
 group Birthyear myBirthyears = {<b1>, 1993, 2012, <b2>}

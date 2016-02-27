@@ -1,8 +1,8 @@
 script FilterTest()
 /**
- * This file tests Filters.
- * (1) Are they expanded to all (*) if nothing is typed? 
- * (2) We should take the set union of all Filters
+This file tests Filters.
+Are they expanded to all () if nothing is typed? 
+We should take the set union of all Filters
  */
 
 
@@ -34,7 +34,9 @@ population is
 
 {
 	foreach Patient p
+	{
 		print p
+	}
 }
 
 

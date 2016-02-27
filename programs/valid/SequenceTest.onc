@@ -1,6 +1,6 @@
 script SequenceTest()
 /**
- * This file tests sequences in a variety of manners
+This file tests sequences in a variety of manners
  */
 
 // We use simple filters so as not to generate too much. 

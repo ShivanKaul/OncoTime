@@ -1,5 +1,5 @@
 script noUselist(a a, b b)
-/* test */
+/** test */
 
 {
 	foreach Patient p 

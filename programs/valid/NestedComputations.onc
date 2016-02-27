@@ -1,6 +1,6 @@
 script NestedComputations()
 /**
- * This file checks that computations that are nested work as intended. 
+This file checks that computations that are nested work as intended. 
  */
 
 // We use simple filters so as not to generate too much. 

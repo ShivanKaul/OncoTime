@@ -1,5 +1,5 @@
 script noFilter(a a, b b)
-/* test */
+/** test */
 use a.grp, b.grp
 use t.grp
 
