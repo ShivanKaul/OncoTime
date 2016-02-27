@@ -24,6 +24,7 @@ import Types
 -- import PrettyPrinter
 import Lexer
 
+
 verifyGroupFiles::[String]->IO ()
 verifyGroupFiles providedList =
     do
@@ -41,10 +42,10 @@ testParser =
         whiteSpace
         --try testHeader <|>testUse <|> testGroups <|> try testComputation <|>  try testDocs 
         --testHeader 
-        --testUse
+        testUse
         -- testDocs
         --testGroups
-        testFilters
+        --testFilters
         -- testComputation
 --
 --
