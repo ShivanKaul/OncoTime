@@ -12,7 +12,7 @@ def run_test(file):
 	os.system(cmd)
 
 def valid():
-	print "Running tests that should be VALID..."
+	print ("Running tests that should be VALID...")
 	for root, dirnames, filenames in os.walk('programs/valid'):
 	        for filename in filenames:
 	        	if not filename.endswith(('.pretty.pretty.onc')):
@@ -20,7 +20,7 @@ def valid():
 	print
 
 def invalid():
-	print "Running tests that should be INVALID..."
+	print ("Running tests that should be INVALID...")
 	for root, dirnames, filenames in os.walk('programs/invalid'):
 	        for filename in filenames:
 	        	if not filename.endswith(('.pretty.pretty.onc')):
@@ -35,5 +35,5 @@ else:
 	elif (sys.argv[1] == "-v"):
 		valid()
 	else:
-		print "Script failed, man."
+		print ("Script failed, man.")
 		sys.exit()

@@ -49,7 +49,7 @@ parseAndWeed file =
                 case parse ((oncoParser  )<* eof) file (formatFile program) of
                     Left e ->
                         do
-                            putStrLn "ERROR">> exitFailure
+                            putStrLn "ERROR WITH PARSER">> exitFailure
                             --print e
                     --Right r -> print r >> writeFile ((reverse (drop 4 (reverse file))) ++ ".pretty.onc") (pretty r)
                     Right r-> weed grpFileNames listOfMaps r
@@ -59,10 +59,7 @@ weed grpFileList conf prg@(Program hdr docs useList groupDefs filter comps) =
     do
         let resu = weedProgram grpFileList conf prg 
         --verify grousp here
-        
-        
         --verify filters
-        --
         case resu of
             Left e -> case e of --CATCH ALL ERRORS HERE
                 (GenError e) -> putStrLn e >> exitFailure
@@ -74,7 +71,8 @@ weedProgram grpFiles conf (Program hdr docs useList groupDefs filter comps) =
         testGroupFiles useList grpFiles
         --test Group Files
         --test Conf
-        verifyFilters conf filter
+        --verifyFilters conf filter
+        --let a = vFilters conf filter
 
         --pure $
         return (Program hdr docs useList groupDefs filter comps)
@@ -86,16 +84,24 @@ testGroupFiles g@((UseFile x):xs) grpFiles =
         --useList to group names 
         let a = verifyGroupFiles x 
         return g
+        
 
 --checkAll
+--one for names
+--one for fields 
+--one for valls
 
+checkSubFields::[Conf]->FilterName->[FilterDef]->Bool
+checkSubFields [] fname [] = False
+checkSubFields c fname [] = True
+checkSubFields c fname ((FilterDef (FilterField fieldName) _):ys) =
+    case (subFieldExists c fname fieldName) of
+        True -> (checkSubFields c fname ys)
+        False -> False
 
-verifyFilters::[Conf]->[Filter]->Either LexError [Filter]
-verifyFilters conf whole@(el@(Filter fname ((FilterDef (FilterField fieldName) filterVal):ys)):xs)= 
-    do 
-
-        Right whole
-        --Left $ GenError "e"
-        --go over the list of filters and make sure they are all in.
-        --
-
+vFilters::[Conf]->[Filter]->Bool
+vFilters conf [] = True
+vFilters conf ((Filter fname a@((FilterDef (FilterField fieldName) _ ):ys)):xs) = 
+    case (fieldExists conf fname) && (checkSubFields conf fname a) of
+        True -> (vFilters conf xs) 
+        False -> False
