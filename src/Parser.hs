@@ -142,7 +142,7 @@ documentation = lexeme $
         doc <- docLiteral
         return $ Docs doc
 docLiteral   = lexeme (
-    do{ str <- between (symbol "/*")
+    do{ str <- between (symbol "/**")
         (symbol "*/" <?> "end of string")
         (many stringChar)
         ; return (foldr (maybe id (:)) "" str)
