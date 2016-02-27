@@ -27,7 +27,8 @@ handleLineComments line =
                                      else stmnt
             in stmntWithoutNewline++";"++comm++"\n"
 
-isEmpty line =(onlyemptyRegex=~line)::Bool
+isEmpty :: String -> Bool
+isEmpty line = (onlyemptyRegex =~ line)::Bool
 
 
 removeNewLines :: String -> String
