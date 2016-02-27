@@ -1,0 +1,22 @@
+script PatientSequences()
+/**
+ * Generates my patient Timelines. 
+ */
+
+// ---- Change data in this group file ----
+use vikramPatientData.grp
+
+// ---- We can incorporate more groups if need be ----
+
+
+// ---- Filters ----
+population is
+	Id: <patientGroupOne>
+	Birthyear: <patientBirthyearRange>
+	Sex: M, F
+
+{
+	list s = sequences like [ct_sim_booked -> ct_sim_completed | patient_arrives]
+
+	print s
+}

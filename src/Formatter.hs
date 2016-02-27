@@ -29,7 +29,7 @@ handleLineComments line =
             in stmntWithoutNewline++";"++comm++"\n"
 
 
-isEmpty : : String -> Bool
+isEmpty :: String -> Bool
 isEmpty line =  case ((matchRegexAll onlyemptyRegex line),(matchRegexAll onlyemptyRegexN line)) of
           (Nothing,Nothing) ->  True
           (Just ("","","\n",[""]),Just ("","\n","",["\n"])) -> True

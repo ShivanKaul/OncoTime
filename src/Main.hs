@@ -39,8 +39,7 @@ parseFile file groupFileList =
                 case parse (getFileName) "" program of
                     Left e ->
                         do
-                            putStrLn "ERROR"
-                            print e
+                            hPutStrLn stderr ("ERROR: " ++ show e)
                     Right r -> if takeBaseName file /= r 
                         then do
                             die ("ERROR: while reading " ++ file ++ ": Filename does not match script name")
@@ -49,8 +48,7 @@ parseFile file groupFileList =
                             case parse ((oncoParser  )<* eof) file (formatFile program) of
                                 Left e ->
                                     do
-                                        putStrLn "ERROR"
-                                        print e
+                                        hPutStrLn stderr ("ERROR: " ++ show e)
                                 Right r -> print r >> writeFile ((reverse (drop 4 (reverse file))) ++ ".pretty.onc") (pretty r)
 
 parseString :: String -> Program
@@ -68,8 +66,7 @@ tparseFile file =
         case parse (testParser <* eof) file program of
             Left e ->
                 do
-                    putStrLn "ERROR"
-                    print e
+                    hPutStrLn stderr ("ERROR: " ++ (show e))
             Right r -> print r 
 
 tparseString :: String -> TestProgram
