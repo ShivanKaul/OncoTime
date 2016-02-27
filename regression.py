@@ -17,6 +17,10 @@ def valid():
 	        for filename in filenames:
 	        	if not filename.endswith(('.pretty.onc')):
 	        		run_test (os.path.join(root, filename))
+	for root, dirnames, filenames in os.walk('programs/examples'):
+	        for filename in filenames:
+	        	if not filename.endswith(('.pretty.onc')):
+	        		run_test (os.path.join(root, filename))
 	print
 
 def invalid():

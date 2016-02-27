@@ -32,8 +32,6 @@ verifyGroupFiles providedList =
         let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
         let listNames = map dropExtension grpFiles 
         if (sort listNames) == (sort providedList) then putStrLn "GroupFiles Exist" else putStrLn "SOME GROUP FILES MISSING" >> exitFailure
-            -- -> putStrLn "ERROR" 
-            --Right r -> putStrLn "All Group Files Exist"
 
 --use this Parser to test
 testParser :: Parser TestProgram
@@ -72,25 +70,6 @@ testFiltersCheck c=
         --filters <- many (filtersCheck c)
         filters <- many filters
         return $ TestFiltersList filters
-
-{-
-filtersCheck ::[Conf]-> Either LexError (Parser Filter)
-filtersCheck c =
-    do
-        filterName <- lexeme $ identifier
-        let a = read identifier
-        case fieldExists $ a of
-           False -> Left $ FieldNameError "ERROR: FIELD DOESN'T EXIST"
-           True -> 
-                do
-                    choice $ [reserved "is", reserved "are"]
-                    semi
-                    filterDs <- lexeme $ some fD
-                    Right $ Filter filterName filterDs -}
---
---
---
---
 
 testHeader::Parser TestProgram
 testHeader =
@@ -193,9 +172,6 @@ docLiteral   = lexeme (
 stringChar      =   do{ c <- stringLetter; return (Just c) }  <?> "string character"
 stringLetter    = satisfy (\c -> (c /= '*'))
 
-
-
---stringEnd = satisfy (\c -> (c /= '/'))
 wordChar :: Parser Char
 wordChar = (satisfy (\c -> (c=='-' ) || (c=='_') || (isAlphaNum c)   ))
 

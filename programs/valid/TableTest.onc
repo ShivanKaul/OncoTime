@@ -17,7 +17,7 @@ doctors are
 	table t = count Patients by Birthyear
 
 	// We want the length of our table at first. 
-	print length of t
+	print t.length
 
 	foreach element i of t
 	{

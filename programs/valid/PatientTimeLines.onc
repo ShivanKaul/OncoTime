@@ -1,4 +1,4 @@
-script PatientSequences()
+script PatientTimeLines()
 /**
  Generates my patient Timelines. 
  */

@@ -29,8 +29,8 @@ import PrettyPrinter
 import Formatter
 import Weeder
 
-parseFile :: String->[Conf]->IO ()
-parseFile file groupFileList =
+parseFile :: String -> IO ()
+parseFile file =
     do 
         -- Check if file ends with .onc
         if takeExtension file /= ".onc" 
@@ -40,7 +40,7 @@ parseFile file groupFileList =
                 case parse (getFileName) "" program of
                     Left e ->
                         do
-                            hPutStrLn stderr ("ERROR: " ++ show e)
+                            hPutStrLn stderr ("ERROR for file: " ++ (takeBaseName file) ++ show e)
                     Right r -> if takeBaseName file /= r 
                         then do
                             die ("ERROR: while reading " ++ file ++ ": Filename does not match script name")
@@ -50,7 +50,7 @@ parseFile file groupFileList =
                                 Left e ->
                                     do
                                         hPutStrLn stderr ("ERROR: " ++ show e)
-                                Right r -> print r >> writeFile ((reverse (drop 4 (reverse file))) ++ ".pretty.onc") (pretty r)
+                                Right r -> writeFile ((reverse (drop 4 (reverse file))) ++ ".pretty.onc") (pretty r) >> print "VALID"
 
 parseString :: String -> Program
 parseString str =
@@ -94,15 +94,8 @@ main =
         readData <- readFile "config.conf"
         (args:_) <- getArgs 
         --args <- getArgs
-        let l= lines readData
-        let listOfMaps =  map makeConf l
-        
-        --let m =  M.fromList listOfMaps
-    --print m 
-    --
-        parseAndWeed args
-
-        print listOfMaps
-        --print $ M.fromList listOfMaps
-        --print reconstructed 
-        --parseFile arg
+        -- let l = lines readData
+        -- let listOfMaps =  map makeConf l
+            --
+        -- parseAndWeed args
+        parseFile args

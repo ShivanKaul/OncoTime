@@ -1,56 +1,13 @@
-script shivan1(a a, b b)
-/** test */
-use a.grp, b.grp
-use t.grp
+script shivan1()
+/** All patients who have prostate cancer and who are born between 1990 to 2016, print these patients */
 
-group Id x = {1, 2, <x>, breast, 1200 to 123123}
-group Id x = {1, 2, <x>, 1200 to 123123}
-
-Patient are
-	Id : 300,3000,0
-	Sex : M, F
-
-Doctor are
-	Id : 300,3000,00000
-	Sex : M, F
-	Dates : 1900 to 2000
-
-Doctor are
-	Id : 300,3000,00000
-	Sex : M, F
-	Dates : 1900 to 2000
-Doctor are
-	Id : 300,3000,00000
-	Sex : M, F
-	Dates : 1900 to 2000
-Doctor are
-	Id : 300,3000,00000
-	Sex : M, F
-	Dates : 1900 to 2000	
+population is
+	Birthyear: 1990 to 2015
+	Diagnosis: prostate
 
 {
 	foreach Patient p 
 	{
 		print p
 	}
-	foreach Patient p 
-	{
-		print p
-		foreach Doctor D
-		{
-			print hi
-		}
-		foreach Doctor D
-		{
-			print hi
-			foreach Doctor D
-			{
-				print hello
-			}
-		}
-		
-	}
-
-	table t = count Patients by Birthyear
-	print t
 }

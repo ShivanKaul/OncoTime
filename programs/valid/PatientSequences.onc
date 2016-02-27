@@ -19,5 +19,7 @@ population is
 	list s = sequences like [ct_sim_booked -> ct_sim_completed | patient_arrives -> end]
 
 	foreach member i in s
+	{
 		print i
+	}
 }
