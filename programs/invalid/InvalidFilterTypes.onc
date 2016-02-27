@@ -1,0 +1,27 @@
+script InvalidFilterTypes()
+/**
+ * Throws an error because filter types are being used incorrectly. 
+ */
+
+// ---- Change data in this group file ----
+
+// ---- We can add or change Filters here ---- 
+population is
+	Events: vikram
+
+period is
+	Birthyear: 1973
+
+events are
+	Events: ct_sim_booked 
+
+doctors are
+	Sex: M
+
+// --- Computations --- 
+{
+	foreach Patient p
+	{
+		print p
+	}
+}

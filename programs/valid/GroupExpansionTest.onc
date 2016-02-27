@@ -1,0 +1,36 @@
+script GroupExpansionTest(Sex g)
+/**
+ * We use this test file to make sure that groups are properly used and expanded 
+ * This file also shows off type inferencing. 
+ */
+
+// ---- Change data in this group file ----
+use myGroups.grp, ExtraGroups.grp
+
+//group Id moreIds = {1000, 15 to 30}
+//group Id moreIds = {2000, <moreIds>}
+
+// ---- We can add or change Filters here ---- 
+population is
+	Id: 10 to 1000
+	//Sex: F//<myGenders>
+//	Birthyear: 1960 to 1970
+	//Diagnosis: <myDiagnosis> 
+	//PostalCode: //H2X
+
+period is 
+	Days: <myWorkDays>
+	//Dates: 2013-01-31 to 2015-01-01
+	//Hours: 09:00
+//	Years: //2013, 2014, 2015
+//	Months: 01 to 03
+
+
+//events are
+//	Events: ct_sim_booked, patient_arrives
+
+// --- Computations --- 
+{
+	foreach Patient p
+		print p
+}

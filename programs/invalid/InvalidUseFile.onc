@@ -1,0 +1,20 @@
+script InvalidUseFile()
+/**
+ * The .grp file does not exist or cannot be found. 
+ */
+
+// ---- Change data in this group file ----
+
+use doesNotExist.grp
+
+// ---- We can add or change Filters here ---- 
+events are
+	Events: <myEvents> 
+
+// --- Computations --- 
+{
+	foreach Patient p
+	{
+		print p
+	}
+}

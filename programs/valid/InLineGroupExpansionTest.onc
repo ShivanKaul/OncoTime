@@ -1,0 +1,35 @@
+script InLineGroupExpansionTest()
+/**
+ * This file checks to see if groups are properly expanded within the program itself. 
+ * Are they (1) Expanded? (2) Redundencies eliminated? (3) Redefinitions handled properly?
+ * Currently redefinitions take the most recent. Do we want to change this?
+ */
+
+use ExtraGroups.grp 
+
+// These are the events I commonly use
+group Events myPopularEvents = {ct_sim_completed,
+								ct_sim_booked,
+								treatment_began}
+
+// These are the events I am interested in right now. 
+group Events myInterestingEvents = { patient_arrives, 
+									 <myPopularEvents>
+									}
+
+// This is a redefinition. it was originally included in ExtraGroups.grp. 
+group Events myExtraGroupEvents = {	
+									patient_scheduled,
+									<myInterestingEvents> 
+								  }
+
+population is
+	Sex: M
+
+events are
+	Events: <myExtraGroupEvents>
+
+{
+	foreach Doctor d
+		print d
+}
