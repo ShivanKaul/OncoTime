@@ -6,7 +6,7 @@ Group Name: Dragon Army
 ## To Build
 ```
 cabal sandbox init
-cabal install
+cabal install --only-dependencies
 cabal build
 ```
 
