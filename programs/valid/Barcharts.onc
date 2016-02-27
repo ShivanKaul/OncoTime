@@ -1,6 +1,6 @@
 script Barcharts()
 /**
- * Generates barcharts. 
+ Generates barcharts. 
  */
 
 // ---- Change data in this group file ----

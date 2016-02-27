@@ -1,7 +1,7 @@
 script PatientDoctorDiagnosis()
 /**
- * Prints all the informations for male patients who came in between 2010 and 2015. 
- * Everythng except for December. 
+ Prints all the informations for male patients who came in between 2010 and 2015. 
+ Everythng except for December. 
  */
 
 group Months myWorkMonths = {01, 02, 03 to 10}

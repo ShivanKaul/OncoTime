@@ -1,6 +1,6 @@
 script DailyPatientHistory()
 /**
- * Generates my patient Timelines. 
+  Generates my patient Timelines. 
  */
 
 // ---- Change data in this group file ----
@@ -18,5 +18,6 @@ population is
 // ---- Computations ----
 {
 	foreach Patient p
-		print p
+	{	print p
+	}
 }
