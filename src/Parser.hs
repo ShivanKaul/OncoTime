@@ -175,7 +175,7 @@ var = lexeme $
 filename::Parser FileName
 filename = lexeme $
     do
-        fname <- many alphaNum
+        fname <- some fChar
         return fname
 
 documentation :: Parser Docs
@@ -196,8 +196,11 @@ stringLetter    = satisfy (\c -> (c /= '*'))
 
 
 --stringEnd = satisfy (\c -> (c /= '/'))
-wordChar = (satisfy (\c -> (isAlphaNum c) || (c=='-' )||(c=='_') ))
+wordChar :: Parser Char
+wordChar = (satisfy (\c -> (c=='-' ) || (c=='_') || (isAlphaNum c)   ))
 
+fChar :: Parser Char
+fChar = (satisfy (\c -> (c=='.' ) || (isAlphaNum c)))
 
 groups::Parser GroupDefs
 groups = lexeme $ 
@@ -227,7 +230,7 @@ groupType = lexeme $
 
 groupItem::Parser GroupItem
 groupItem = try groupRange
-        <|> try groupValInt
+        -- <|> try groupValInt
         <|> try groupValString
         <|> try groupVar
 

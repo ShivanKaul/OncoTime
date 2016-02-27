@@ -31,8 +31,8 @@ handleLineComments line =
 
 isEmpty :: String -> Bool
 isEmpty line =  case ((matchRegexAll onlyemptyRegex line),(matchRegexAll onlyemptyRegexN line)) of
-          (Nothing,Nothing) ->  True
-          (Just ("","","\n",[""]),Just ("","\n","",["\n"])) -> True
+          (Nothing,Nothing) ->  False
+          (Just ("",_,_,_),Just ("",_,_,_)) -> True
           _ -> False
 
 
@@ -50,6 +50,6 @@ formatFile contents =
     in   (h1 ++ d ++ p1)
 
 
-testFormatter = (putStrLn $ show $ formatFile "File()\n\n/* ohai \ntutta*/\nhello!//kites\n//might\n\n\nbye\n\nkettle") 
+testFormatter = (putStrLn $ show $ formatFile "File()\n\n/* ohai \ntutta*/\nhello! how are you? //kites\n//might\n\n\nbye\n\nkettle\n   \ncat\n\t\n\t\n") 
 
 
