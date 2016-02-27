@@ -108,6 +108,14 @@ header =
         semi
         return $ Header fname args
 
+getFileName :: Parser String
+getFileName = 
+    do
+        whiteSpace
+        reserved "script"
+        fname <- filename
+        return fname
+
 arg :: Parser Arg
 arg = 
     do

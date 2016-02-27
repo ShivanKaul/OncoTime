@@ -1,4 +1,4 @@
-script ParameterExpansion(Sex s, Birthyear b1, Birthyear b2, Events e)
+script example5(Sex s, Birthyear b1, Birthyear b2, Events e)
 // Example 5 from Reference Compiler
 /*
 Parameter example.
@@ -8,7 +8,7 @@ population is
 	Id: 13456, 134, 2455
 	Sex: M, F
 	Birthyear: <myBirthyears>
-	Diagnosis: breast, prostate, <e> // can be strings or groups
+	Diagnosis: breast, prostate, <e>
 	PostalCode: H4X
 period is
 	Years: 2012, 2012, 2014

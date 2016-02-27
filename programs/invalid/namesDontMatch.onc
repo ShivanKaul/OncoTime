@@ -1,6 +1,6 @@
 // Hey
 
-script PatientSequences()
+script example4()
 
 /*
 Generates my patient Timelines.

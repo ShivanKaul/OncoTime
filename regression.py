@@ -15,7 +15,7 @@ def valid():
 	print "Running tests that should be VALID..."
 	for root, dirnames, filenames in os.walk('programs/valid'):
 	        for filename in filenames:
-	        	if not filename.endswith(('.pretty.pretty.onc')):
+	        	if not filename.endswith(('.pretty.onc')):
 	        		run_test (os.path.join(root, filename))
 	print
 

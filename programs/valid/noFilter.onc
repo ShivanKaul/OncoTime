@@ -1,7 +1,10 @@
-script a(a a, b b)
+script noFilter(a a, b b)
 /* test */
 use a.grp, b.grp
 use t.grp
+
+group Id x = {1, 2, <x>, 1200 to 123123}
+group Id x = {1, 2, <x>, 1200 to 123123}	
 
 {
 	foreach Patient p 

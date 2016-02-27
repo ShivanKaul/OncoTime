@@ -33,16 +33,25 @@ parseFile file groupFileList =
     do 
         -- Check if file ends with .onc
         if takeExtension file /= ".onc" 
-            then do die ("ERROR: while reading " ++ file ++ ": File extension not .onc")
+            then die ("ERROR: while reading " ++ file ++ ": File extension not .onc")
             else do
                 program <- readFile file
-                -- case parse ((oncoParser  )<* eof) file (trace (formatFile program) (formatFile program) )of --debugging
-                case parse ((oncoParser  )<* eof) file (formatFile program) of
+                case parse (getFileName) "" program of
                     Left e ->
                         do
                             putStrLn "ERROR"
                             print e
-                    Right r -> print r >> writeFile ((reverse (drop 4 (reverse file))) ++ ".pretty.onc") (pretty r)
+                    Right r -> if takeBaseName file /= r 
+                        then do
+                            die ("ERROR: while reading " ++ file ++ ": Filename does not match script name")
+                        else do
+                            -- case parse ((oncoParser  )<* eof) file (trace (formatFile program) (formatFile program) )of --debugging
+                            case parse ((oncoParser  )<* eof) file (formatFile program) of
+                                Left e ->
+                                    do
+                                        putStrLn "ERROR"
+                                        print e
+                                Right r -> print r >> writeFile ((reverse (drop 4 (reverse file))) ++ ".pretty.onc") (pretty r)
 
 parseString :: String -> Program
 parseString str =

@@ -1,4 +1,4 @@
-script a(a a, b b)
+script noUselist(a a, b b)
 /* test */
 
 {
