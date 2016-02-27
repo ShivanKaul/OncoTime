@@ -9,7 +9,8 @@ occupiedLineRegex =  mkRegex "[^ \t\n][^\n]*\n"
 docStringRegex =  "(/\\*(.|\n)*\\*/)" :: String
 commentRegex =  mkRegex "//.*"
 removeDocs :: String -> (String, String,String)
-onlyemptyRegex = "([ \t]*(\n|$))"
+onlyemptyRegex = mkRegex "([ \t]*$)"
+onlyemptyRegexN = mkRegex "([ \t]*\n)"
 removeDocs fileContents =
   let matches = fileContents =~ docStringRegex :: MatchResult String
       
@@ -17,7 +18,7 @@ removeDocs fileContents =
 
 
 handleLineComments line = 
-  let (stmnt,comm) = case matchRegexAll commentRegex (trace "" line) of
+  let (stmnt,comm) = case matchRegexAll commentRegex (line) of
           Nothing ->  (line,"")
           Just(withoutComment, comm,_,_)-> ( (withoutComment,comm))
   in  if ((isEmpty stmnt) || null stmnt) 
@@ -27,8 +28,12 @@ handleLineComments line =
                                      else stmnt
             in stmntWithoutNewline++";"++comm++"\n"
 
-isEmpty :: String -> Bool
-isEmpty line = (onlyemptyRegex =~ line)::Bool
+
+isEmpty : : String -> Bool
+isEmpty line =  case ((matchRegexAll onlyemptyRegex line),(matchRegexAll onlyemptyRegexN line)) of
+          (Nothing,Nothing) ->  True
+          (Just ("","","\n",[""]),Just ("","\n","",["\n"])) -> True
+          _ -> False
 
 
 removeNewLines :: String -> String
@@ -45,5 +50,6 @@ formatFile contents =
     in   (h1 ++ d ++ p1)
 
 
-testFormatter = putStrLn $ show $ formatFile "File()\n/* ohai \ntutta*/\nhello!//kites\n//might\n\n\nbye\n\nkettle"
+testFormatter = (putStrLn $ show $ formatFile "File()\n\n/* ohai \ntutta*/\nhello!//kites\n//might\n\n\nbye\n\nkettle") 
+
 
