@@ -1,13 +1,14 @@
 OncoTime
 =========
 
+OncoTime is an experimental Domain Specific Language which allows for easy analysis and visualization of patient treament paths in radiation oncology.
+
+
 Group Name: Dragon Army
 
-Brendan Games Gordon - 260529254
-
-Shivan Kaul Sahib - 260512593
-
-Yusaira Khan - 260526007
+- Brendan Games Gordon - 260529254
+- Shivan Kaul Sahib - 260512593
+- Yusaira Khan - 260526007
 
 We have set up a number of scripts to help with building and running. We have
 
@@ -17,7 +18,7 @@ tests.sh - runs the tests (it runs the compiler on programs in programs/valid/ a
 everything.sh - runs both of the above two scripts
 ```
 
-We have placed a copy of the `oncotime` executable in the top-level folder. 
+We have placed a copy of the `oncotime` executable in the top-level folder. Note that this is compiled for Darwin.
 
 ## To Build
 
