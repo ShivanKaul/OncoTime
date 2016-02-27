@@ -174,7 +174,7 @@ groupVar =
 groupValString::Parser GroupItem
 groupValString = lexeme $
     do
-        gv <- some letter
+        gv <- some alphaNum
         return $ GroupValString gv
 
 groupValInt::Parser GroupItem
@@ -256,13 +256,23 @@ list=
         return $ List v e
 
 seqList::Parser [[SeqField]]
-seqList= squares $ sepBy singleSequence bar
+seqList= lexeme $ squares $ sepBy singleSequence bar
         
 singleSequence::Parser [SeqField]
-singleSequence = sepBy seqField arrow 
+singleSequence = 
+    do 
+        (optional semi)
+        x <- sepBy seqField arrow
+        (optional semi)
+        return x
 
 seqField::Parser SeqField
-seqField = try(seqSingle) <|> try(seqDisj) <|> try(seqNeg) <|> try(seqStar) 
+seqField = 
+    do
+        (optional semi)
+        x <- try(seqSingle) <|> try(seqDisj) <|> try(seqNeg) <|> try(seqStar) 
+        (optional semi)
+        return x
 
 seqSingle::Parser SeqField
 seqSingle =
@@ -357,7 +367,7 @@ forEachList =
         reserved "foreach"
         reserved "member"
         v1 <- var
-        reserved "of"
+        reserved "in"
         v2 <- var
         semi
         return $ ForEachList v1 v2
