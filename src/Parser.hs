@@ -258,8 +258,8 @@ manyComp =
     do 
         c <- curlies $ (optional semi) >> (many computation)
         if (null c) 
-            then trace ("WARNING: Computation list is empty.") semi
-        else semi
+            then trace ("WARNING: Computation list is empty.") (optional semi)
+        else (optional semi)
         return c
 
 computation::Parser Computation
