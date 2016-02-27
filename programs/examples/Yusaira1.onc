@@ -17,7 +17,7 @@ period is
 {	
 	table t = count Patients by Birthyear
 	print t.length
-	for Patient p
+	foreach Patient p
 	{
 	print Sex, Postal_Code of p
 	}
