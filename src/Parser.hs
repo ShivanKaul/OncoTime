@@ -86,8 +86,9 @@ testComputation =
         return $ TestComputation comp
 
 oncoParser:: Parser Program
-oncoParser = 
+oncoParser =
     do
+        whiteSpace
         hdr <- header
         doc <- documentation 
         use <- many useList
