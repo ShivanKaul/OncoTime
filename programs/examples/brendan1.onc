@@ -1,0 +1,20 @@
+script brendan1()
+/**
+This program generates the barcharts of all patients between the ages of 20 and 30 who have prostate cancer 
+*/
+
+use PatientData.grp
+
+population is
+    Sex: M
+    Diagnosis: prostate
+    Birthyear: 1986 to 1996
+
+{
+    list p = sequences like [ct_sim_booked -> ct_sim_completed]
+        foreach member i in p
+            {
+            print i
+            }
+}
+
