@@ -24,15 +24,6 @@ import Types
 -- import PrettyPrinter
 import Lexer
 
-
-verifyGroupFiles::[String]->IO ()
-verifyGroupFiles providedList =
-    do
-        dirContents <- getDirectoryContents "."
-        let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
-        let listNames = map dropExtension grpFiles 
-        if (sort listNames) == (sort providedList) then putStrLn "GroupFiles Exist" else putStrLn "SOME GROUP FILES MISSING" >> exitFailure
-
 --use this Parser to test
 testParser :: Parser TestProgram
 testParser = 
@@ -510,7 +501,6 @@ useList = lexeme $
         names <- sepBy grpFile comma
         --case verifyGroupFiles names of
           --  False -> fail
-        let t = verifyGroupFiles names
         semi
         return $ UseFile names
 

@@ -97,5 +97,5 @@ main =
         -- let l = lines readData
         -- let listOfMaps =  map makeConf l
             --
-        -- parseAndWeed args
-        parseFile args
+        parseAndWeed args
+        --parseFile args

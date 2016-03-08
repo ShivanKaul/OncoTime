@@ -29,7 +29,6 @@ import PrettyPrinter
 import Formatter
 
 
-
 parseAndWeed::String->IO(Program)
 parseAndWeed file =
     do
@@ -46,10 +45,10 @@ parseAndWeed file =
             else do
                 program <- readFile file
                 -- case parse ((oncoParser  )<* eof) file (trace (formatFile program) (formatFile program) )of --debugging
-                case parse ((oncoParser  )<* eof) file (formatFile program) of
+                case parse ((oncoParser)<* eof) file (formatFile program) of
                     Left e ->
                         do
-                            putStrLn "ERROR WITH PARSER">> exitFailure
+                            putStrLn "ERROR" >> print e>> exitFailure
                             --print e
                     --Right r -> print r >> writeFile ((reverse (drop 4 (reverse file))) ++ ".pretty.onc") (pretty r)
                     Right r-> weed grpFileNames listOfMaps r
@@ -61,8 +60,7 @@ weed grpFileList conf prg@(Program hdr docs useList groupDefs filter comps) =
         --verify grousp here
         --verify filters
         case resu of
-            Left e -> case e of --CATCH ALL ERRORS HERE
-                (GenError e) -> putStrLn e >> exitFailure
+            Left e -> print e >> exitFailure  --CATCH ALL ERRORS HERE
             Right r -> putStrLn "weeded successfully" >> return r
        
 weedProgram::[String]->[Conf]->Program->Either LexError Program
@@ -73,23 +71,24 @@ weedProgram grpFiles conf (Program hdr docs useList groupDefs filter comps) =
         --test Conf
         --verifyFilters conf filter
         --let a = vFilters conf filter
-
         --pure $
         return (Program hdr docs useList groupDefs filter comps)
 
-testGroupFiles::[UseFile]->[String]->Either LexError [UseFile]
-testGroupFiles g@((UseFile x):xs) grpFiles =
---testGroupFiles g@[(UseFile x)] grpFiles = 
-    do
-        --useList to group names 
-        let a = verifyGroupFiles x 
-        return g
-        
+flattenUseFile::[UseFile]->[String]
+flattenUseFile ((UseFile []):[]) = [] 
+flattenUseFile ((UseFile x):[]) = x
+flattenUseFile ((UseFile []):xs) = flattenUseFile(xs)
+flattenUseFile ((UseFile x):xs) = x ++ flattenUseFile(xs)
+flattenUseFile _ = []
 
---checkAll
---one for names
---one for fields 
---one for valls
+testGroupFiles::[UseFile]->[String]->Either LexError [UseFile]
+testGroupFiles useFiles grpFiles =
+    do
+        --Flatten the useFile List
+        let declaredUseFiles = flattenUseFile useFiles
+        case (sort declaredUseFiles) == (sort grpFiles) of
+            False -> Left $ MissingFilesError "ERROR: Group files Missing" --Better error messages for other cases. Maybe see what files are missing exactly. Doesn't need to be true false exactly
+            True -> Right $ useFiles
 
 checkSubFields::[Conf]->FilterName->[FilterDef]->Bool
 checkSubFields [] fname [] = False
