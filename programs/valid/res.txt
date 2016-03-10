@@ -1,0 +1,33 @@
+
+programs/valid/PatientSequences.onc: 
+MissingFilesError "ERROR: Group files Missing"
+programs/valid/noGroups.onc: 
+MissingFilesError "ERROR: Group files Missing"
+programs/valid/PatientTimeLines.onc: 
+MissingFilesError "ERROR: Group files Missing"
+programs/valid/noFilter.onc: 
+MissingFilesError "ERROR: Group files Missing"
+programs/valid/sample.onc: 
+MissingFilesError "ERROR: Group files Missing"
+programs/valid/example4.onc: 
+MissingFilesError "ERROR: Group files Missing"
+programs/valid/DailyPatientHistory.onc: 
+MissingFilesError "ERROR: Group files Missing"
+programs/valid/GroupExpansionTest.onc: 
+MissingFilesError "ERROR: Group files Missing"
+programs/valid/Barcharts.onc: 
+MissingFilesError "ERROR: Group files Missing"
+programs/valid/InLineGroupExpansionTest.onc: 
+MissingFilesError "ERROR: Group files Missing"
+programs/examples/brendan2.onc: 
+MissingFilesError "ERROR: Group files Missing"
+programs/examples/shivan2.onc: All Group files exist
+Weeded successfully
+programs/examples/brendan1.onc: 
+MissingFilesError "ERROR: Group files Missing"
+programs/examples/Yusaira1.onc: 
+MissingFilesError "ERROR: Group files Missing"
+programs/examples/Yusaira2.onc: All Group files exist
+Weeded successfully
+programs/examples/shivan1.onc: All Group files exist
+Weeded successfully

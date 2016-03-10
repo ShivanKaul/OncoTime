@@ -91,11 +91,10 @@ tparseFileCheck file =
             Right r -> print r 
 main = 
     do
-        readData <- readFile "config.conf"
+        --readData <- readFile "config.conf"
         (args:_) <- getArgs 
         --args <- getArgs
         -- let l = lines readData
         -- let listOfMaps =  map makeConf l
-            --
         parseAndWeed args
         --parseFile args

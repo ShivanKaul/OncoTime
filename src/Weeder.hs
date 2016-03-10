@@ -32,15 +32,6 @@ import Formatter
 parseAndWeed::String->IO(Program)
 parseAndWeed file =
     do
-        {-
-        program <- readFile file
-        readData <- readFile "config.conf"
-        let l= lines readData
-        let listOfMaps =  map makeConf l
-        dirContents <- getDirectoryContents "."
-        let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
-        let grpFileNames = map dropExtension grpFiles 
-        -}
         -- Check if file ends with .onc
         if takeExtension file /= ".onc" 
             then do die ("ERROR: while reading " ++ file ++ ": File extension not .onc")
@@ -58,29 +49,53 @@ parseAndWeed file =
 
 --the function that does all weeding
 weed::String->Program->IO(Program)
-weed file prg@(Program hdr docs useList groupDefs filter comps) =
+weed file prg@(Program hdr docs useList groupDefs filters comps) =
     do
-        let conf = readConf file
-        let grpFileList = weedGroupFiles useList
-        --let resu = weedProgram grpFileList conf prg 
-        --verify grousp here
+        --get Config file
+        let conf = readConf file 
+       --grpFile weeding
+        dirContents <- getDirectoryContents "."
+        let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
+        let grpFileNames = map dropExtension grpFiles 
+        let grpFileList = weedGroupFiles useList grpFileNames
+        
+        case grpFileList of 
+            Left e -> putStrLn (file ++ ": ") >> print e >> exitFailure
+            Right r -> putStrLn $ file ++ ": All Group files exist"
+        --parsing each group file
+        
         --verify filters
+        putStrLn "Weeded successfully"
         return prg
         --case resu of
           --  Left e -> print e >> exitFailure  --CATCH ALL ERRORS HERE
            -- Right r -> putStrLn "weeded successfully" >> return r
-      
-weedGroupFiles::[UseFile]->IO(Either LexError [UseFile])
-weedGroupFiles useList = 
-    do
-        dirContents <- getDirectoryContents "."
-        let grpFiles = map dropExtension $ filter (\x -> takeExtension x == ".grp") dirContents
-        let declaredUseFiles = flattenUseFile useList
-        case (null $ filter (not . (`elem` grpFiles)) declaredUseFiles) of
-        --case (sort declaredUseFiles) == (sort grpFiles) of
-            False -> return $ Left $ MissingFilesError "ERROR: Group files Missing" --Better error messages for other cases. Maybe see what files are missing exactly. Doesn't need to be true false exactly
-            True -> return $ Right $ useList
 
+weedGroupFiles::[UseFile]->[String]->Either LexError [UseFile]
+weedGroupFiles useList grpFiles = 
+    do
+        let declaredUseFiles = flattenUseFile useList
+
+        if declaredUseFiles == [] 
+            then Right $ useList 
+            else 
+                case (null $ filter (not . (`elem` grpFiles)) declaredUseFiles) of
+        --case (sort declaredUseFiles) == (sort grpFiles) of
+                    False -> Left $ MissingFilesError ("ERROR: Missing one of group files: " ++ ( intercalate ","  declaredUseFiles) ++ " out of: " ++ (intercalate "," grpFiles)) --Better error messages for other cases. Maybe see what files are missing exactly. Doesn't need to be true false exactly
+                    True -> Right $ useList
+
+{-
+--should return files that are not elem of
+--returns found files
+compareUseLists::[String]->[String]->[String]
+compareUseLists [] [] = []
+compareUseLists grpFiles [] =  []
+compareUseLists grpFiles (useFile:ys) = 
+    case useFile `elem` grpFiles of
+        False -> useFile ++ (compareUseLists grpFiles ys) 
+        True -> (compareUseLists grpFiles ys) 
+compareUseLists [] useFile = []
+-}
 
 readConf::String->IO([Conf])
 readConf file = 
