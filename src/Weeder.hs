@@ -28,10 +28,11 @@ import Parser
 import PrettyPrinter
 import Formatter
 
-
+--parse file that weeds
 parseAndWeed::String->IO(Program)
 parseAndWeed file =
     do
+        {-
         program <- readFile file
         readData <- readFile "config.conf"
         let l= lines readData
@@ -39,6 +40,7 @@ parseAndWeed file =
         dirContents <- getDirectoryContents "."
         let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
         let grpFileNames = map dropExtension grpFiles 
+        -}
         -- Check if file ends with .onc
         if takeExtension file /= ".onc" 
             then do die ("ERROR: while reading " ++ file ++ ": File extension not .onc")
@@ -51,22 +53,47 @@ parseAndWeed file =
                             putStrLn "ERROR" >> print e>> exitFailure
                             --print e
                     --Right r -> print r >> writeFile ((reverse (drop 4 (reverse file))) ++ ".pretty.onc") (pretty r)
-                    Right r-> weed grpFileNames listOfMaps r
+                    --Right r-> weed grpFileNames listOfMaps r
+                    Right parsedProg -> weed file parsedProg 
 
-weed::[String]->[Conf]->Program->IO(Program)
-weed grpFileList conf prg@(Program hdr docs useList groupDefs filter comps) =
+--the function that does all weeding
+weed::String->Program->IO(Program)
+weed file prg@(Program hdr docs useList groupDefs filter comps) =
     do
-        let resu = weedProgram grpFileList conf prg 
+        let conf = readConf file
+        let grpFileList = weedGroupFiles useList
+        --let resu = weedProgram grpFileList conf prg 
         --verify grousp here
         --verify filters
-        case resu of
-            Left e -> print e >> exitFailure  --CATCH ALL ERRORS HERE
-            Right r -> putStrLn "weeded successfully" >> return r
-       
-weedProgram::[String]->[Conf]->Program->Either LexError Program
-weedProgram grpFiles conf (Program hdr docs useList groupDefs filter comps) =
+        return prg
+        --case resu of
+          --  Left e -> print e >> exitFailure  --CATCH ALL ERRORS HERE
+           -- Right r -> putStrLn "weeded successfully" >> return r
+      
+weedGroupFiles::[UseFile]->IO(Either LexError [UseFile])
+weedGroupFiles useList = 
     do
-        testGroupFiles useList grpFiles
+        dirContents <- getDirectoryContents "."
+        let grpFiles = map dropExtension $ filter (\x -> takeExtension x == ".grp") dirContents
+        let declaredUseFiles = flattenUseFile useList
+        case (null $ filter (not . (`elem` grpFiles)) declaredUseFiles) of
+        --case (sort declaredUseFiles) == (sort grpFiles) of
+            False -> return $ Left $ MissingFilesError "ERROR: Group files Missing" --Better error messages for other cases. Maybe see what files are missing exactly. Doesn't need to be true false exactly
+            True -> return $ Right $ useList
+
+
+readConf::String->IO([Conf])
+readConf file = 
+    do
+        program <- readFile file
+        readData <- readFile "config.conf"
+        let l= lines readData
+        let listOfMaps =  map makeConf l
+        return listOfMaps
+
+weedProgram::[Conf]->Program->Either LexError Program
+weedProgram conf (Program hdr docs useList groupDefs filter comps) =
+    do
         --test Group Files
         --test Conf
         --verifyFilters conf filter
