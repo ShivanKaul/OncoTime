@@ -23,7 +23,7 @@ import TypeUtils
 import Debug.Trace
 
 --Our modules
-import Types 
+import Types
 import Parser
 import PrettyPrinter
 import Formatter
@@ -33,7 +33,7 @@ parseAndWeed::String->IO(Program)
 parseAndWeed file =
     do
         -- Check if file ends with .onc
-        if takeExtension file /= ".onc" 
+        if takeExtension file /= ".onc"
             then do die ("ERROR: while reading " ++ file ++ ": File extension not .onc")
             else do
                 program <- readFile file
@@ -45,25 +45,25 @@ parseAndWeed file =
                             --print e
                     --Right r -> print r >> writeFile ((reverse (drop 4 (reverse file))) ++ ".pretty.onc") (pretty r)
                     --Right r-> weed grpFileNames listOfMaps r
-                    Right parsedProg -> weed file parsedProg 
+                    Right parsedProg -> weed file parsedProg
 
 --the function that does all weeding
 weed::String->Program->IO(Program)
 weed file prg@(Program hdr docs useList groupDefs filters comps) =
     do
         --get Config file
-        let conf = readConf file 
+        let conf = readConf file
        --grpFile weeding
         dirContents <- getDirectoryContents "."
         let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
-        let grpFileNames = map dropExtension grpFiles 
+        let grpFileNames = map dropExtension grpFiles
         let grpFileList = weedGroupFiles useList grpFileNames
-        
-        case grpFileList of 
+
+        case grpFileList of
             Left e -> putStrLn (file ++ ": ") >> print e >> exitFailure
             Right r -> putStrLn $ file ++ ": All Group files exist"
         --parsing each group file
-        
+
         --verify filters
         putStrLn "Weeded successfully"
         return prg
@@ -72,13 +72,13 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
            -- Right r -> putStrLn "weeded successfully" >> return r
 
 weedGroupFiles::[UseFile]->[String]->Either LexError [UseFile]
-weedGroupFiles useList grpFiles = 
+weedGroupFiles useList grpFiles =
     do
         let declaredUseFiles = flattenUseFile useList
 
-        if declaredUseFiles == [] 
-            then Right $ useList 
-            else 
+        if declaredUseFiles == []
+            then Right $ useList
+            else
                 case (null $ filter (not . (`elem` grpFiles)) declaredUseFiles) of
         --case (sort declaredUseFiles) == (sort grpFiles) of
                     False -> Left $ MissingFilesError ("ERROR: Missing one of group files: " ++ ( intercalate ","  declaredUseFiles) ++ " out of: " ++ (intercalate "," grpFiles)) --Better error messages for other cases. Maybe see what files are missing exactly. Doesn't need to be true false exactly
@@ -90,15 +90,31 @@ weedGroupFiles useList grpFiles =
 compareUseLists::[String]->[String]->[String]
 compareUseLists [] [] = []
 compareUseLists grpFiles [] =  []
-compareUseLists grpFiles (useFile:ys) = 
+compareUseLists grpFiles (useFile:ys) =
     case useFile `elem` grpFiles of
-        False -> useFile ++ (compareUseLists grpFiles ys) 
-        True -> (compareUseLists grpFiles ys) 
+        False -> useFile ++ (compareUseLists grpFiles ys)
+        True -> (compareUseLists grpFiles ys)
 compareUseLists [] useFile = []
 -}
 
+-- Group file names, parsing them individually, building up a list of
+-- groupdefs which are then appended to parse output of parser
+inlineGroupFiles :: [String] -> [GroupDefs]
+inlineGroupFiles grpFiles =
+    do
+        groupDefs <- concat (map getGroupDefs grpFiles)
+        return groupDefs
+
+getGroupDefs :: String -> [GroupDefs]
+getGroupDefs groupFile =
+    do
+        readGroupFile <- (readFile groupFile)
+        case parse (manyGroups) "" (readGroupFile) of
+            Left e -> []
+            Right r -> r
+
 readConf::String->IO([Conf])
-readConf file = 
+readConf file =
     do
         program <- readFile file
         readData <- readFile "config.conf"
@@ -117,7 +133,7 @@ weedProgram conf (Program hdr docs useList groupDefs filter comps) =
         return (Program hdr docs useList groupDefs filter comps)
 
 flattenUseFile::[UseFile]->[String]
-flattenUseFile ((UseFile []):[]) = [] 
+flattenUseFile ((UseFile []):[]) = []
 flattenUseFile ((UseFile x):[]) = x
 flattenUseFile ((UseFile []):xs) = flattenUseFile(xs)
 flattenUseFile ((UseFile x):xs) = x ++ flattenUseFile(xs)
@@ -142,7 +158,7 @@ checkSubFields c fname ((FilterDef (FilterField fieldName) _):ys) =
 
 vFilters::[Conf]->[Filter]->Bool
 vFilters conf [] = True
-vFilters conf ((Filter fname a@((FilterDef (FilterField fieldName) _ ):ys)):xs) = 
+vFilters conf ((Filter fname a@((FilterDef (FilterField fieldName) _ ):ys)):xs) =
     case (fieldExists conf fname) && (checkSubFields conf fname a) of
-        True -> (vFilters conf xs) 
+        True -> (vFilters conf xs)
         False -> False
