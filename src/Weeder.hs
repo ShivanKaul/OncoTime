@@ -63,7 +63,9 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
             Left e -> putStrLn (file ++ ": ") >> print e >> exitFailure
             Right r -> putStrLn $ file ++ ": All Group files exist"
         --parsing each group file
-        
+       
+
+
         --verify filters
         putStrLn "Weeded successfully"
         return prg
@@ -84,18 +86,6 @@ weedGroupFiles useList grpFiles =
                     False -> Left $ MissingFilesError ("ERROR: Missing one of group files: " ++ ( intercalate ","  declaredUseFiles) ++ " out of: " ++ (intercalate "," grpFiles)) --Better error messages for other cases. Maybe see what files are missing exactly. Doesn't need to be true false exactly
                     True -> Right $ useList
 
-{-
---should return files that are not elem of
---returns found files
-compareUseLists::[String]->[String]->[String]
-compareUseLists [] [] = []
-compareUseLists grpFiles [] =  []
-compareUseLists grpFiles (useFile:ys) = 
-    case useFile `elem` grpFiles of
-        False -> useFile ++ (compareUseLists grpFiles ys) 
-        True -> (compareUseLists grpFiles ys) 
-compareUseLists [] useFile = []
--}
 
 readConf::String->IO([Conf])
 readConf file = 

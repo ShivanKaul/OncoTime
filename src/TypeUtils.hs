@@ -20,10 +20,14 @@ import Types
 import Lexer
 
 
-data Conf = Conf (FieldName, (M.Map SubFieldName (SubField))) deriving(Eq, Show)
+data Config =  Config (M.Map FieldName (M.Map SubFieldName (SubField)))
+
+--data Conf = Conf (FieldName, (M.Map SubFieldName (SubField))) deriving(Eq, Show)
+--type SubField = (AllowedType, [AllowedVal])
 type SubField = (AllowedType, [AllowedVal])
 
-data TypesMap = TypesMap FieldName (M.Map AllowedType [AllowedVal])
+
+--data TypesMap = TypesMap FieldName (M.Map AllowedType [AllowedVal])
 type FieldName = String
 type AllowedType = String
 type AllowedVal = String
