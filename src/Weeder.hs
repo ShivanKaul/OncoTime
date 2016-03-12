@@ -52,7 +52,8 @@ weed::String->Program->IO(Program)
 weed file prg@(Program hdr docs useList groupDefs filters comps) =
     do
         --get Config file
-        let conf = readConf file 
+        conf <- readConfig file 
+        print $ M.showTree $ configToMap conf
        --grpFile weeding
         dirContents <- getDirectoryContents "."
         let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
@@ -68,9 +69,10 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
 
         --verify filters
         putStrLn "Weeded successfully"
+        
         return prg
         --case resu of
-          --  Left e -> print e >> exitFailure  --CATCH ALL ERRORS HERE
+          --  Left e -> print e >> exitFailure  --CATALL ERRORS HERE
            -- Right r -> putStrLn "weeded successfully" >> return r
 
 weedGroupFiles::[UseFile]->[String]->Either LexError [UseFile]
@@ -86,15 +88,16 @@ weedGroupFiles useList grpFiles =
                     False -> Left $ MissingFilesError ("ERROR: Missing one of group files: " ++ ( intercalate ","  declaredUseFiles) ++ " out of: " ++ (intercalate "," grpFiles)) --Better error messages for other cases. Maybe see what files are missing exactly. Doesn't need to be true false exactly
                     True -> Right $ useList
 
-
-readConf::String->IO([Conf])
-readConf file = 
+readConfig::String->IO(Config)
+readConfig file = 
     do
         program <- readFile file
         readData <- readFile "config.conf"
         let l= lines readData
-        let listOfMaps =  map makeConf l
-        return listOfMaps
+        let totalMap = configListToMap $ map makeConfig l
+        print $ M.showTree $ totalMap 
+        return $ Config totalMap
+
 
 weedProgram::[Conf]->Program->Either LexError Program
 weedProgram conf (Program hdr docs useList groupDefs filter comps) =
@@ -121,18 +124,3 @@ testGroupFiles useFiles grpFiles =
         case (sort declaredUseFiles) == (sort grpFiles) of
             False -> Left $ MissingFilesError "ERROR: Group files Missing" --Better error messages for other cases. Maybe see what files are missing exactly. Doesn't need to be true false exactly
             True -> Right $ useFiles
-
-checkSubFields::[Conf]->FilterName->[FilterDef]->Bool
-checkSubFields [] fname [] = False
-checkSubFields c fname [] = True
-checkSubFields c fname ((FilterDef (FilterField fieldName) _):ys) =
-    case (subFieldExists c fname fieldName) of
-        True -> (checkSubFields c fname ys)
-        False -> False
-
-vFilters::[Conf]->[Filter]->Bool
-vFilters conf [] = True
-vFilters conf ((Filter fname a@((FilterDef (FilterField fieldName) _ ):ys)):xs) = 
-    case (fieldExists conf fname) && (checkSubFields conf fname a) of
-        True -> (vFilters conf xs) 
-        False -> False

@@ -80,9 +80,9 @@ tparseFileCheck file =
     do 
         readData <- readFile "config.conf"
         let l= lines readData
-        let listOfMaps =  map makeConf l
+        let totalMap =  Config $ configListToMap $ map makeConfig l
         program <- readFile file
-        case parse ((testParserCheck listOfMaps) <* eof) file program of
+        case parse ((testParserCheck totalMap) <* eof) file program of
             Left e ->
                 do
                     putStrLn "ERROR"
