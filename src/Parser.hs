@@ -10,7 +10,7 @@ import System.IO
 import qualified Data.Map as M
 import Data.List
 import Control.Monad
-import Control.Applicative (some) 
+import Control.Applicative (some)
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
@@ -26,11 +26,11 @@ import Lexer
 
 --use this Parser to test
 testParser :: Parser TestProgram
-testParser = 
+testParser =
     do
         whiteSpace
-        --try testHeader <|>testUse <|> testGroups <|> try testComputation <|>  try testDocs 
-        --testHeader 
+        --try testHeader <|>testUse <|> testGroups <|> try testComputation <|>  try testDocs
+        --testHeader
         testUse
         -- testDocs
         --testGroups
@@ -47,8 +47,8 @@ testParserCheck ::Config-> Parser TestProgram
 testParserCheck c = 
     do
         whiteSpace
-        --try testHeader <|>testUse <|> testGroups <|> try testComputation <|>  try testDocs 
-        --testHeader 
+        --try testHeader <|>testUse <|> testGroups <|> try testComputation <|>  try testDocs
+        --testHeader
         --testUse
         -- testDocs
         --testGroups
@@ -75,19 +75,19 @@ testDocs =
         return $TestDocs docs
 
 testUse::Parser TestProgram
-testUse = 
+testUse =
     do
         use <- many useList
         return $ TestUseFileList use
 
 testGroups::Parser TestProgram
-testGroups = 
+testGroups =
     do
         grp <- many groups
         return $ TestGroupList grp
 
 testFilters::Parser TestProgram
-testFilters = 
+testFilters =
     do
         filt <- many filters
         return $ TestFiltersList filt
@@ -103,16 +103,16 @@ oncoParser =
     do
         whiteSpace
         hdr <- header
-        doc <- documentation 
+        doc <- documentation
         use <- many useList
         grp <- many groups
         filt <- manyFilters
         comp <- manyComp
-        return $ Program hdr doc use grp filt comp 
+        return $ Program hdr doc use grp filt comp
 
 --IO to checkfilename
 header:: Parser Header
-header = 
+header =
     do
         reserved "script"
         fname <- filename
@@ -121,7 +121,7 @@ header =
         return $ Header fname args
 
 getFileName :: Parser String
-getFileName = 
+getFileName =
     do
         whiteSpace
         reserved "script"
@@ -129,7 +129,7 @@ getFileName =
         return fname
 
 arg :: Parser Arg
-arg = 
+arg =
     do
         t <- groupType
         v <- var
@@ -150,7 +150,7 @@ filename = lexeme $
 
 documentation :: Parser Docs
 documentation = lexeme $
-    do  
+    do
         doc <- docLiteral
         return $ Docs doc
 
@@ -197,24 +197,30 @@ wordChar = (satisfy (\c -> (c=='-' ) || (c=='_') || (isAlphaNum c)   ))
 fChar :: Parser Char
 fChar = (satisfy (\c -> (c=='.' ) || (isAlphaNum c)))
 
+manyGroups :: Parser [GroupDefs]
+manyGroups =
+    do
+        grps <- many groups
+        return grps
+
 groups::Parser GroupDefs
-groups = lexeme $ 
+groups = lexeme $
     do
         reserved "group"
         grpType <- groupType
         v <- var
         reserved "="
-        grpItem <- curlies $ sepBy formattedGroup comma 
+        grpItem <- curlies $ sepBy formattedGroup comma
         semi
         return $ Group grpType v grpItem
 
 
 formattedGroup::Parser GroupItem
-formattedGroup = 
+formattedGroup =
     do
       (optional semi)
       z<-groupItem
-      (optional semi)  
+      (optional semi)
       return z
 
 groupType::Parser GroupType
@@ -273,29 +279,29 @@ betw = lexeme $
         return $ Between (read pre) (read post)
 
 manyComp ::Parser [Computation]
-manyComp = 
-    do 
+manyComp =
+    do
         c <- curlies $ (optional semi) >> (many computation)
-        if (null c) 
+        if (null c)
             then trace ("WARNING: Computation list is empty.") (optional semi)
         else (optional semi)
         return c
 
 computation::Parser Computation
-computation = 
-    try (liftM2 Foreach foreach manyComp) 
-    <|> try (liftM Table table) 
+computation =
+    try (liftM2 Foreach foreach manyComp)
+    <|> try (liftM Table table)
     <|> try (list)
-    <|> try (liftM Print prints) 
-    <|> try (liftM Barchart barchart) 
+    <|> try (liftM Print prints)
+    <|> try (liftM Barchart barchart)
 
 foreach::Parser ForEachDef
-foreach = 
+foreach =
     do
         try(forEachFilter) <|> try(forEachTable) <|> try(forEachSequence) <|> try(forEachList)
 
 table::Parser TableAction
-table = 
+table =
     do
         reserved "table"
         v <- var
@@ -315,26 +321,26 @@ list=
         reserved "=" --equal --equal
         reserved "sequences"
         reserved "like"
-        e <- seqList 
+        e <- seqList
         semi
         return $ List v e
 
 seqList::Parser [[SeqField]]
 seqList= lexeme $ squares $ sepBy singleSequence bar
-        
+
 singleSequence::Parser [SeqField]
-singleSequence = 
-    do 
+singleSequence =
+    do
         (optional semi)
         x <- sepBy seqField arrow
         (optional semi)
         return x
 
 seqField::Parser SeqField
-seqField = 
+seqField =
     do
         (optional semi)
-        x <- try(seqSingle) <|> try(seqDisj) <|> try(seqNeg) <|> try(seqStar) 
+        x <- try(seqSingle) <|> try(seqDisj) <|> try(seqNeg) <|> try(seqStar)
         (optional semi)
         return x
 
@@ -344,7 +350,7 @@ seqSingle =
         e <- event
         return $ Single e
 seqStar :: Parser SeqField
-seqStar = 
+seqStar =
     do
         e <- curlies $ sepBy event comma
         star
@@ -356,18 +362,18 @@ seqNeg =
         return $ Neg e
 seqNot::Parser Event
 seqNot =
-    do 
+    do
         reserved "not"
         event
 
 seqDisj :: Parser SeqField
-seqDisj = 
+seqDisj =
     do
         e <- curlies $ sepBy event comma
         return $ Disj e
 
 event::Parser Event
-event =  try (eSome) <|> try (liftM EAll eventName) 
+event =  try (eSome) <|> try (liftM EAll eventName)
 eSome::Parser Event
 eSome = do
     e<-eventName
@@ -378,22 +384,22 @@ eventName :: Parser EventName
 eventName =
     do
         ename <- identifier
-        return $ ename 
+        return $ ename
 
 prints:: Parser PrintAction
-prints = try printvar <|> try printTimeLine <|> try printLength <|> try printFilters <|> printElement 
+prints = try printvar <|> try printTimeLine <|> try printLength <|> try printFilters <|> printElement
 
-barchart::Parser Var 
+barchart::Parser Var
 barchart =  lexeme $
-    do 
+    do
         reserved "barchart"
         v <- var
         semi
         return $ v
 
 
-forEachFilter::Parser ForEachDef 
-forEachFilter = 
+forEachFilter::Parser ForEachDef
+forEachFilter =
     do
         reserved "foreach"
         f <- lexeme filterName
@@ -402,7 +408,7 @@ forEachFilter =
         return $ ForEachFilter f v
 
 
-forEachTable::Parser ForEachDef 
+forEachTable::Parser ForEachDef
 forEachTable =
     do
         reserved "foreach"
@@ -424,8 +430,8 @@ forEachSequence =
         semi
         return $ ForEachSequence v1 e
 
-forEachList::Parser ForEachDef 
-forEachList = 
+forEachList::Parser ForEachDef
+forEachList =
     do
         reserved "foreach"
         reserved "member"
@@ -436,7 +442,7 @@ forEachList =
         return $ ForEachList v1 v2
 
 printvar::Parser PrintAction
-printvar = 
+printvar =
     do
         reserved "print"
         v <- var
@@ -461,7 +467,7 @@ printLength =
         dot
         reserved "length"
         semi
-        return $ PrintLength v 
+        return $ PrintLength v
 
 
 printFilters::Parser PrintAction
@@ -475,7 +481,7 @@ printFilters =
         return $ PrintFilters filterList v
 
 printElement::Parser PrintAction
-printElement = 
+printElement =
     do
         reserved "print"
         v1 <-var
@@ -486,11 +492,11 @@ printElement =
 filterName::Parser FilterName
 filterName = lexeme $
     do
-        f <- identifier 
+        f <- identifier
         return f
 
 filterVal::Parser FilterVal
-filterVal = 
+filterVal =
     do
         g <- groupItem
         return g
@@ -514,22 +520,22 @@ fD::Parser FilterDef
 fD = try(filterDefs)
 
 filterDefs :: Parser FilterDef
-filterDefs = 
+filterDefs =
     do
         ffield <- identifier
         colon
-        fval <- sepBy filterVal comma 
+        fval <- sepBy filterVal comma
         semi
         return $ FilterDef (FilterField ffield) fval
 
-useList :: Parser UseFile 
+useList :: Parser UseFile
 useList = lexeme $
-    do 
+    do
         reserved "use"
         names <- sepBy grpFile comma
         --case verifyGroupFiles names of
           --  False -> fail
-        
+
         semi
         return $ UseFile names
 

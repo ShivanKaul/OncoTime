@@ -23,67 +23,54 @@ import TypeUtils
 import Debug.Trace
 
 --Our modules
-import Types 
+import Types
 import Parser
 import PrettyPrinter
 import Formatter
-
---parse file that weeds
-parseAndWeed::String->IO(Program)
-parseAndWeed file =
-    do
-        -- Check if file ends with .onc
-        if takeExtension file /= ".onc" 
-            then do die ("ERROR: while reading " ++ file ++ ": File extension not .onc")
-            else do
-                program <- readFile file
-                -- case parse ((oncoParser  )<* eof) file (trace (formatFile program) (formatFile program) )of --debugging
-                case parse ((oncoParser)<* eof) file (formatFile program) of
-                    Left e ->
-                        do
-                            putStrLn "ERROR" >> print e>> exitFailure
-                            --print e
-                    --Right r -> print r >> writeFile ((reverse (drop 4 (reverse file))) ++ ".pretty.onc") (pretty r)
-                    Right parsedProg -> print "Parsed. Now weeding." >> weed file parsedProg 
 
 --the function that does all weeding
 weed::String->Program->IO(Program)
 weed file prg@(Program hdr docs useList groupDefs filters comps) =
     do
         --get Config file
-        conf <- readConfig file 
-        --print $ M.showTree $ configToMap conf
+        let conf = readConf file
        --grpFile weeding
         dirContents <- getDirectoryContents "."
         let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
-        let grpFileNames = map dropExtension grpFiles 
+        let grpFileNames = map dropExtension grpFiles
         let grpFileList = weedGroupFiles useList grpFileNames
-        
-        case grpFileList of 
+
+        case grpFileList of
             Left e -> putStrLn (file ++ ": ") >> print e >> exitFailure
             Right r -> putStrLn $ file ++ ": All Group files exist"
+
         --parsing each group file
-       
+        let grpAllFilesContents = map (readFile) grpFiles
+        groups <- sequence (map (getGroupDefs) (grpAllFilesContents))
         --verify filters
         putStrLn "Weeded successfully"
-        
         return prg
-        --case resu of
-          --  Left e -> print e >> exitFailure  --CATALL ERRORS HERE
-           -- Right r -> putStrLn "weeded successfully" >> return r
-
+        
 weedGroupFiles::[UseFile]->[String]->Either LexError [UseFile]
-weedGroupFiles useList grpFiles = 
+weedGroupFiles useList grpFiles =
     do
         let declaredUseFiles = flattenUseFile useList
 
-        if declaredUseFiles == [] 
-            then Right $ useList 
-            else 
+        if declaredUseFiles == []
+            then Right $ useList
+            else
                 case (null $ filter (not . (`elem` grpFiles)) declaredUseFiles) of
         --case (sort declaredUseFiles) == (sort grpFiles) of
                     False -> Left $ MissingFilesError ("ERROR: Missing one of group files: " ++ ( intercalate ","  declaredUseFiles) ++ " out of: " ++ (intercalate "," grpFiles)) --Better error messages for other cases. Maybe see what files are missing exactly. Doesn't need to be true false exactly
                     True -> Right $ useList
+
+getGroupDefs :: IO(String) -> IO([GroupDefs])
+getGroupDefs grpFileData =
+    do
+        readData <- grpFileData
+        case parse (manyGroups) "" (readData) of
+            Left e -> putStrLn ("ERROR: " ++ show e) >> return []
+            Right r -> return r
 
 readConfig::String->IO(Config)
 readConfig file = 
@@ -107,7 +94,7 @@ weedProgram conf (Program hdr docs useList groupDefs filter comps) =
         return (Program hdr docs useList groupDefs filter comps)
 
 flattenUseFile::[UseFile]->[String]
-flattenUseFile ((UseFile []):[]) = [] 
+flattenUseFile ((UseFile []):[]) = []
 flattenUseFile ((UseFile x):[]) = x
 flattenUseFile ((UseFile []):xs) = flattenUseFile(xs)
 flattenUseFile ((UseFile x):xs) = x ++ flattenUseFile(xs)
@@ -121,3 +108,4 @@ testGroupFiles useFiles grpFiles =
         case (sort declaredUseFiles) == (sort grpFiles) of
             False -> Left $ MissingFilesError "ERROR: Group files Missing" --Better error messages for other cases. Maybe see what files are missing exactly. Doesn't need to be true false exactly
             True -> Right $ useFiles
+
