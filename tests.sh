@@ -5,4 +5,8 @@ NC='\033[0m' # No Color
 
 chmod +x oncotime
 printf "\n${RED}Running tests...${NC}\n"
-python regression.py
+if [ $# -eq 0 ] 
+then	python regression.py
+else	python regression.py $1
+fi
+
