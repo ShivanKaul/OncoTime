@@ -1,0 +1,2 @@
+group Id patientGroupOne = {1 to 250, 300 to 400, 1001};
+group Birthyear patientBirthyearRange = {1950 to 1970};
