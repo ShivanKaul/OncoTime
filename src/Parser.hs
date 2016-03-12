@@ -157,10 +157,10 @@ documentation = lexeme $
 docLiteral :: Parser String        
 docLiteral   = lexeme (
     do{ str <- between (symbol "/**")
-        (symbol "*/" <?> "end of Documentation String")
+        (symbol "*/" <?> "end of Documentation String (*/)")
         (many docChar)
         ; return (foldr (maybe id (:)) "" str)
-    }  <?> "literal string")
+    }  <?> "Documentation String")
 
 docChar :: Parser (Maybe Char)
 docChar      =   do{ c <- validDocChar; return (Just c) }  <?> "Documentation string character"
@@ -171,13 +171,7 @@ validDocChar    =
         isNextValid <- isStarSlash
         --satisfy (\c -> (c /= '*'))
         satisfy (\c -> not isNextValid)
-        {-if char == '*' 
-        then
-            do 
-                isNextSlash <- isSlash
-                tokenPrim (\c -> show [char]) (\pos c _cs -> pos) (\c -> if isNextSlash then Just char else Nothing)
         
-        else  return char-}
         
 isStarSlash :: Parser Bool
 isStarSlash = 
@@ -185,11 +179,7 @@ isStarSlash =
         char <- lookAhead $ count 2 anyChar
         return (char == "*/")
 
-{-
-validDocChar    = satisfy (\c -> (c /= '*' ))
-notSlash = lookAhead symbol "/"
 
--}
 
 wordChar :: Parser Char
 wordChar = (satisfy (\c -> (c=='-' ) || (c=='_') || (isAlphaNum c)   ))
@@ -507,7 +497,7 @@ filters =
         filterName <- lexeme $ identifier
         choice $ [reserved "is", reserved "are"]
         semi
-        filterDs <- lexeme $ some fD
+        filterDs <- lexeme $ some $ try filterDefs
         return $ Filter filterName filterDs
 
 manyFilters :: Parser [Filter]
@@ -516,8 +506,6 @@ manyFilters =
         f <- many filters
         return $ f
 
-fD::Parser FilterDef
-fD = try(filterDefs)
 
 filterDefs :: Parser FilterDef
 filterDefs =
@@ -528,21 +516,20 @@ filterDefs =
         semi
         return $ FilterDef (FilterField ffield) fval
 
-useList :: Parser UseFile
-useList = lexeme $
-    do
-        reserved "use"
-        names <- sepBy grpFile comma
-        --case verifyGroupFiles names of
-          --  False -> fail
 
-        semi
-        return $ UseFile names
+useList :: Parser UseFile 
+useList = lexeme (
+    do {
+        reserved "use";
+        names <- sepBy grpFile comma;
+        semi;
+        return $ UseFile names;}<?> "Use statement")
+
 
 grpFile::Parser String
-grpFile = lexeme $
-    do
-        file <- some alphaNum
-        dot
-        string "grp"
-        return file
+grpFile = lexeme (
+    do {
+        file <- some alphaNum;
+        dot;
+        string "grp";
+        return file;} <?> "use file" )

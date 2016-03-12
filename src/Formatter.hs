@@ -47,9 +47,16 @@ formatFile contents =
     let y@(h,d,p) = removeDocs contents
         h1 =  (removeNewLines h )
         p1 =  (removeNewLines p )
-    in   (h1 ++ d ++ p1)
+    in   trace (addLineNumbers contents) (h1 ++ d ++ p1)
+
+addLineNumbers contents=
+  addnums 1 (lines contents) 
+addnums :: Int->[String]  -> String
+addnums num [] = []  
+addnums num (l:ls) = ((show num) ++ "\t"++ l++"\n") ++ (addnums (num+1) ls)
 
 
-testFormatter = (putStrLn $ show $ formatFile "File()\n\n/* ohai \ntutta*/\nhello! how are you? //kites\n//might\n\n\nbye\n\nkettle\n   \ncat\n\t\n\t\n")
+testFormatter = (putStrLn $ addLineNumbers $ formatFile "File()\n\n/* ohai \ntutta*/\n\nhello! how are you? //kites\n//might\n\n\nbye\ntea\nkettle\n   \ncat\n\n\n\t\n") 
+
 
 
