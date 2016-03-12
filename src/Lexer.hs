@@ -73,7 +73,7 @@ stringLit = Token.stringLiteral lexer
 charLit = Token.charLiteral lexer
 integer = Token.integer lexer -- parses an integer
 float = Token.float lexer
-semi = Token.semi lexer -- parses a semicolon
+
 colon = Token.colon lexer
 whiteSpace = Token.whiteSpace lexer -- parses whitespace
 parens = Token.parens lexer
@@ -84,3 +84,4 @@ bar = symbol "|"
 arrow = symbol "->" 
 star = symbol "*" 
 equal = symbol "=" 
+semi = symbol ";" <?> "newline" -- parses a semicolon

@@ -153,15 +153,43 @@ documentation = lexeme $
     do  
         doc <- docLiteral
         return $ Docs doc
+
+docLiteral :: Parser String        
 docLiteral   = lexeme (
     do{ str <- between (symbol "/**")
-        (symbol "*/" <?> "end of string")
-        (many stringChar)
+        (symbol "*/" <?> "end of Documentation String")
+        (many docChar)
         ; return (foldr (maybe id (:)) "" str)
     }  <?> "literal string")
 
-stringChar      =   do{ c <- stringLetter; return (Just c) }  <?> "string character"
-stringLetter    = satisfy (\c -> (c /= '*'))
+docChar :: Parser (Maybe Char)
+docChar      =   do{ c <- validDocChar; return (Just c) }  <?> "Documentation string character"
+
+validDocChar :: Parser Char
+validDocChar    = 
+    do
+        isNextValid <- isStarSlash
+        --satisfy (\c -> (c /= '*'))
+        satisfy (\c -> not isNextValid)
+        {-if char == '*' 
+        then
+            do 
+                isNextSlash <- isSlash
+                tokenPrim (\c -> show [char]) (\pos c _cs -> pos) (\c -> if isNextSlash then Just char else Nothing)
+        
+        else  return char-}
+        
+isStarSlash :: Parser Bool
+isStarSlash = 
+    do
+        char <- lookAhead $ count 2 anyChar
+        return (char == "*/")
+
+{-
+validDocChar    = satisfy (\c -> (c /= '*' ))
+notSlash = lookAhead symbol "/"
+
+-}
 
 wordChar :: Parser Char
 wordChar = (satisfy (\c -> (c=='-' ) || (c=='_') || (isAlphaNum c)   ))
