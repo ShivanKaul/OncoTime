@@ -33,7 +33,7 @@ weed::String->Program->IO(Program)
 weed file prg@(Program hdr docs useList groupDefs filters comps) =
     do
         --get Config file
-        let conf = readConf file
+        let conf = readConfig file
        --grpFile weeding
         dirContents <- getDirectoryContents "."
         let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
