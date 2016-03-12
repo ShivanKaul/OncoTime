@@ -15,20 +15,19 @@ import Text.ParserCombinators.Parsec.Language
 import Text.ParserCombinators.Parsec.Char
 import qualified Text.ParserCombinators.Parsec.Token as Token
 import Data.Char
-import Debug.Trace
+--import Debug.Trace
 import Types
 -- import PrettyPrinter
 import Lexer
 
 
-data Config =  Config (Map FieldName (Map SubFieldName (SubField))) deriving(Eq, Show)
+data Config =  Config (Map FieldName SubMap) deriving(Eq, Show)
+
+data SubMap = SubMap (Map SubFieldName (SubField)) deriving(Eq, Show)
 
 data Conf = Conf (FieldName, (Map SubFieldName (SubField))) deriving(Eq, Show)
---type SubField = (AllowedType, [AllowedVal])
 type SubField = (AllowedType, [AllowedVal])
 
-
---data TypesMap = TypesMap FieldName (M.Map AllowedType [AllowedVal])
 type FieldName = String
 type AllowedType = String
 type AllowedVal = String
@@ -40,8 +39,6 @@ makeConfig str =
         Left e-> error$ show e
         Right r -> r
 
-
---SubFieldName (AllowedType, AllowedVal)
 typeMapMaker::Parser (String, (String, [String])) 
 typeMapMaker =
     do
@@ -66,22 +63,17 @@ typeTuple =
         alVals <- squares $ sepBy identifier comma
         return (alType, alVals)
 
---data Config =  Config (M.Map FieldName (M.Map SubFieldName (SubField)))
 configParser::Parser Config
 configParser =
     do
         whiteSpace
         fieldName <- identifier
         colon
-        --reserved "["
         typeMapList <- squares $ sepBy subFieldMapMaker comma
         --concat list of maps to a single one
         let subMapList = foldr M.union M.empty typeMapList 
-        --reserved "]"
         semi
-        --M.fromList typeMapList
-        --return $ Config (M.singleton fieldName (M.fromList typeMapList)) 
-        return $ Config (M.singleton fieldName subMapList)
+        return $ Config (M.singleton fieldName (SubMap subMapList))
 
 
 getTypeFromMap::(SubField)->AllowedType
@@ -91,18 +83,28 @@ getValFromMap::(SubField)->[AllowedVal]
 getValFromMap (a,b) = b
 
 
-configListToMap::[Config]->(Map FieldName (Map SubFieldName (SubField)))
+--configListToMap::[Config]->(Map FieldName (Map SubFieldName (SubField)))
+configListToMap::[Config]->(Map FieldName SubMap)
 --configLisToMap ((Config (Map fn (Map sfn (sf)))):xs) = M.union 
-configListToMap ((Config []):M.empty) = M.empty
-configListToMap ((Config x):[]) = M.singleton  
+configListToMap ((Config (x)):[]) = 
+    case M.toList x of
+        [] -> M.empty
+        (fname, sub):[] -> M.singleton fname sub
+        mapList -> x 
 configListToMap ((Config x):xs) = M.union x $ configListToMap xs
-configListToMap ((Config []):xs) = configListToMap xs 
 
-configToMap::Config->(Map FieldName (Map SubFieldName (SubField)))
+configToMap::Config->(Map FieldName SubMap)
 configToMap (Config conf) = conf
---configLisToMap ((Config (Map fn (Map sfn (sf)))):xs) = M.union 
-
 --data Config =  Config (Map FieldName (Map SubFieldName (SubField))) deriving(Eq, Show)
+
+fieldExists::Config->FieldName->Bool
+fieldExists (Config confmap) fname = M.member fname confmap 
+
+subFieldExists::Config->FieldName->SubFieldName->Bool
+subFieldExists (Config confmap) fname sfname =  
+    case (M.lookup fname confmap) of
+        Nothing -> False
+        Just (SubMap m) -> M.member sfname m
 
 testFieldStuff::IO()
 testFieldStuff = 
@@ -110,14 +112,13 @@ testFieldStuff =
         readData <-readFile "config.conf"
         let l = lines readData
         let listOfMaps = map makeConfig l
-        
   --      let totalMap = foldr M.union M.empty listOfMaps
-
         --GET RID OF LIST OF MAPS. STUPID STUPID STUPID 
         let totalMap = configListToMap listOfMaps
-        print $ totalMap
         --print $ M.toList totalMap
-        --print $ fieldExists listOfMaps "Population" 
-        --print $ subFieldExists listOfMaps "Population" "Sex"
+        --print $ fieldExists (Config totalMap) "Population" 
+        --print $ fieldExists (Config totalMap) "population" 
+        --print $ subFieldExists (Config totalMap) "Population" "Sex"
+        --print $ subFieldExists (Config totalMap) "Population" "Flarf"
         --print $ getConfWithField listOfMaps "Population"
-
+        print "fields tested" 

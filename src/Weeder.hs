@@ -44,8 +44,7 @@ parseAndWeed file =
                             putStrLn "ERROR" >> print e>> exitFailure
                             --print e
                     --Right r -> print r >> writeFile ((reverse (drop 4 (reverse file))) ++ ".pretty.onc") (pretty r)
-                    --Right r-> weed grpFileNames listOfMaps r
-                    Right parsedProg -> weed file parsedProg 
+                    Right parsedProg -> print "Parsed. Now weeding." >> weed file parsedProg 
 
 --the function that does all weeding
 weed::String->Program->IO(Program)
@@ -53,7 +52,7 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
     do
         --get Config file
         conf <- readConfig file 
-        print $ M.showTree $ configToMap conf
+        --print $ M.showTree $ configToMap conf
        --grpFile weeding
         dirContents <- getDirectoryContents "."
         let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
@@ -65,8 +64,6 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
             Right r -> putStrLn $ file ++ ": All Group files exist"
         --parsing each group file
        
-
-
         --verify filters
         putStrLn "Weeded successfully"
         
@@ -95,7 +92,7 @@ readConfig file =
         readData <- readFile "config.conf"
         let l= lines readData
         let totalMap = configListToMap $ map makeConfig l
-        print $ M.showTree $ totalMap 
+        --print $ M.showTree $ totalMap 
         return $ Config totalMap
 
 
