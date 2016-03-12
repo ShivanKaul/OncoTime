@@ -23,34 +23,43 @@ import TypeUtils
 import Debug.Trace
 
 --Our modules
-import Types 
+import Types
 import Parser
 import PrettyPrinter
 import Formatter
 import Weeder
 
-parseFile :: String -> IO ()
+parseFile :: String -> IO (Program)
 parseFile file =
-    do 
+    do
         -- Check if file ends with .onc
-        if takeExtension file /= ".onc" 
+        if takeExtension file /= ".onc"
             then die ("ERROR: while reading " ++ file ++ ": File extension not .onc")
             else do
                 program <- readFile file
+                -- Check if filename == scriptname
                 case parse (getFileName) "" program of
                     Left e ->
                         do
-                            hPutStrLn stderr ("ERROR for file: " ++ (takeBaseName file) ++ show e)
-                    Right r -> if takeBaseName file /= r 
+                            die ("ERROR for file: " ++ (takeBaseName file) ++ show e)
+                    Right r -> if takeBaseName file /= r
                         then do
                             die ("ERROR: while reading " ++ file ++ ": Filename does not match script name")
                         else do
-                            -- case parse ((oncoParser  )<* eof) file (trace (formatFile program) (formatFile program) )of --debugging
-                            case parse ((oncoParser  )<* eof) file (formatFile program) of
+                            -- Parse program
+                            case parse ((oncoParser)<* eof) file (formatFile program) of
                                 Left e ->
                                     do
-                                        hPutStrLn stderr ("ERROR: " ++ show e)
-                                Right r -> writeFile ((reverse (drop 4 (reverse file))) ++ ".pretty.onc") (pretty r) >> print "VALID"
+                                        die ("ERROR: " ++ show e)
+                                Right parsedProg -> weed file parsedProg
+                                -- Right parsedProg -> return parsedProg
+
+-- (reverse (drop 4 (reverse file)))
+prettyPrintFile :: Program -> String -> IO()
+prettyPrintFile prog file =
+    do
+        writeFile (replaceExtension file ".pretty.onc") (pretty prog)
+        print "VALID"
 
 parseString :: String -> Program
 parseString str =
@@ -62,13 +71,13 @@ parseString str =
 --ConfMap
 tparseFile :: String ->IO ()
 tparseFile file =
-    do 
+    do
         program <- readFile file
         case parse (testParser <* eof) file program of
             Left e ->
                 do
                     hPutStrLn stderr ("ERROR: " ++ (show e))
-            Right r -> print r 
+            Right r -> print r
 
 tparseString :: String -> TestProgram
 tparseString str =
@@ -78,7 +87,7 @@ tparseString str =
 
 tparseFileCheck :: String ->IO ()
 tparseFileCheck file =
-    do 
+    do
         readData <- readFile "config.conf"
         let l= lines readData
         let listOfMaps =  map makeConf l
@@ -88,13 +97,14 @@ tparseFileCheck file =
                 do
                     putStrLn "ERROR"
                     print e
-            Right r -> print r 
-main = 
+            Right r -> print r
+main =
     do
         --readData <- readFile "config.conf"
-        (args:_) <- getArgs 
+        (args:_) <- getArgs
         --args <- getArgs
         -- let l = lines readData
         -- let listOfMaps =  map makeConf l
-        parseAndWeed args
+        parsedProg <- parseFile args
+        putStrLn (pretty parsedProg)
         --parseFile args

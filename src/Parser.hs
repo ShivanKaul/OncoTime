@@ -535,7 +535,7 @@ useList = lexeme $
         names <- sepBy grpFile comma
         --case verifyGroupFiles names of
           --  False -> fail
-        
+
         semi
         return $ UseFile names
 

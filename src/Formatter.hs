@@ -5,7 +5,7 @@ import Text.Regex
 import Debug.Trace
 
 
-occupiedLineRegex =  mkRegex "[^ \t\n][^\n]*\n" 
+occupiedLineRegex =  mkRegex "[^ \t\n][^\n]*\n"
 docStringRegex =  "(/\\*(.|\n)*\\*/)" :: String
 commentRegex =  mkRegex "//.*"
 removeDocs :: String -> (String, String,String)
@@ -13,18 +13,18 @@ onlyemptyRegex = mkRegex "([ \t]*$)"
 onlyemptyRegexN = mkRegex "([ \t]*\n)"
 removeDocs fileContents =
   let matches = fileContents =~ docStringRegex :: MatchResult String
-      
+
   in ((mrBefore matches),(mrMatch matches), (mrAfter matches))
 
 
-handleLineComments line = 
+handleLineComments line =
   let (stmnt,comm) = case matchRegexAll commentRegex (line) of
           Nothing ->  (line,"")
           Just(withoutComment, comm,_,_)-> ( (withoutComment,comm))
-  in  if ((isEmpty stmnt) || null stmnt) 
+  in  if ((isEmpty stmnt) || null stmnt)
       then line
       else  let stmntWithoutNewline = if (  (last stmnt == '\n') )
-                                     then init stmnt 
+                                     then init stmnt
                                      else stmnt
             in stmntWithoutNewline++";"++comm++"\n"
 
@@ -40,7 +40,7 @@ removeNewLines :: String -> String
 removeNewLines prog =
   case matchRegexAll occupiedLineRegex prog of
     Nothing -> handleLineComments prog
-    Just(before, matched,after,_)-> (before)++(handleLineComments matched) ++(removeNewLines  after) 
+    Just(before, matched,after,_)-> (before)++(handleLineComments matched) ++(removeNewLines  after)
 
 
 formatFile contents =
@@ -50,6 +50,6 @@ formatFile contents =
     in   (h1 ++ d ++ p1)
 
 
-testFormatter = (putStrLn $ show $ formatFile "File()\n\n/* ohai \ntutta*/\nhello! how are you? //kites\n//might\n\n\nbye\n\nkettle\n   \ncat\n\t\n\t\n") 
+testFormatter = (putStrLn $ show $ formatFile "File()\n\n/* ohai \ntutta*/\nhello! how are you? //kites\n//might\n\n\nbye\n\nkettle\n   \ncat\n\t\n\t\n")
 
 

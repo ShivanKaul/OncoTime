@@ -29,23 +29,24 @@ import PrettyPrinter
 import Formatter
 
 --parse file that weeds
-parseAndWeed::String->IO(Program)
-parseAndWeed file =
-    do
-        -- Check if file ends with .onc
-        if takeExtension file /= ".onc"
-            then do die ("ERROR: while reading " ++ file ++ ": File extension not .onc")
-            else do
-                program <- readFile file
-                -- case parse ((oncoParser  )<* eof) file (trace (formatFile program) (formatFile program) )of --debugging
-                case parse ((oncoParser)<* eof) file (formatFile program) of
-                    Left e ->
-                        do
-                            putStrLn "ERROR" >> print e>> exitFailure
-                            --print e
-                    --Right r -> print r >> writeFile ((reverse (drop 4 (reverse file))) ++ ".pretty.onc") (pretty r)
-                    --Right r-> weed grpFileNames listOfMaps r
-                    Right parsedProg -> weed file parsedProg
+-- parseAndWeed::String->IO(Program)
+-- parseAndWeed file =
+--     do
+--         -- Check if file ends with .onc
+--         if takeExtension file /= ".onc"
+--             then do die ("ERROR: while reading " ++ file ++ ": File extension not .onc")
+--             else do
+--                 program <- readFile file
+--                 -- case parse ((oncoParser  )<* eof) file (trace (formatFile program) (formatFile program) )of --debugging
+--                 case parse ((oncoParser)<* eof) file (formatFile program) of
+--                     Left e ->
+--                         do
+--                             putStrLn "ERROR" >> print e>> exitFailure
+--                             --print e
+--                     --Right r -> print r >> writeFile ((reverse (drop 4 (reverse file))) ++ ".pretty.onc") (pretty r)
+--                     --Right r-> weed grpFileNames listOfMaps r
+--                     Right parsedProg -> return parsedProg
+--                     -- Right parsedProg -> weed file parsedProg
 
 --the function that does all weeding
 weed::String->Program->IO(Program)
@@ -62,14 +63,19 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         case grpFileList of
             Left e -> putStrLn (file ++ ": ") >> print e >> exitFailure
             Right r -> putStrLn $ file ++ ": All Group files exist"
+
         --parsing each group file
+        let grpAllFilesContents = map (readFile) grpFiles
+        groups <- sequence (map (getGroupDefs) (grpAllFilesContents))
+
+        -- putStrLn (show (concat groups))
+
+        -- putStrLn $ pretty (concat groups)
 
         --verify filters
         putStrLn "Weeded successfully"
         return prg
-        --case resu of
-          --  Left e -> print e >> exitFailure  --CATCH ALL ERRORS HERE
-           -- Right r -> putStrLn "weeded successfully" >> return r
+
 
 weedGroupFiles::[UseFile]->[String]->Either LexError [UseFile]
 weedGroupFiles useList grpFiles =
@@ -99,19 +105,22 @@ compareUseLists [] useFile = []
 
 -- Group file names, parsing them individually, building up a list of
 -- groupdefs which are then appended to parse output of parser
-inlineGroupFiles :: [String] -> [GroupDefs]
-inlineGroupFiles grpFiles =
-    do
-        groupDefs <- concat (map getGroupDefs grpFiles)
-        return groupDefs
 
-getGroupDefs :: String -> [GroupDefs]
-getGroupDefs groupFile =
+
+-- inlineGroupFiles :: [String] -> [GroupDefs]
+-- inlineGroupFiles grpFiles =
+--     do
+--         let readFiles = map (readFile) grpFiles
+--         groupDefs <- concat (map (getGroupDefs) (readFiles))
+--         return groupDefs
+
+getGroupDefs :: IO(String) -> IO([GroupDefs])
+getGroupDefs grpFileData =
     do
-        readGroupFile <- (readFile groupFile)
-        case parse (manyGroups) "" (readGroupFile) of
-            Left e -> []
-            Right r -> r
+        readData <- grpFileData
+        case parse (manyGroups) "" (readData) of
+            Left e -> putStrLn ("ERROR: " ++ show e) >> return []
+            Right r -> return r
 
 readConf::String->IO([Conf])
 readConf file =
