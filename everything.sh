@@ -5,6 +5,5 @@ NC='\033[0m' # No Color
 
 
 chmod +x build.sh
-source build.sh
 chmod +x tests.sh
-source tests.sh
+./build.sh && ./tests.sh
