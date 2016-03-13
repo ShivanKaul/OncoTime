@@ -44,6 +44,6 @@ else:
     elif (sys.argv[1] == "-v"):
         valid()
     else:
-        print ('Running test ', sys.argv[1])
+        print 'Running test ' + sys.argv[1] + ':'
         run_test(sys.argv[1])
         sys.exit()

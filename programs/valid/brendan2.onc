@@ -3,13 +3,13 @@ script brendan2()
 prints 3  doctors, who in the past 6 years, who were assigned for breast, stomach, or l
 */
 
-use patientData.grp
+use PatientData.grp
 
 group Id doctorIDs = {1234,1235,1236}
 
 population is
     Sex: F
-    Diagnosis: breast, stomach, lung 
+    Diagnosis: breast, stomach, lung
 
 
 doctors are
