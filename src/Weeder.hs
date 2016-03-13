@@ -36,11 +36,11 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         let conf = readConfig file
 
        --grpFile weeding
-        dirContents <- getDirectoryContents "programs/valid/"
+        dirContents <- getDirectoryContents (dropFileName file)
         let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
         let grpFileNames = map dropExtension grpFiles
         let grpFileList = weedGroupFiles useList grpFileNames
-        let useFilesToParse = map (\x -> "programs/valid/" ++ x ++ ".grp")
+        let useFilesToParse = map (\x -> (dropFileName file) ++ x ++ ".grp")
                                   (flattenUseFile useList)
 
         putStrLn ("Group files are " ++ (show useFilesToParse))

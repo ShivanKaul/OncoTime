@@ -1,8 +1,0 @@
-script shivan2()
-/** For all female patients, get their diagnosis and create table */
-population is
-	gender: female
-{ 
-	table x = count patients by Diagnosis
-	print x
-}
