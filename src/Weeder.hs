@@ -36,7 +36,7 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         let conf = readConfig file
 
        --grpFile weeding
-        dirContents <- getDirectoryContents "."
+        dirContents <- getDirectoryContents "programs/valid/"
         let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
         let grpFileNames = map dropExtension grpFiles
         let grpFileList = weedGroupFiles useList grpFileNames
@@ -55,8 +55,8 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
 
 
         --check erroneous subfields i.e. whether all fields exist
-        --let fil = checkFilters filters [] conf 
-        
+        --let fil = checkFilters filters [] conf
+
         --checking field redeclarations
         --checkFilterRedec filters [] conf
 
@@ -68,7 +68,7 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         --verify filters
         putStrLn "Weeded successfully"
         return prg
-        
+
         let newGroups = concat (groups)
 
         putStrLn "Weeded successfully"
@@ -102,13 +102,13 @@ getGroupDefs grpFileData =
             Right r -> return r
 
 readConfig::String->IO(Config)
-readConfig file = 
+readConfig file =
     do
         program <- readFile file
         readData <- readFile "config.conf"
         let l= lines readData
         let totalMap = configListToMap $ map makeConfig l
-        --print $ M.showTree $ totalMap 
+        --print $ M.showTree $ totalMap
         return $ Config totalMap
 
 
@@ -144,21 +144,21 @@ testGroupFiles useFiles grpFiles =
 --go through the list and make sure each filter is in the list, also that it isn't redeclared
 
 {-
-checkFilters::[Filter]->[Filter]->Config->Either LexError [Filter] 
+checkFilters::[Filter]->[Filter]->Config->Either LexError [Filter]
 checkFilters [] checkedList conf = checkedList
 checkFilters (f:fs) [] conf  = checkFilters (f ++ []) conf
-checkFilters ((Filter f def):fs) checkedList  conf = 
-    case filter (== f) (map (\(Filter fn fd) -> fn)  checkedList) of 
+checkFilters ((Filter f def):fs) checkedList  conf =
+    case filter (== f) (map (\(Filter fn fd) -> fn)  checkedList) of
         [] ->  checkFilters fs (checkedList ++ f) conf
         _ -> return $ FieldNameError "Error. The field " ++ f ++ "has been redeclared"
 
 -}
 
 {-
-checkFilters::[Filters]->[Filters]->Config->Either LexError [Filters] 
-checkFilters [] checkedList conf = 
+checkFilters::[Filters]->[Filters]->Config->Either LexError [Filters]
+checkFilters [] checkedList conf =
 checkFilters (f:fs) [] conf  = checkFilters (f ++ []) conf
-checkFilters ((Filter f def):fs) ((Filter ch cdef):cs) conf = 
+checkFilters ((Filter f def):fs) ((Filter ch cdef):cs) conf =
     case f `elem' checkedList of
         True = return $ FieldNameError "Error. The field " ++ f ++ "has already been declared"
         False = checkFilters fs (checkedList ++ f) conf
