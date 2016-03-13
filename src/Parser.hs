@@ -265,7 +265,7 @@ betw = lexeme $
     do
         pre <- lexeme $ some digit
         reserved "to"
-        post <- lexeme $ some digit
+        post <- lexeme $ some digit     
         return $ Between (read pre) (read post)
 
 manyComp ::Parser [Computation]
@@ -288,7 +288,7 @@ singleComp = lexeme(
 
 computation::Parser Computation
 computation =
-    try (liftM2 Foreach foreach (try manyComp <|> singleComp))
+    try (liftM2 Foreach foreach {-(try-} manyComp{- <|> singleComp)-})
     <|> try (liftM Table table)
     <|> try (list)
     <|> try (liftM Print prints)
