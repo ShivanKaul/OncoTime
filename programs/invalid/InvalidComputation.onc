@@ -20,7 +20,7 @@ population is
 period is
 	Days: <myWorkDays>
 	Years: <my_years>
-	Times: 10:00, 10:10
+//	Times: 10:00, 10:10
 
 events are
 	Events: <my_events>

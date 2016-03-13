@@ -36,7 +36,7 @@ parseFile filename =
         case parse ((oncoParser)<* eof) filename (formatFile program) of
             Left e ->
                 do
-                    die ("ERROR while parsing: " ++ filename ++ show e)
+                    die ("ERROR while parsing: " ++ show e)
             Right parsedProg -> return parsedProg
 
 checkForErrors :: String -> String -> IO()

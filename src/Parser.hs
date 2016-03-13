@@ -156,7 +156,7 @@ documentation = lexeme $
 
 docLiteral :: Parser String
 docLiteral   = lexeme (
-    do{ str <- between (symbol "/**" <?> "Start of Documentation String (/**)")
+    do{ str <- between (symbol "/*" <?> "Start of Documentation String (/*)")
         (symbol "*/" <?> "end of Documentation String (*/)")
         (many docChar)
         ; return (foldr (maybe id (:)) "" str)
@@ -271,19 +271,24 @@ betw = lexeme $
 manyComp ::Parser [Computation]
 manyComp = lexeme(
     do  {
-        c <- between (symbol "{" <?> "Computation Block ({})") 
-        (symbol "}" <?> "End of computation block (})") $
+        c <- between (symbol "{" <?> "Start of Computation Block \"{\"") 
+        (symbol "}" <?> "End of computation block \"}\"") $
         (optional semi) >> (many computation);
         if (null c)
             then trace ("WARNING: Computation list is empty.") (optional semi)
         else (optional semi);
-        return c}<?> "Computation Block")
+        return c}<?> "Computation Block \"{}\"")
 
-
+singleComp :: Parser [Computation]
+singleComp = lexeme( 
+    do { 
+    c <- computation;
+    return [c] } <?> "Single Line Computation"
+    )
 
 computation::Parser Computation
 computation =
-    try (liftM2 Foreach foreach manyComp)
+    try (liftM2 Foreach foreach (try manyComp <|> singleComp))
     <|> try (liftM Table table)
     <|> try (list)
     <|> try (liftM Print prints)
@@ -303,7 +308,7 @@ table = lexeme (
         return $ TableCount v fn fv}<?>"Table Statement")
 
 list::Parser Computation
-list= lexeme (
+list = lexeme (
     do {
         reserved "list";
         v <- var;

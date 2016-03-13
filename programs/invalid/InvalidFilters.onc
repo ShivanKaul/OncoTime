@@ -19,7 +19,7 @@ events are
 	Events: ct_sim_booked, 12311
 
 doctors are
-	Id: 11231, 10:10
+	Id: 11231//, 10:10
 
 // --- Computations --- 
 {

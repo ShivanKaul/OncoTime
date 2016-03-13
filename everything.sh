@@ -6,4 +6,11 @@ NC='\033[0m' # No Color
 
 chmod +x build.sh
 chmod +x tests.sh
-./build.sh && ./tests.sh
+. build.sh 
+
+if [[ $build_status == 0 ]]
+then
+	. tests.sh
+else
+	printf "\n${RED}Error while building. Not running tests${NC}\n"
+fi

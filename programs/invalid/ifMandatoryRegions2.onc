@@ -1,4 +1,4 @@
-script ifMandatoryRegions2.onc(a a, b b)
+script ifMandatoryRegions2(a a, b b)
 use a.grp, b.grp
 use t.grp
 
