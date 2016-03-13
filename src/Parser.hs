@@ -120,8 +120,8 @@ header =
         semi
         return $ Header fname args
 
-getFileName :: Parser String
-getFileName =
+getScriptName :: Parser String
+getScriptName =
     do
         whiteSpace
         reserved "script"
@@ -154,7 +154,7 @@ documentation = lexeme $
         doc <- docLiteral
         return $ Docs doc
 
-docLiteral :: Parser String        
+docLiteral :: Parser String
 docLiteral   = lexeme (
     do{ str <- between (symbol "/**")
         (symbol "*/" <?> "end of Documentation String (*/)")
@@ -166,15 +166,15 @@ docChar :: Parser (Maybe Char)
 docChar      =   do{ c <- validDocChar; return (Just c) }  <?> "Documentation string character"
 
 validDocChar :: Parser Char
-validDocChar    = 
+validDocChar    =
     do
         isNextValid <- isStarSlash
         --satisfy (\c -> (c /= '*'))
         satisfy (\c -> not isNextValid)
-        
-        
+
+
 isStarSlash :: Parser Bool
-isStarSlash = 
+isStarSlash =
     do
         char <- lookAhead $ count 2 anyChar
         return (char == "*/")
@@ -517,7 +517,7 @@ filterDefs =
         return $ FilterDef (FilterField ffield) fval
 
 
-useList :: Parser UseFile 
+useList :: Parser UseFile
 useList = lexeme (
     do {
         reserved "use";

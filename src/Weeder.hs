@@ -40,7 +40,8 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
         let grpFileNames = map dropExtension grpFiles
         let grpFileList = weedGroupFiles useList grpFileNames
-        let useFilesToParse = map (\x -> "programs/valid/" ++ x ++ ".grp") (flattenUseFile useList)
+        let useFilesToParse = map (\x -> "programs/valid/" ++ x ++ ".grp")
+                                  (flattenUseFile useList)
 
         putStrLn ("Group files are " ++ (show useFilesToParse))
 
@@ -70,7 +71,6 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         
         let newGroups = concat (groups)
 
-        --verify filters
         putStrLn "Weeded successfully"
         return (Program hdr docs [] (newGroups ++ groupDefs) filters comps)
 
@@ -84,8 +84,13 @@ weedGroupFiles useList grpFiles =
             then Right $ useList
             else
                 case (null $ filter (not . (`elem` grpFiles)) declaredUseFiles) of
-        --case (sort declaredUseFiles) == (sort grpFiles) of
-                    False -> Left $ MissingFilesError ("ERROR: Missing one of group files: " ++ ( intercalate ","  declaredUseFiles) ++ " out of: " ++ (intercalate "," grpFiles)) --Better error messages for other cases. Maybe see what files are missing exactly. Doesn't need to be true false exactly
+                    False -> Left $ MissingFilesError
+                        ("ERROR: Missing one of group files: " ++
+                        ( intercalate ","  declaredUseFiles) ++
+                        " out of: " ++ (intercalate "," grpFiles))
+                    --Better error messages for other cases.
+                    -- Maybe see what files are missing exactly.
+                    -- Doesn't need to be true false exactly
                     True -> Right $ useList
 
 getGroupDefs :: IO(String) -> IO([GroupDefs])
@@ -130,7 +135,10 @@ testGroupFiles useFiles grpFiles =
         --Flatten the useFile List
         let declaredUseFiles = flattenUseFile useFiles
         case (sort declaredUseFiles) == (sort grpFiles) of
-            False -> Left $ MissingFilesError "ERROR: Group files Missing" --Better error messages for other cases. Maybe see what files are missing exactly. Doesn't need to be true false exactly
+            False -> Left $ MissingFilesError "ERROR: Group files Missing"
+            -- Better error messages for other cases.
+            -- Maybe see what files are missing exactly.
+            -- Doesn't need to be true false exactly
             True -> Right $ useFiles
 
 --go through the list and make sure each filter is in the list, also that it isn't redeclared

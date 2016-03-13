@@ -29,31 +29,48 @@ import Formatter
 import Weeder
 
 parseFile :: String -> IO (Program)
-parseFile file =
+parseFile filename =
     do
-        -- Check if file ends with .onc
-        if takeExtension file /= ".onc"
-            then die ("ERROR: while reading " ++ file ++ ": File extension not .onc")
-            else do
-                program <- readFile file
-                -- Check if filename == scriptname
-                case parse (getFileName) "" program of
-                    Left e ->
-                        do
-                            die ("ERROR for file: " ++ (takeBaseName file) ++ show e)
-                    Right r -> if takeBaseName file /= r
-                        then do
-                            die ("ERROR: while reading " ++ file ++ ": Filename does not match script name")
-                        else do
-                            -- Parse program
-                            case parse ((oncoParser)<* eof) file (formatFile program) of
-                                Left e ->
-                                    do
-                                        die ("ERROR: " ++ show e)
-                                Right parsedProg -> return parsedProg
-                                -- Right parsedProg -> return parsedProg
+        program <- readFile filename
+        checkForErrors program filename
+        case parse ((oncoParser)<* eof) filename (formatFile program) of
+            Left e ->
+                do
+                    die ("ERROR while parsing: " ++ filename ++ show e)
+            Right parsedProg -> return parsedProg
 
--- (reverse (drop 4 (reverse file)))
+checkForErrors :: String -> String -> IO()
+checkForErrors prog file =
+    do
+        checkExtensionName file
+        fileNameCheck file prog
+        return ()
+
+-- Check if file ends with .onc
+checkExtensionName :: String -> IO()
+checkExtensionName file =
+    do
+        if takeExtension file /= ".onc"
+            then die ("ERROR: while reading " ++
+                file ++ ": File extension not .onc")
+            else return ()
+
+-- Check if script name == filename
+fileNameCheck :: String -> String -> IO()
+fileNameCheck file prog  =
+    do
+        -- Get script name
+        case parse (getScriptName) "" prog of
+            Left e -> die ("ERROR for file: " ++ (takeBaseName file) ++ show e)
+            -- And die if != filename
+            Right r -> if takeBaseName file /= r
+                then do
+                    die ("ERROR: while reading " ++
+                        file ++
+                        ": Filename does not match script name")
+                else return ()
+
+
 prettyPrintFile :: Program -> String -> IO()
 prettyPrintFile prog file =
     do
@@ -102,4 +119,4 @@ main =
         (args:_) <- getArgs
         parsed <- parseFile args
         weededProg <- weed args parsed
-        prettyPrintFile parsed args
+        prettyPrintFile weededProg args
