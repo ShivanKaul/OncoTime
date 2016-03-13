@@ -7,7 +7,7 @@ import System.FilePath
 import System.Exit
 import System.Environment
 import System.IO
-import qualified Data.Map as M
+import qualified Data.Map as Map
 import Data.List
 import Control.Monad
 import Control.Applicative
