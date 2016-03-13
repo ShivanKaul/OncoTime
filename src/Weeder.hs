@@ -40,12 +40,16 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
         let grpFileNames = map dropExtension grpFiles
         let grpFileList = weedGroupFiles useList grpFileNames
+        let useFilesToParse = map (\x -> "programs/valid/" ++ x ++ ".grp") (flattenUseFile useList)
+
+        putStrLn ("Group files are " ++ (show useFilesToParse))
+
         case grpFileList of
             Left e -> putStrLn (file ++ ": ") >> print e >> exitFailure
             Right r -> putStrLn $ file ++ ": All Group files exist"
 
         --parsing each group file
-        let grpAllFilesContents = map (readFile) grpFiles
+        let grpAllFilesContents = map (readFile) (useFilesToParse)
         groups <- sequence (map (getGroupDefs) (grpAllFilesContents))
 
 
@@ -64,6 +68,13 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         putStrLn "Weeded successfully"
         return prg
         
+        let newGroups = concat (groups)
+
+        --verify filters
+        putStrLn "Weeded successfully"
+        return (Program hdr docs [] (newGroups ++ groupDefs) filters comps)
+
+
 weedGroupFiles::[UseFile]->[String]->Either LexError [UseFile]
 weedGroupFiles useList grpFiles =
     do

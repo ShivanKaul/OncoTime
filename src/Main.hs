@@ -50,7 +50,7 @@ parseFile file =
                                 Left e ->
                                     do
                                         die ("ERROR: " ++ show e)
-                                Right parsedProg -> weed file parsedProg
+                                Right parsedProg -> return parsedProg
                                 -- Right parsedProg -> return parsedProg
 
 -- (reverse (drop 4 (reverse file)))
@@ -99,11 +99,7 @@ tparseFileCheck file =
             Right r -> print r
 main =
     do
-        --readData <- readFile "config.conf"
         (args:_) <- getArgs
-        --args <- getArgs
-        -- let l = lines readData
-        -- let listOfMaps =  map makeConf l
-        parsedProg <- parseFile args
-        putStrLn (pretty parsedProg)
-        --parseFile args
+        parsed <- parseFile args
+        weededProg <- weed args parsed
+        prettyPrintFile parsed args
