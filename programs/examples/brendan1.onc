@@ -1,6 +1,6 @@
 script brendan1()
 /**
-This program generates the barcharts of all patients between the ages of 20 and 30 who have prostate cancer 
+This program generates the barcharts of all patients between the ages of 20 and 30 who have prostate cancer
 */
 
 use PatientData.grp
