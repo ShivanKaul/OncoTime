@@ -36,12 +36,11 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         conf <- readConfig file
 
        --grpFile weeding
-        dirContents <- getDirectoryContents (dropFileName file)
+        dirContents <- getDirectoryContents "."
         let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
         let grpFileNames = map dropExtension grpFiles
         let grpFileList = weedGroupFiles useList grpFileNames
-        let useFilesToParse = map (\x -> (dropFileName file) ++ x ++ ".grp")
-                                  (flattenUseFile useList)
+        let useFilesToParse = map (\x -> "programs/valid/" ++ x ++ ".grp") (flattenUseFile useList)
 
         putStrLn ("Group files are " ++ (show useFilesToParse))
 
@@ -59,6 +58,10 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
             Left e -> print e >> putStrLn "FILTERS:" >> print filters >> putStrLn "CONF:" >> print conf >>  exitFailure
             Right r -> putStrLn "All filters valid"
         
+        case (checkFilters filters conf) of
+            Left e -> print e >> putStrLn "FILTERS:" >> print filters >> putStrLn "CONF:" >> print conf >>  exitFailure 
+            Right r -> putStrLn "All Fields valid"
+
         --checking field redeclarations
         --checkFilterRedec filters [] conf
 
@@ -70,9 +73,10 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         --verify filters
         putStrLn "Weeded successfully"
         return prg
-
+        
         let newGroups = concat (groups)
 
+        --verify filters
         putStrLn "Weeded successfully"
         return (Program hdr docs [] (newGroups ++ groupDefs) filters comps)
 
@@ -86,13 +90,8 @@ weedGroupFiles useList grpFiles =
             then Right $ useList
             else
                 case (null $ filter (not . (`elem` grpFiles)) declaredUseFiles) of
-                    False -> Left $ MissingFilesError
-                        ("ERROR: Missing one of group files: " ++
-                        ( intercalate ","  declaredUseFiles) ++
-                        " out of: " ++ (intercalate "," grpFiles))
-                    --Better error messages for other cases.
-                    -- Maybe see what files are missing exactly.
-                    -- Doesn't need to be true false exactly
+        --case (sort declaredUseFiles) == (sort grpFiles) of
+                    False -> Left $ MissingFilesError ("ERROR: Missing one of group files: " ++ ( intercalate ","  declaredUseFiles) ++ " out of: " ++ (intercalate "," grpFiles)) --Better error messages for other cases. Maybe see what files are missing exactly. Doesn't need to be true false exactly
                     True -> Right $ useList
 
 getGroupDefs :: IO(String) -> IO([GroupDefs])
@@ -104,13 +103,13 @@ getGroupDefs grpFileData =
             Right r -> return r
 
 readConfig::String->IO(Config)
-readConfig file =
+readConfig file = 
     do
         program <- readFile file
         readData <- readFile "config.conf"
         let l= lines readData
         let totalMap = configListToMap $ map makeConfig l
-        --print $ M.showTree $ totalMap
+        --print $ M.showTree $ totalMap 
         return $ Config totalMap
 
 
@@ -137,11 +136,9 @@ testGroupFiles useFiles grpFiles =
         --Flatten the useFile List
         let declaredUseFiles = flattenUseFile useFiles
         case (sort declaredUseFiles) == (sort grpFiles) of
-            False -> Left $ MissingFilesError "ERROR: Group files Missing"
-            -- Better error messages for other cases.
-            -- Maybe see what files are missing exactly.
-            -- Doesn't need to be true false exactly
+            False -> Left $ MissingFilesError "ERROR: Group files Missing" --Better error messages for other cases. Maybe see what files are missing exactly. Doesn't need to be true false exactly
             True -> Right $ useFiles
+
 
 checkFilters::[Filter]->Config->Either LexError [Filter] 
 checkFilters filList conf = case (checkFilRedec filList ) of
@@ -173,7 +170,28 @@ getRedeclarations (x:xs) checkedList =
         False -> getRedeclarations xs checkedList
 
 
+--checks fields
+checkFiltConf::[Filter]->Config->Either LexError [Filter]
+checkFiltConf x conf = 
+    case (checkFields conf x []) of
+        [] -> Right x
+        l -> Left $ MissingConfigField ("The following fields are not specified in the config file" ++ (intercalate ", " (map (getFilterName) l)) )
+
+checkFields::Config->[Filter]->[Filter]->[Filter]
+checkFields conf [] [] = [] 
+checkFields conf [] notIncList = notIncList 
+checkFields conf (x:xs) notIncList = 
+    case fieldExists conf (getFilterName x) of
+        True -> checkFields conf xs notIncList
+        False -> checkFields conf xs (x:notIncList)
+
+
+
+--given a list of filters, and a config, makes sure each filter is defined in the config
+
 --checks erroneous fields
+--Given a list of 
 
 
 --checks erroneous subfields
+
