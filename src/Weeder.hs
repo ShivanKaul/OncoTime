@@ -28,26 +28,6 @@ import Parser
 import PrettyPrinter
 import Formatter
 
---parse file that weeds
--- parseAndWeed::String->IO(Program)
--- parseAndWeed file =
---     do
---         -- Check if file ends with .onc
---         if takeExtension file /= ".onc"
---             then do die ("ERROR: while reading " ++ file ++ ": File extension not .onc")
---             else do
---                 program <- readFile file
---                 -- case parse ((oncoParser  )<* eof) file (trace (formatFile program) (formatFile program) )of --debugging
---                 case parse ((oncoParser)<* eof) file (formatFile program) of
---                     Left e ->
---                         do
---                             putStrLn "ERROR" >> print e>> exitFailure
---                             --print e
---                     --Right r -> print r >> writeFile ((reverse (drop 4 (reverse file))) ++ ".pretty.onc") (pretty r)
---                     --Right r-> weed grpFileNames listOfMaps r
---                     Right parsedProg -> return parsedProg
---                     -- Right parsedProg -> weed file parsedProg
-
 --the function that does all weeding
 weed::String->Program->IO(Program)
 weed file prg@(Program hdr docs useList groupDefs filters comps) =
@@ -59,22 +39,22 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
         let grpFileNames = map dropExtension grpFiles
         let grpFileList = weedGroupFiles useList grpFileNames
+        let useFilesToParse = map (\x -> "programs/valid/" ++ x ++ ".grp") (flattenUseFile useList)
+
+        putStrLn ("Group files are " ++ (show useFilesToParse))
 
         case grpFileList of
             Left e -> putStrLn (file ++ ": ") >> print e >> exitFailure
             Right r -> putStrLn $ file ++ ": All Group files exist"
 
         --parsing each group file
-        let grpAllFilesContents = map (readFile) grpFiles
+        let grpAllFilesContents = map (readFile) (useFilesToParse)
         groups <- sequence (map (getGroupDefs) (grpAllFilesContents))
-
-        -- putStrLn (show (concat groups))
-
-        -- putStrLn $ pretty (concat groups)
+        let newGroups = concat (groups)
 
         --verify filters
         putStrLn "Weeded successfully"
-        return prg
+        return (Program hdr docs [] (newGroups ++ groupDefs) filters comps)
 
 
 weedGroupFiles::[UseFile]->[String]->Either LexError [UseFile]
