@@ -288,7 +288,7 @@ singleComp = lexeme(
 
 computation::Parser Computation
 computation =
-    try (liftM2 Foreach foreach {-(try-} manyComp{- <|> singleComp)-})
+    try (liftM2 Foreach foreach  manyComp {-(try-} {- <|> singleComp)-})
     <|> try (liftM Table table)
     <|> try (list)
     <|> try (liftM Print prints)
