@@ -33,7 +33,7 @@ weed::String->Program->IO(Program)
 weed file prg@(Program hdr docs useList groupDefs filters comps) =
     do
         --get Config file
-        let conf = readConfig file
+        conf <- readConfig file
 
        --grpFile weeding
         dirContents <- getDirectoryContents "."
@@ -54,7 +54,9 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
 
 
         --check erroneous subfields i.e. whether all fields exist
-        --let fil = checkFilters filters [] conf 
+        case (checkFilters filters conf) of
+            Left e -> print e >> putStrLn "FILTERS:" >> print filters >> putStrLn "CONF:" >> print conf >>  exitFailure
+            Right r -> putStrLn "All filters valid"
         
         --checking field redeclarations
         --checkFilterRedec filters [] conf
@@ -133,27 +135,39 @@ testGroupFiles useFiles grpFiles =
             False -> Left $ MissingFilesError "ERROR: Group files Missing" --Better error messages for other cases. Maybe see what files are missing exactly. Doesn't need to be true false exactly
             True -> Right $ useFiles
 
---go through the list and make sure each filter is in the list, also that it isn't redeclared
 
-{-
-checkFilters::[Filter]->[Filter]->Config->Either LexError [Filter] 
-checkFilters [] checkedList conf = checkedList
-checkFilters (f:fs) [] conf  = checkFilters (f ++ []) conf
-checkFilters ((Filter f def):fs) checkedList  conf = 
-    case filter (== f) (map (\(Filter fn fd) -> fn)  checkedList) of 
-        [] ->  checkFilters fs (checkedList ++ f) conf
-        _ -> return $ FieldNameError "Error. The field " ++ f ++ "has been redeclared"
+checkFilters::[Filter]->Config->Either LexError [Filter] 
+checkFilters filList conf = case (checkFilRedec filList ) of
+    Right r -> Right filList
+    Left e -> Left e 
 
--}
+--Highest level, checkFilters. Is in the either monad to give us error checking
 
-{-
-checkFilters::[Filters]->[Filters]->Config->Either LexError [Filters] 
-checkFilters [] checkedList conf = 
-checkFilters (f:fs) [] conf  = checkFilters (f ++ []) conf
-checkFilters ((Filter f def):fs) ((Filter ch cdef):cs) conf = 
-    case f `elem' checkedList of
-        True = return $ FieldNameError "Error. The field " ++ f ++ "has already been declared"
-        False = checkFilters fs (checkedList ++ f) conf
+getFilterName::Filter->FilterName
+getFilterName (Filter f _) = f
 
--}
+checkFilRedec::[Filter]->Either LexError [Filter]
+checkFilRedec [] = Right []
+checkFilRedec x = 
+    case (getRedeclarations x []) of
+        [] -> Right $ x
+        y -> Left $ RedecError ("The following filters were redeclared: " ++ (intercalate ", " (map (getFilterName) y)) )
+--checkFilRedec a@_ = Left $ MissingConfigFile ("ERROR: Missing or Empty Config File Specified " ++ "\n Filters:" ++ (intercalate ", " (map (getFilterName) a )))
+ --  ++ (intercalate ", " (map (getFilterName) redList))
+
+--creates a list of all repeated elements of a list
+getRedeclarations::(Eq a)=>[a]->[a]->[a]
+getRedeclarations [] [] = []
+getRedeclarations [] checkedList = checkedList
+getRedeclarations (x:[]) [] = [] 
+getRedeclarations (x:xs) checkedList = 
+    case x `elem` xs of 
+        True -> getRedeclarations ((filter (/= x)) xs) (x:checkedList)
+        False -> getRedeclarations xs checkedList
+
+
+--checks erroneous fields
+
+
+--checks erroneous subfields
 

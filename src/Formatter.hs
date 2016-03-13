@@ -47,7 +47,7 @@ formatFile contents =
     let y@(h,d,p) = removeDocs contents
         h1 =  (removeNewLines h )
         p1 =  (removeNewLines p )
-    in   trace (addLineNumbers contents) (h1 ++ d ++ p1)
+    in  {-  trace (addLineNumbers contents) -} (h1 ++ d ++ p1)
 
 addLineNumbers contents=
   addnums 1 (lines contents) 
