@@ -119,4 +119,4 @@ main =
         (args:_) <- getArgs
         parsed <- parseFile args
         weededProg <- weed args parsed
-        prettyPrintFile weededProg args
+        prettyPrintFile parsed args

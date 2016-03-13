@@ -1,0 +1,26 @@
+script brendan2()
+/**
+prints 3  doctors, who in the past 6 years, who were assigned for breast, stomach, or l
+*/
+
+use PatientData.grp
+
+group Id doctorIDs = {1234,1235,1236}
+
+population is
+    Sex: F
+    Diagnosis: breast, stomach, lung
+
+
+doctors are
+    Id: doctorIDs
+
+period is
+    Years: 2010 to 2016
+{
+    foreach doctor d
+    {
+    barchart d
+    }
+
+}

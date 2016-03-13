@@ -1,0 +1,26 @@
+script Yusaira1(BirthYear y)
+/** no star signs are allowed in the  */
+use file1.grp, file2.grp
+
+
+group BirthYear x = {1971,1972}
+group BirthYear z = {1971,1972, <y>}
+
+Patient are
+	Sex : M, F
+	BirthYear : <x>
+
+period is
+	Years: 2012, 2012, 2014
+	Days: Mon, Tues, Wed, Thurs, Fri
+
+{	
+	table t = count Patients by Birthyear
+	print t.length
+	foreach Patient p
+	{
+	print Sex, Postal_Code of p
+	}
+	
+	
+}

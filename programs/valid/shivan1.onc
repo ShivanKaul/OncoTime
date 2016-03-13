@@ -1,0 +1,13 @@
+script shivan1()
+/** All patients who have prostate cancer and who are born between 1990 to 2016, print these patients */
+
+population is
+	Birthyear: 1990 to 2015
+	Diagnosis: prostate
+
+{
+	foreach Patient p 
+	{
+		print p
+	}
+}
