@@ -28,5 +28,3 @@ import Parser
 import PrettyPrinter
 import Formatter
 
--- typecheck ::
--- typecheck

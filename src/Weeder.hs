@@ -8,7 +8,8 @@ import System.FilePath
 import System.Exit
 import System.Environment
 import System.IO
-import qualified Data.Map as M
+import qualified Data.HashMap.Strict as HashMap
+import Data.Hashable
 import Data.List
 import Control.Monad
 import Control.Applicative
@@ -51,31 +52,50 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
 
         --parsing each group file
         let grpAllFilesContents = map (readFile) (useFilesToParse)
-        groups <- sequence (map (getGroupDefs) (grpAllFilesContents))
-
+        newGroups <- sequence (map (getGroupDefs) (grpAllFilesContents))
 
         --check erroneous subfields i.e. whether all fields exist
         case (checkFilters filters conf) of
-            Left e -> print e >> putStrLn "FILTERS:" >> print filters >> putStrLn "CONF:" >> print conf >>  exitFailure
+            Left e -> print e >> putStrLn "FILTERS:" >> print filters >>
+                putStrLn "CONF:" >> print conf >>  exitFailure
             Right r -> putStrLn "All filters valid"
-        
+
         --checking field redeclarations
         --checkFilterRedec filters [] conf
-
-
         --redeclarations of foreach
 
         --table syntax checking
 
         --verify filters
+
+        let allGroups = (concat (newGroups)) ++ groupDefs
+
+        -- SAMPLE USES OF SYMBOL TABLE
+        -- let symbolTable1 = buildSymbolTable allGroups hdr
+        -- testIfSymbolTableContains symbolTable1 (Var "x")
+
         putStrLn "Weeded successfully"
-        return prg
+        return (Program hdr docs [] (allGroups) filters comps)
 
-        let newGroups = concat (groups)
+-- Make Var hashable
+instance (Hashable Var) where
+  hashWithSalt s (Var v) = s + (hash v)
 
-        putStrLn "Weeded successfully"
-        return (Program hdr docs [] (newGroups ++ groupDefs) filters comps)
+-- Utility test function to check if symbol table contains a key
+testIfSymbolTableContains :: HashMap.HashMap Var GroupType -> Var -> IO()
+testIfSymbolTableContains hashmap (Var v) =
+        case (HashMap.lookup (Var v) hashmap) of
+            Nothing -> print "nothing found!"
+            Just r -> print ("Found VALUE " ++ show r ++ " for KEY " ++
+                v ++ " in symboltable1")
 
+-- Build symbol table from groups
+buildSymbolTable :: [GroupDefs] -> Header -> HashMap.HashMap Var GroupType
+buildSymbolTable groups (Header _ args) =
+    do
+        let keyValuesGroups = map (\(Group (t) (v) _) -> (v, t)) (groups)
+        let keyValuesHeader = map (\(Arg (t) (v)) -> (v, t)) (args)
+        (HashMap.fromList (keyValuesGroups ++ keyValuesHeader))
 
 weedGroupFiles::[UseFile]->[String]->Either LexError [UseFile]
 weedGroupFiles useList grpFiles =
@@ -143,10 +163,10 @@ testGroupFiles useFiles grpFiles =
             -- Doesn't need to be true false exactly
             True -> Right $ useFiles
 
-checkFilters::[Filter]->Config->Either LexError [Filter] 
+checkFilters::[Filter]->Config->Either LexError [Filter]
 checkFilters filList conf = case (checkFilRedec filList ) of
     Right r -> Right filList
-    Left e -> Left e 
+    Left e -> Left e
 
 --Highest level, checkFilters. Is in the either monad to give us error checking
 
@@ -155,7 +175,7 @@ getFilterName (Filter f _) = f
 
 checkFilRedec::[Filter]->Either LexError [Filter]
 checkFilRedec [] = Right []
-checkFilRedec x = 
+checkFilRedec x =
     case (getRedeclarations x []) of
         [] -> Right $ x
         y -> Left $ RedecError ("The following filters were redeclared: " ++ (intercalate ", " (map (getFilterName) y)) )
@@ -166,9 +186,9 @@ checkFilRedec x =
 getRedeclarations::(Eq a)=>[a]->[a]->[a]
 getRedeclarations [] [] = []
 getRedeclarations [] checkedList = checkedList
-getRedeclarations (x:[]) [] = [] 
-getRedeclarations (x:xs) checkedList = 
-    case x `elem` xs of 
+getRedeclarations (x:[]) [] = []
+getRedeclarations (x:xs) checkedList =
+    case x `elem` xs of
         True -> getRedeclarations ((filter (/= x)) xs) (x:checkedList)
         False -> getRedeclarations xs checkedList
 
