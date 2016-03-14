@@ -31,7 +31,7 @@ data GroupDefs = Group GroupType Var [GroupItem]
     deriving (Show, Eq)
 
 data GroupType = GroupType String deriving (Show, Eq)
-data GroupItem = GroupValString String | GroupVar Var | GroupRange RangeType 
+data GroupItem = GroupValString String | GroupVar Var | GroupRange RangeType | GroupDate IntValue IntValue IntValue deriving (Show, Eq)
 
 --better field for GroupVal than string?
 

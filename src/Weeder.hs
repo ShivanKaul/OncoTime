@@ -9,6 +9,7 @@ import System.Exit
 import System.Environment
 import System.IO
 import qualified Data.HashMap.Strict as HashMap
+import qualified Data.Map as M 
 import Data.Hashable
 import Data.List
 import Control.Monad

@@ -237,9 +237,6 @@ groupValString = lexeme $
         gv <- some wordChar
         return $ GroupValString gv
 
-groupRange::Parser GroupItem
-groupRange = try (liftM GroupRange betw) <|> try (liftM GroupRange before) <|> try (liftM GroupRange after) <|> try (liftM GroupRange rangeint)
-
 groupValDate::Parser GroupItem
 groupValDate = lexeme (
     do {
