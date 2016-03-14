@@ -457,7 +457,7 @@ prints:: Parser PrintAction
 prints = lexeme ( 
     do{
    x<-(try printvar <|> try printTimeLine <|> try printLength <|> try printFilters <|> try printElement);
-   semi;
+   
    return x;
    } <?> "Print Statement")
 
@@ -469,7 +469,7 @@ printTimeLine =
         reserved "timeline"
         reserved "of"
         v<-var
-        
+        semi
         return $ PrintTimeLine v
 
 printLength::Parser PrintAction
@@ -479,7 +479,7 @@ printLength =
         v<-var
         dot
         reserved "length"
-        
+        semi 
         return $ PrintLength v
 
 
@@ -490,7 +490,7 @@ printFilters =
         filterList <- sepBy filterName comma
         reserved "of"
         v <- var
-        
+        semi  
         return $ PrintFilters filterList v
 
 printElement::Parser PrintAction
@@ -499,7 +499,7 @@ printElement =
         reserved "print"
         v1 <-var
         v2 <- between (symbol "[" <?> "Table index \"[]\"") (symbol "]") var
-        
+        semi  
         return $ PrintElement v1 v2
 
 filterName::Parser FilterName
