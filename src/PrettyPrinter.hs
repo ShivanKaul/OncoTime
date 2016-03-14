@@ -78,11 +78,11 @@ instance PrettyPrint RangeType where
     prettyPrint (Before i) = "Before " ++ prettyPrint i
     prettyPrint (After i) = "After " ++ prettyPrint i
     prettyPrint (Between i j) = prettyPrint i ++ " to " ++ prettyPrint j
-    prettyPrint (RangeInt i) = prettyPrint i
+    prettyPrint (SingleInt g) = prettyPrint g
 
 instance PrettyPrint GroupItem where
     prettyPrint (GroupValString gval) = gval
-    --prettyPrint (GroupValInt gval) = prettyPrint gval
+    prettyPrint (GroupDate y m d) = (prettyPrint y) ++"-"++ (prettyPrint m) ++"-"++ (prettyPrint d)
     prettyPrint (GroupVar gvar) = "<" ++ prettyPrint gvar ++ ">"
     prettyPrint (GroupRange grange) = prettyPrint grange
 

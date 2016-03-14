@@ -32,7 +32,7 @@ def invalid():
     print ("Running tests that should be INVALID...")
     for root, dirnames, filenames in os.walk('programs/invalid'):
             for filename in filenames:
-                if not filename.endswith(('.pretty.pretty.onc')):
+                if not filename.endswith(('pretty.onc')):
                     run_test(os.path.join(root, filename))
 
 if (len(sys.argv) == 1):

@@ -156,7 +156,7 @@ documentation = lexeme $
 
 docLiteral :: Parser String
 docLiteral   = lexeme (
-    do{ str <- between (symbol "/**" <?> "Start of Documentation String (/**)")
+    do{ str <- between (symbol "/*" <?> "Start of Documentation String (/*)")
         (symbol "*/" <?> "end of Documentation String (*/)")
         (many docChar)
         ; return (foldr (maybe id (:)) "" str)
@@ -182,7 +182,7 @@ isStarSlash =
 
 
 wordChar :: Parser Char
-wordChar = (satisfy (\c -> (c=='-' ) || (c=='_') || (isAlphaNum c)   ))
+wordChar = (satisfy (\c -> (c=='_') || (isAlphaNum c) ))
 
 fChar :: Parser Char
 fChar = (satisfy (\c -> (c=='.' ) || (isAlphaNum c)))
@@ -220,12 +220,12 @@ groupType = lexeme $
         return $ GroupType gt
 
 groupItem::Parser GroupItem
-groupItem = try groupRange
-        -- <|> try groupValInt
+groupItem = try groupValDate
+        <|> try groupRange
         <|> try groupValString
         <|> try groupVar
 
-groupVar::Parser GroupItem
+groupVar :: Parser GroupItem
 groupVar =
     do
         gv <- angles $ var
@@ -239,6 +239,19 @@ groupValString = lexeme $
 
 groupRange::Parser GroupItem
 groupRange = try (liftM GroupRange betw) <|> try (liftM GroupRange before) <|> try (liftM GroupRange after) <|> try (liftM GroupRange rangeint)
+
+groupValDate::Parser GroupItem
+groupValDate = lexeme (
+    do {
+        y <- some digit;
+        date_sep;
+        m <- some digit;
+        date_sep;
+        d <- some digit;
+        return $ GroupDate (read y) (read m) (read d)} <?> "Date")
+
+groupRange::Parser GroupItem
+groupRange = try (liftM GroupRange betw) <|> try (liftM GroupRange before) <|> try (liftM GroupRange after)  <|> try (liftM GroupRange single) <?> "Number or Range"
 
 before::Parser RangeType
 before =
@@ -259,64 +272,70 @@ betw = lexeme $
     do
         pre <- lexeme $ some digit
         reserved "to"
-        post <- lexeme $ some digit
+        post <- lexeme $ some digit     
         return $ Between (read pre) (read post)
 
-rangeint::Parser RangeType
-rangeint = lexeme $ 
+
+single::Parser RangeType
+single = lexeme $
     do
-        num <- lexeme $ some digit
-        return $ RangeInt (read num)
+        gd <- some digit
+        return $ SingleInt $ read gd
+
 
 manyComp ::Parser [Computation]
-manyComp =
-    do
-        c <- curlies $ (optional semi) >> (many computation)
+manyComp = lexeme(
+    do  {
+        c <- between (symbol "{" <?> "Start of Computation Block \"{\"") 
+        (symbol "}" <?> "End of computation block \"}\"") $
+        (optional semi) >> (many computation);
         if (null c)
             then trace ("WARNING: Computation list is empty.") (optional semi)
-        else (optional semi)
-        return c
+        else (optional semi);
+        return c}<?> "Computation Block \"{}\"")
+
+singleComp :: Parser [Computation]
+singleComp = lexeme( 
+    do { 
+    c <- computation;
+    return [c] } <?> "Single Line Computation"
+    )
 
 computation::Parser Computation
 computation =
-    try (liftM2 Foreach foreach manyComp)
+    try (liftM2 Foreach foreach  manyComp {-(try-} {- <|> singleComp)-})
     <|> try (liftM Table table)
     <|> try (list)
     <|> try (liftM Print prints)
     <|> try (liftM Barchart barchart)
 
-foreach::Parser ForEachDef
-foreach =
-    do
-        try(forEachFilter) <|> try(forEachTable) <|> try(forEachSequence) <|> try(forEachList)
-
 table::Parser TableAction
-table =
-    do
-        reserved "table"
-        v <- var
-        reserved "="
-        reserved "count"
-        fn <- filterName
-        reserved "by"
-        fv <-filterVal
-        semi
-        return $ TableCount v fn fv
+table = lexeme (
+    do {
+        reserved "table";
+        v <- var;
+        reserved "=";
+        reserved "count";
+        fn <- filterName;
+        reserved "by";
+        fv <-filterVal;
+        semi;
+        return $ TableCount v fn fv}<?>"Table Statement")
 
 list::Parser Computation
-list=
-    do
-        reserved "list"
-        v <- var
-        reserved "=" --equal --equal
-        reserved "sequences"
-        reserved "like"
-        e <- seqList
-        semi
-        return $ List v e
+list = lexeme (
+    do {
+        reserved "list";
+        v <- var;
+        reserved "="; --equal --equal
+        reserved "sequences";
+        reserved "like";
+        e <- seqList;
+        semi;
+        return $ List v e} <?> "List Statement")
 
 seqList::Parser [[SeqField]]
-seqList= lexeme $ squares $ sepBy singleSequence bar
+seqList= lexeme ( (squares $ sepBy singleSequence bar)<?> "Sequence")  
 
 singleSequence::Parser [SeqField]
 singleSequence =
@@ -330,7 +349,7 @@ seqField::Parser SeqField
 seqField =
     do
         (optional semi)
-        x <- try(seqSingle) <|> try(seqDisj) <|> try(seqNeg) <|> try(seqStar)
+        x <- lexeme ((try(seqSingle) <|> try(seqDisj) <|> try(seqNeg) <|> try(seqStar))<?>" Sequence Event")
         (optional semi)
         return x
 
@@ -363,7 +382,7 @@ seqDisj =
         return $ Disj e
 
 event::Parser Event
-event =  try (eSome) <|> try (liftM EAll eventName)
+event =  lexeme ((try (eSome) <|> try (liftM EAll eventName))<?>"Event")
 eSome::Parser Event
 eSome = do
     e<-eventName
@@ -375,18 +394,20 @@ eventName =
     do
         ename <- identifier
         return $ ename
-
-prints:: Parser PrintAction
-prints = try printvar <|> try printTimeLine <|> try printLength <|> try printFilters <|> printElement
-
 barchart::Parser Var
-barchart =  lexeme $
-    do
-        reserved "barchart"
-        v <- var
-        semi
-        return $ v
+barchart =  lexeme (
+    do{
+        reserved "barchart";
+        v <- var;
+        semi;
+        return $ v}<?> "Barchart")
 
+foreach::Parser ForEachDef
+foreach =lexeme(
+    do{  f<-try(forEachFilter) <|> try(forEachTable) <|> try(forEachSequence) <|> try(forEachList);
+        optional semi;
+        return f;
+} <?> "For Each Definition")
 
 forEachFilter::Parser ForEachDef
 forEachFilter =
@@ -394,7 +415,6 @@ forEachFilter =
         reserved "foreach"
         f <- lexeme filterName
         v <- var
-        semi
         return $ ForEachFilter f v
 
 
@@ -406,7 +426,6 @@ forEachTable =
         v1 <- var
         reserved "of"
         v2 <- var
-        semi
         return $ ForEachTable v1 v2
 
 forEachSequence::Parser ForEachDef
@@ -417,7 +436,6 @@ forEachSequence =
         v1 <- var
         reserved "like"
         e <- seqList
-        semi
         return $ ForEachSequence v1 e
 
 forEachList::Parser ForEachDef
@@ -428,7 +446,6 @@ forEachList =
         v1 <- var
         reserved "in"
         v2 <- var
-        semi
         return $ ForEachList v1 v2
 
 printvar::Parser PrintAction
@@ -439,6 +456,15 @@ printvar =
         semi
         return $ PrintVar v
 
+prints:: Parser PrintAction
+prints = lexeme ( 
+    do{
+   x<-(try printvar <|> try printTimeLine <|> try printLength <|> try printFilters <|> try printElement);
+   semi;
+   return x;
+   } <?> "Print Statement")
+
+
 printTimeLine::Parser PrintAction
 printTimeLine =
     do
@@ -446,7 +472,7 @@ printTimeLine =
         reserved "timeline"
         reserved "of"
         v<-var
-        semi
+        
         return $ PrintTimeLine v
 
 printLength::Parser PrintAction
@@ -456,7 +482,7 @@ printLength =
         v<-var
         dot
         reserved "length"
-        semi
+        
         return $ PrintLength v
 
 
@@ -467,7 +493,7 @@ printFilters =
         filterList <- sepBy filterName comma
         reserved "of"
         v <- var
-        semi
+        
         return $ PrintFilters filterList v
 
 printElement::Parser PrintAction
@@ -475,8 +501,8 @@ printElement =
     do
         reserved "print"
         v1 <-var
-        v2 <- squares $ var
-        semi
+        v2 <- between (symbol "[" <?> "Table index \"[]\"") (symbol "]") var
+        
         return $ PrintElement v1 v2
 
 filterName::Parser FilterName
@@ -486,35 +512,34 @@ filterName = lexeme $
         return f
 
 filterVal::Parser FilterVal
-filterVal =
-    do
-        g <- groupItem
-        return g
+filterVal = lexeme( groupItem <?> "Field Options")
+        
 
 filters :: Parser Filter
-filters =
-    do
-        filterName <- lexeme $ identifier
-        choice $ [reserved "is", reserved "are"]
-        semi
-        filterDs <- lexeme $ some $ try filterDefs
-        return $ Filter filterName filterDs
+filters = lexeme(
+    do  {
+        filtName <- lexeme (identifier <?> "Filter Section Name");
+        choice $ [reserved "is", reserved "are"];
+        semi;
+        filterDs <- lexeme $ some $ try filterDefs;
+        return $ Filter filtName filterDs} <?> "Filter Section")
 
 manyFilters :: Parser [Filter]
-manyFilters =
-    do
-        f <- many filters
-        return $ f
+manyFilters = lexeme (
+    do {
+        many filters
+        } <?> "Filters Block")
 
 
 filterDefs :: Parser FilterDef
-filterDefs =
-    do
-        ffield <- identifier
-        colon
-        fval <- sepBy filterVal comma
-        semi
+filterDefs = lexeme (
+    do {
+        ffield <- identifier;
+        colon;
+        fval <- sepBy filterVal comma;
+        semi;
         return $ FilterDef (FilterField ffield) fval
+        } <?> "Field Definition ")
 
 
 useList :: Parser UseFile

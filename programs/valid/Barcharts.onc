@@ -1,6 +1,6 @@
-script Barcharts()
+script Barcharts(Id x, Date y)
 /**
- Generates barcharts. 
+ Generates barcharts.
  */
 
 // ---- Change data in this group file ----
@@ -21,6 +21,6 @@ population is
 	table v = count Doctors by Id
 
 	print t
-	print s 
+	print s
 	print v
 }
