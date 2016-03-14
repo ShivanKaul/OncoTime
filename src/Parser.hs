@@ -237,14 +237,8 @@ groupValString = lexeme $
         gv <- some wordChar
         return $ GroupValString gv
 
-groupValInt::Parser GroupItem
-groupValInt = lexeme $
-    do
-        gd <- some digit
-        return $ GroupValInt $ read gd
-
 groupRange::Parser GroupItem
-groupRange = try (liftM GroupRange betw) <|> try (liftM GroupRange before) <|> try (liftM GroupRange after)
+groupRange = try (liftM GroupRange betw) <|> try (liftM GroupRange before) <|> try (liftM GroupRange after) <|> try (liftM GroupRange rangeint)
 
 before::Parser RangeType
 before =
@@ -267,6 +261,12 @@ betw = lexeme $
         reserved "to"
         post <- lexeme $ some digit
         return $ Between (read pre) (read post)
+
+rangeint::Parser RangeType
+rangeint = lexeme $ 
+    do
+        num <- lexeme $ some digit
+        return $ RangeInt (read num)
 
 manyComp ::Parser [Computation]
 manyComp =

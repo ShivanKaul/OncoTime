@@ -52,20 +52,19 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         let grpAllFilesContents = map (readFile) (useFilesToParse)
         groups <- sequence (map (getGroupDefs) (grpAllFilesContents))
 
-
         --check erroneous subfields i.e. whether all fields exist
         case (checkFilters filters conf) of
             Left e -> print e >> putStrLn "FILTERS:" >> print filters >> putStrLn "CONF:" >> print conf >>  exitFailure
             Right r -> putStrLn "All filters valid"
         
         case (checkFilters filters conf) of
-            Left e -> print e >> putStrLn "FILTERS:" >> print filters >> putStrLn "CONF:" >> print conf >>  exitFailure 
+            Left e -> print e >>  putStrLn "FILTERS:" >> print filters >> putStrLn "CONF:" >> print conf >>  exitFailure 
             Right r -> putStrLn "All Fields valid"
 
         --checking field redeclarations
         --checkFilterRedec filters [] conf
 
-
+       
         --redeclarations of foreach
 
         --table syntax checking
@@ -142,7 +141,10 @@ testGroupFiles useFiles grpFiles =
 
 checkFilters::[Filter]->Config->Either LexError [Filter] 
 checkFilters filList conf = case (checkFilRedec filList ) of
-    Right r -> Right filList
+    Right r -> 
+        case (checkSubFieldsEx conf r [] ) of
+            [] -> Right filList
+            l -> Left $ MissingConfigField $ "Error. Subfields Missing in " ++ (M.showTreeWith (\k x -> show (k,x)) True False (M.fromList l) )
     Left e -> Left e 
 
 --Highest level, checkFilters. Is in the either monad to give us error checking
@@ -185,7 +187,52 @@ checkFields conf (x:xs) notIncList =
         True -> checkFields conf xs notIncList
         False -> checkFields conf xs (x:notIncList)
 
+getFilterDefList::Filter->[FilterDef]
+getFilterDefList (Filter _ fd) = fd
 
+getFilterField::FilterDef->FilterField
+getFilterField (FilterDef ff _ ) = ff
+
+getFilterFieldStr::FilterField->String
+getFilterFieldStr (FilterField s) = s
+
+getFilterValList::FilterDef->[FilterVal]
+getFilterValList (FilterDef _ fv ) = fv
+
+
+
+--given a list of filters, makes sure each thing int he map belongs
+--COULD ALSO DO TYPE CHEKING HERE, GIVEN THE SYMBOL TABLE
+checkSubFieldsEx::Config->[Filter]->[(FilterName, [SubFieldName])]->[(FilterName, [SubFieldName])] 
+checkSubFieldsEx conf [] [] = [] 
+checkSubFieldsEx conf [] l = l
+checkSubFieldsEx conf (x:xs) l = 
+    do
+        let fn = (getFilterName x) --first arg to subfield exists, the name of the field we are checking
+
+        let confMap =  configToMap conf
+
+        let submap = (M.lookup fn confMap)  --the submap. Here is a map of all the subfields the config specifes for particular field fn
+        
+        --list of filter definitions for that particular field. i.e., if the field is Doctor, this specifes all the lists of [ID: vals_here, etc]
+        let fdefList = (getFilterDefList x)
+        
+        let missingSubFields = filter (not . (subFieldExists conf fn)) (map (getFilterFieldStr . getFilterField) fdefList) 
+         
+        
+        --For each field in the list, we are going to check that it exists int he list, we are going to check 
+         
+
+       -- case (subFieldExists fn  ) of
+         --   True -> 
+           -- False ->
+
+        if (missingSubFields == []) then checkSubFieldsEx conf xs l 
+            else checkSubFieldsEx conf xs ((fn, missingSubFields) : l)
+
+
+--checkSubFieldTypes::Config
+--checkSubFieldValues
 
 --given a list of filters, and a config, makes sure each filter is defined in the config
 
