@@ -16,8 +16,8 @@ import qualified Text.ParserCombinators.Parsec.Token as Token
 languageDef = 
     emptyDef {
             Token.commentLine = "//"
-            ,Token.identStart = letter <|> char '_'
-            ,Token.identLetter = alphaNum <|> char '_'
+            ,Token.identStart = letter <|> char '_' <?> "start of identifier"
+            ,Token.identLetter = alphaNum <|> char '_' <?> "rest of identifier"
             ,Token.reservedNames = [
                 "script",
                 "/**",
@@ -66,7 +66,7 @@ angles = Token.angles lexer
 parents = Token.parens lexer
 dot = Token.dot lexer
 comma = Token.comma lexer
-identifier = Token.identifier lexer -- parses an identifier
+identifier = (Token.identifier lexer) <?> "identifier" -- parses an identifier
 reserved = Token.reserved lexer -- parses a reserved name
 reservedOp = Token.reservedOp lexer -- parses an operator
 stringLit = Token.stringLiteral lexer
@@ -85,3 +85,4 @@ arrow = symbol "->"
 star = symbol "*" 
 equal = symbol "=" 
 semi = symbol ";" <?> "newline" -- parses a semicolon
+date_sep = symbol "-" <?> "Date separator \"-\""

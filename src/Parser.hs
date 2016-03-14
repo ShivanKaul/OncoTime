@@ -182,7 +182,7 @@ isStarSlash =
 
 
 wordChar :: Parser Char
-wordChar = (satisfy (\c -> (c=='-' ) || (c=='_') || (isAlphaNum c)   ))
+wordChar = (satisfy (\c -> (c=='_') || (isAlphaNum c) ))
 
 fChar :: Parser Char
 fChar = (satisfy (\c -> (c=='.' ) || (isAlphaNum c)))
@@ -220,12 +220,12 @@ groupType = lexeme $
         return $ GroupType gt
 
 groupItem::Parser GroupItem
-groupItem = try groupRange
-        -- <|> try groupValInt
+groupItem = try groupValDate
+        <|> try groupRange
         <|> try groupValString
         <|> try groupVar
 
-groupVar::Parser GroupItem
+groupVar :: Parser GroupItem
 groupVar =
     do
         gv <- angles $ var
@@ -237,14 +237,18 @@ groupValString = lexeme $
         gv <- some wordChar
         return $ GroupValString gv
 
-groupValInt::Parser GroupItem
-groupValInt = lexeme $
-    do
-        gd <- some digit
-        return $ GroupValInt $ read gd
+groupValDate::Parser GroupItem
+groupValDate = lexeme (
+    do {
+        y <- some digit;
+        date_sep;
+        m <- some digit;
+        date_sep;
+        d <- some digit;
+        return $ GroupDate (read y) (read m) (read d)} <?> "Date")
 
 groupRange::Parser GroupItem
-groupRange = try (liftM GroupRange betw) <|> try (liftM GroupRange before) <|> try (liftM GroupRange after)
+groupRange = try (liftM GroupRange betw) <|> try (liftM GroupRange before) <|> try (liftM GroupRange after)  <|> try (liftM GroupRange single) <?> "Number or Range"
 
 before::Parser RangeType
 before =
@@ -267,6 +271,13 @@ betw = lexeme $
         reserved "to"
         post <- lexeme $ some digit     
         return $ Between (read pre) (read post)
+
+single::Parser RangeType
+single = lexeme $
+    do
+        gd <- some digit
+        return $ SingleInt $ read gd
+
 
 manyComp ::Parser [Computation]
 manyComp = lexeme(
@@ -442,7 +453,12 @@ printvar =
         return $ PrintVar v
 
 prints:: Parser PrintAction
-prints = lexeme ((try printvar <|> try printTimeLine <|> try printLength <|> try printFilters <|> printElement) <?> "Print Statement")
+prints = lexeme ( 
+    do{
+   x<-(try printvar <|> try printTimeLine <|> try printLength <|> try printFilters <|> try printElement);
+   semi;
+   return x;
+   } <?> "Print Statement")
 
 
 printTimeLine::Parser PrintAction
@@ -452,7 +468,7 @@ printTimeLine =
         reserved "timeline"
         reserved "of"
         v<-var
-        semi
+        
         return $ PrintTimeLine v
 
 printLength::Parser PrintAction
@@ -462,7 +478,7 @@ printLength =
         v<-var
         dot
         reserved "length"
-        semi
+        
         return $ PrintLength v
 
 
@@ -473,7 +489,7 @@ printFilters =
         filterList <- sepBy filterName comma
         reserved "of"
         v <- var
-        semi
+        
         return $ PrintFilters filterList v
 
 printElement::Parser PrintAction
@@ -481,8 +497,8 @@ printElement =
     do
         reserved "print"
         v1 <-var
-        v2 <- squares $ var
-        semi
+        v2 <- between (symbol "[" <?> "Table index \"[]\"") (symbol "]") var
+        
         return $ PrintElement v1 v2
 
 filterName::Parser FilterName

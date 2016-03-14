@@ -11,14 +11,14 @@ Patient are
 	BirthYear : <x>
 
 period is
-	Years: 2012, 2012, 2014
+	Years: 2012, 2012, 2014, 2013-01-02
 	Days: Mon, Tues, Wed, Thurs, Fri
 
 {	
 	table t = count Patients by Birthyear
 	print t.length
 	foreach Patient p{
-	print Sex, Postal_Code of p
+	print Sex, Postal_Code of p	
 	}
 		
 	table t = count Patients by Birthyear 

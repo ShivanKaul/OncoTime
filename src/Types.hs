@@ -31,7 +31,7 @@ data GroupDefs = Group GroupType Var [GroupItem]
     deriving (Show, Eq)
 
 data GroupType = GroupType String deriving (Show, Eq)
-data GroupItem = GroupValString String | GroupVar Var | GroupRange RangeType | GroupValInt IntValue 
+data GroupItem = GroupValString String | GroupVar Var | GroupRange RangeType  | GroupDate IntValue IntValue IntValue
     deriving (Show, Eq)
 
 --better field for GroupVal than string?
@@ -43,7 +43,7 @@ type FilterName = String
 type FilterVal = GroupItem -- deriving (Show, Eq)
 data FilterField = FilterField String deriving (Show, Eq)
 
-data RangeType = Before IntValue | After IntValue | Between IntValue IntValue 
+data RangeType = Before IntValue | After IntValue | Between IntValue IntValue | SingleInt IntValue 
      deriving (Show, Eq)
     
 type IntValue = Int 
