@@ -45,7 +45,7 @@ typeMapMaker =
         name <- stringLit 
         colon
         tup <- parens $ typeTuple
-        return (name, tup) 
+        return ((map toLower name), tup) 
 
 subFieldMapMaker::Parser (Map SubFieldName (AllowedType, [AllowedVal]))
 subFieldMapMaker = 
@@ -53,7 +53,7 @@ subFieldMapMaker =
         name <- stringLit 
         colon
         tup <- parens $ typeTuple 
-        return (M.singleton name tup) 
+        return (M.singleton (map toLower name) tup) 
 
 typeTuple::Parser (AllowedType, [AllowedVal])
 typeTuple =
@@ -61,7 +61,7 @@ typeTuple =
         alType <- identifier
         comma
         alVals <- squares $ sepBy identifier comma
-        return (alType, alVals)
+        return (map toLower alType, alVals)
 
 configParser::Parser Config
 configParser =
@@ -73,7 +73,7 @@ configParser =
         --concat list of maps to a single one
         let subMapList = foldr M.union M.empty typeMapList 
         semi
-        return $ Config (M.singleton fieldName (SubMap subMapList))
+        return $ Config (M.singleton (map toLower fieldName) (SubMap subMapList))
 
 
 getTypeFromMap::(SubField)->AllowedType

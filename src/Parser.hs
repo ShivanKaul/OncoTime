@@ -506,7 +506,7 @@ filterName::Parser FilterName
 filterName = lexeme $
     do
         f <- identifier
-        return f
+        return (map toLower f)
 
 filterVal::Parser FilterVal
 filterVal = lexeme( groupItem <?> "Field Options")
@@ -519,7 +519,7 @@ filters = lexeme(
         choice $ [reserved "is", reserved "are"];
         semi;
         filterDs <- lexeme $ some $ try filterDefs;
-        return $ Filter filtName filterDs} <?> "Filter Section")
+        return $ Filter (map toLower filtName) filterDs} <?> "Filter Section")
 
 manyFilters :: Parser [Filter]
 manyFilters = lexeme (
@@ -535,7 +535,7 @@ filterDefs = lexeme (
         colon;
         fval <- sepBy filterVal comma;
         semi;
-        return $ FilterDef (FilterField ffield) fval
+        return $ FilterDef (FilterField (map toLower ffield)) fval
         } <?> "Field Definition ")
 
 
