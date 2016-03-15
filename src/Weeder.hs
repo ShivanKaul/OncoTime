@@ -37,24 +37,26 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         --get Config file
         conf <- readConfig file
        --grpFile weeding
-        dirContents <- (getDirectoryContents ".") 
+        curContents <- (getDirectoryContents ".") 
         valContents <-  (getDirectoryContents "./programs/valid/" ) 
+        
+        --dirContents <-  (getDirectoryContents "./programs/valid/" ) 
         invContents <- (getDirectoryContents "./programs/invalid/")
-        let dirContents = dirContents ++ valContents ++ invContents
+        let dirContents = curContents ++ valContents ++ invContents
         let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
         let grpFileNames = map dropExtension grpFiles
         let grpFileList = weedGroupFiles useList grpFileNames
         let useFilesToParse = map (\x -> "programs/valid/" ++ x ++ ".grp") (flattenUseFile useList)
 
-        putStrLn ("Group files are " ++ (show useFilesToParse))
+        --putStrLn ("Group files are " ++ (show useFilesToParse))
 
         case grpFileList of
             Left e -> putStrLn (file ++ ": ") >> print e >> exitFailure
             Right r -> putStrLn $ file ++ ": All Group files exist"
 
         --parsing each group file
-        let grpAllFilesContents = map (readFile) (useFilesToParse)
-        newGroups <- sequence (map (getGroupDefs) (grpAllFilesContents))
+        --let grpAllFilesContents = map (readFile) (useFilesToParse)
+        --newGroups <- sequence (map (getGroupDefs) (grpAllFilesContents))
 
         --check erroneous subfields i.e. whether all fields exist
        
@@ -70,7 +72,8 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         --table syntax checking
 
         --verify filters
-        let allGroups = (concat (newGroups)) ++ groupDefs
+        --let allGroups = (concat (newGroups)) ++ groupDefs
+        let allGroups = groupDefs
 
         -- SAMPLE USES OF SYMBOL TABLE
         -- let symbolTable1 = buildSymbolTable allGroups hdr
