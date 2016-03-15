@@ -36,13 +36,14 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
     do
         --get Config file
         conf <- readConfig file
+        putStrLn $ "File "++file++"\n"
        --grpFile weeding
-        curContents <- (getDirectoryContents ".") 
-        valContents <-  (getDirectoryContents "./programs/valid/" ) 
+        curContents <- (getDirectoryContents  $ dropFileName file) 
+        --valContents <-  (getDirectoryContents "./programs/valid/" ) 
         
         --dirContents <-  (getDirectoryContents "./programs/valid/" ) 
-        invContents <- (getDirectoryContents "./programs/invalid/")
-        let dirContents = curContents ++ valContents ++ invContents
+        --invContents <- (getDirectoryContents "./programs/invalid/")
+        let dirContents = curContents -- ++ valContents ++ invContents
         let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
         let grpFileNames = map dropExtension grpFiles
         let grpFileList = weedGroupFiles useList grpFileNames
