@@ -21,18 +21,6 @@ import Types
 import Lexer
 
 
-data Config =  Config (Map FieldName SubMap) deriving(Eq, Show)
-
-data SubMap = SubMap (Map SubFieldName (SubField)) deriving(Eq, Show)
-
-data Conf = Conf (FieldName, (Map SubFieldName (SubField))) deriving(Eq, Show)
-type SubField = (AllowedType, [AllowedVal])
-
-type FieldName = String
-type AllowedType = String
-type AllowedVal = String
-type SubFieldName = String
-
 makeConfig:: String -> Config
 makeConfig str =
     case parse (configParser <* eof) "" str of

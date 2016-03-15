@@ -49,7 +49,6 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         let useFilesToParse = map (\x -> "programs/valid/" ++ x ++ ".grp") (flattenUseFile useList)
 
         --putStrLn ("Group files are " ++ (show useFilesToParse))
-
         case grpFileList of
             Left e -> putStrLn (file ++ ": ") >> print e >> exitFailure
             Right r -> putStrLn $ file ++ ": All Group files exist"
