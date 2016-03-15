@@ -83,7 +83,7 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         -- testIfSymbolTableContains symbolTable1 (Var "x")
 
         putStrLn "Weeded successfully"
-        return (Program hdr docs [] (allGroups) filters comps)
+        return (Program hdr docs [] (allGroups) filters (weedComputations comps))
 
 -- Make Var hashable
 instance (Hashable Var) where
@@ -278,3 +278,8 @@ compareFieldTypes (FieldType "String")g@(GroupValString _)  = Right ()
 compareFieldTypes (FieldType "Int") g@(GroupRange _) = Right ()
 compareFieldTypes (FieldType "Date") g@(GroupDate _ _ _) = Right ()
 compareFieldTypes b a = Left $ TypeError ("Type Error between " ++ (show a) ++ " and " ++ (show b))
+
+
+weedComputations :: [Computation]->[Computation]
+weedComputations = trace "\n:(\n" 
+
