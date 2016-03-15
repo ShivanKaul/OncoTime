@@ -96,12 +96,15 @@ data ForEachDef
 data LexError = FieldNameError String | SubFieldNameError String | AllowedTypeError String | AllowedValError String | FieldNotFoundError String | GenError String | MissingFilesError String | MissingConfigFile String | RedecError String | MissingConfigField String deriving (Show, Eq)
 
 
+--we should also define a list of aliases perhaps that we pass
 data Config =  Config (M.Map FieldName SubMap) deriving(Eq, Show)
 
 data SubMap = SubMap (M.Map SubFieldName (SubField)) deriving(Eq, Show)
 
-data Conf = Conf (FieldName, (M.Map SubFieldName (SubField))) deriving(Eq, Show)
-type SubField = (AllowedType, [AllowedVal])
+data SubField = SubFieldType String | SubFieldVal [AllowedVal] | SubFieldLoopVals [AllowedVal] deriving (Show, Eq)
+
+
+--type SubField = (AllowedType, [AllowedVal])
 
 type FieldName = String
 type AllowedType = String

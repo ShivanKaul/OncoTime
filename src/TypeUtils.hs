@@ -24,9 +24,9 @@ import Lexer
 makeConfig:: String -> Config
 makeConfig str =
     case parse (configParser <* eof) "" str of
-        Left e-> error$ show e
+        Left e-> error $ show e
         Right r -> r
-
+{-
 typeMapMaker::Parser (String, (String, [String])) 
 typeMapMaker =
     do
@@ -34,42 +34,67 @@ typeMapMaker =
         colon
         tup <- parens $ typeTuple
         return ((map toLower name), tup) 
-
-subFieldMapMaker::Parser (Map SubFieldName (AllowedType, [AllowedVal]))
-subFieldMapMaker = 
+-}
+--subFieldMapMaker::Parser (Map SubFieldName (AllowedType, [AllowedVal]))
+subFieldMapMaker::Parser (Map SubFieldName SubField)
+subFieldMapMaker = lexeme $
     do
         name <- stringLit 
         colon
-        tup <- parens $ typeTuple 
-        return (M.singleton (map toLower name) tup) 
+        subf <- parents $ subfield
+        return (M.singleton (map toLower name) subf)
+        --tup <- parens $ typeTuple 
+        --return (M.singleton (map toLower name) tup) 
 
-typeTuple::Parser (AllowedType, [AllowedVal])
-typeTuple =
+subfield::Parser SubField 
+subfield = --lexeme $
     do
-        alType <- identifier
-        comma
-        alVals <- squares $ sepBy identifier comma
-        return (map toLower alType, alVals)
+        sf <-  try subfieldval <|>  try subfieldtype<|> try subfieldloopvals <?> "stupid"               --sf <- choice [ (squares (sepBy identifier comma)), (curlies (sepBy identifier comma)), identifier]
+
+        
+        return sf
+
+subfieldval::Parser SubField
+subfieldval = lexeme $
+    do
+        p <-( squares  (sepBy identifier comma) )
+        return $ SubFieldVal p
+
+subfieldloopvals::Parser SubField
+subfieldloopvals = lexeme $
+    do
+        p <-( curlies  (sepBy identifier comma) )
+        return $ SubFieldLoopVals p
+
+
+subfieldtype::Parser SubField
+subfieldtype = lexeme $
+    do
+        p <- identifier
+        return $ SubFieldType p 
+
+
 
 configParser::Parser Config
-configParser =
+configParser = lexeme $
     do
         whiteSpace
         fieldName <- identifier
         colon
         typeMapList <- squares $ sepBy subFieldMapMaker comma
         --concat list of maps to a single one
-        let subMapList = foldr M.union M.empty typeMapList 
+        --let subMapList = foldr M.union M.empty typeMapList 
+        let subMapList = M.unions typeMapList
         semi
-        return $ Config (M.singleton (map toLower fieldName) (SubMap subMapList))
+        return $ Config (M.singleton (map toLower fieldName) (SubMap $  subMapList))
 
-
+{-
 getTypeFromMap::(SubField)->AllowedType
 getTypeFromMap (a,b) = a
 
 getValFromMap::(SubField)->[AllowedVal]
 getValFromMap (a,b) = b
-
+-}
 
 --configListToMap::[Config]->(Map FieldName (Map SubFieldName (SubField)))
 configListToMap::[Config]->(Map FieldName SubMap)

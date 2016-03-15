@@ -63,6 +63,9 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
             Left e -> print e >>  putStrLn "FILTERS:" >> print filters >> putStrLn "CONF:" >> print conf >>  exitFailure 
             Right r -> putStrLn "All Fields valid"
 
+        
+        --case checkFilterTypes filters con
+
         --checking field redeclarations
         --checkFilterRedec filters [] conf
 
@@ -132,16 +135,6 @@ readConfig file =
         --print $ M.showTree $ totalMap 
         return $ Config totalMap
 
-
-weedProgram::[Conf]->Program->Either LexError Program
-weedProgram conf (Program hdr docs useList groupDefs filter comps) =
-    do
-        --test Group Files
-        --test Conf
-        --verifyFilters conf filter
-        --let a = vFilters conf filter
-        --pure $
-        return (Program hdr docs useList groupDefs filter comps)
 
 flattenUseFile::[UseFile]->[String]
 flattenUseFile ((UseFile []):[]) = []
@@ -228,36 +221,20 @@ checkSubFieldsEx conf [] l = l
 checkSubFieldsEx conf (x:xs) l = 
     do
         let fn = (getFilterName x) --first arg to subfield exists, the name of the field we are checking
-
         let confMap =  configToMap conf
-
         let submap = (M.lookup fn confMap)  --the submap. Here is a map of all the subfields the config specifes for particular field fn
-        
         --list of filter definitions for that particular field. i.e., if the field is Doctor, this specifes all the lists of [ID: vals_here, etc]
         let fdefList = (getFilterDefList x)
-        
         let missingSubFields = filter (not . (subFieldExists conf fn)) (map (getFilterFieldStr . getFilterField) fdefList) 
-         
-        
         --For each field in the list, we are going to check that it exists int he list, we are going to check 
-         
-
-       -- case (subFieldExists fn  ) of
-         --   True -> 
-           -- False ->
-
         if (missingSubFields == []) then checkSubFieldsEx conf xs l 
             else checkSubFieldsEx conf xs ((fn, missingSubFields) : l)
+
 
 
 --checkSubFieldTypes::Config
 --checkSubFieldValues
 
+
+
 --given a list of filters, and a config, makes sure each filter is defined in the config
-
---checks erroneous fields
---Given a list of 
-
-
---checks erroneous subfields
-
