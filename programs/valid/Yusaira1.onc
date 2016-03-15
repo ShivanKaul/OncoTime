@@ -19,9 +19,18 @@ period is
 	print t.length
 	foreach Patient p{
 	print Sex, Postal_Code of p	
+	foreach Doctor d{
+	 foreach Diagnosis i {
+	 
+	 }
 	}
-		
-	table t = count Patients by Birthyear 
+	}
+	list s = sequences like [ct_sim_completed->	ct_sim_booked->treatment_began-> patient_arrives]
+
+	foreach member i in s
+	{	
+	print i
+	}
 	
 	
 	

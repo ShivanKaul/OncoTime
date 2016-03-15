@@ -331,11 +331,11 @@ list = lexeme (
         semi;
         return $ List v e} <?> "List Statement")
 
-seqList::Parser [[SeqField]]
-seqList= lexeme ( (squares $ sepBy singleSequence bar)<?> "Sequence")  
+seqList::Parser [SeqField]
+seqList= lexeme ( (squares $  formattedSequence )<?> "Sequence")  
 
-singleSequence::Parser [SeqField]
-singleSequence =
+formattedSequence::Parser [SeqField]
+formattedSequence =
     do
         (optional semi)
         x <- sepBy seqField arrow
@@ -346,9 +346,10 @@ seqField::Parser SeqField
 seqField =
     do
         (optional semi)
-        x <- lexeme ((try(seqSingle) <|> try(seqDisj) <|> try(seqNeg) <|> try(seqStar))<?>" Sequence Event")
+        x <- lexeme ((try(seqSingle) <|> try(seqBar) <|> try(seqComma) <|> try(seqNeg) <|> try(seqStar))<?>" Sequence Event")
         (optional semi)
         return x
+
 
 seqSingle::Parser SeqField
 seqSingle =
@@ -372,25 +373,23 @@ seqNot =
         reserved "not"
         event
 
-seqDisj :: Parser SeqField
-seqDisj =
+seqComma :: Parser SeqField
+seqComma =
     do
         e <- curlies $ sepBy event comma
-        return $ Disj e
+        return $ Comma e
+seqBar :: Parser SeqField
+seqBar =
+    do
+        e <- sepBy event bar
+        return $ Bar e
 
 event::Parser Event
-event =  lexeme ((try (eSome) <|> try (liftM EAll eventName))<?>"Event")
-eSome::Parser Event
-eSome = do
-    e<-eventName
-    param<-parens $ sepBy var comma
-    return $ ESome e param
+event =  lexeme ((liftM Event eventName)<?>"Event")
 
 eventName :: Parser EventName
-eventName =
-    do
-        ename <- identifier
-        return $ ename
+eventName = identifier
+
 barchart::Parser Var
 barchart =  lexeme (
     do{

@@ -39,20 +39,19 @@ instance PrettyPrint ForEachDef where
         " in " ++ prettyPrint var2
 
 instance PrettyPrint Event where
-    prettyPrint (EAll ename) = ename
-    prettyPrint (ESome ename vars) = ename ++ "(" ++ (intercalate ", " (map prettyPrint vars)) ++ ")"
+    prettyPrint (Event ename) = ename
 
 instance PrettyPrint SeqField where
     prettyPrint (Single event) = prettyPrint event
-    prettyPrint (Disj events) = "{" ++ (intercalate ", " (map prettyPrint events)) ++ "}"
+    prettyPrint (Comma events) = "{" ++ (intercalate ", " (map prettyPrint events)) ++ "}"
+    prettyPrint (Bar events) = (intercalate " | " (map prettyPrint events))
     prettyPrint (Star events) = "{" ++ (intercalate ", " (map prettyPrint events)) ++ "}" ++ "*"
     prettyPrint (Neg event) = "(not" ++ prettyPrint event ++ ")"
 
 instance PrettyPrint Sequence where
-    prettyPrint seqs = "[" ++ (intercalate " | " (map prettyPrint seqs)) ++ "]"
+    prettyPrint seqs = "[ " ++ (intercalate " -> " (map prettyPrint seqs)) ++ " ]"
 
-instance PrettyPrint [SeqField] where
-    prettyPrint seqs = (intercalate " -> " (map prettyPrint seqs))
+
 
 instance PrettyPrint Computation where
     prettyIndent  (indent) (Foreach foreachdef comps) = indent ++ prettyPrint foreachdef ++ 

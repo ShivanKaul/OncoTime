@@ -70,18 +70,18 @@ data PrintAction
      | PrintElement Var Var --like array indexing, slide 39
      deriving (Show, Eq)
 
-type Sequence = [[SeqField{- separated by ->-}] {-separated by | -}] 
+type Sequence = [SeqField{- separated by ->-}]  
 
 type EventName = String
 
 data Event 
-    = EAll EventName
-    | ESome EventName [Var]
+    = Event EventName
     deriving(Show,Eq)
 
 data SeqField
-    = Single Event
-    | Disj [Event]
+    = Single Event 
+    | Comma [Event]
+    | Bar [Event]
     | Star [Event]
     | Neg Event
     deriving(Show,Eq)
@@ -93,8 +93,7 @@ data ForEachDef
      | ForEachList Var Var
      deriving (Show, Eq)
 
-data LexError = FieldNameError String | FilterNameError String | AllowedTypeError String | AllowedValError String | FieldNotFoundError String | GenError String | MissingFilesError String | MissingConfigFile String | RedecError String | MissingConfigField String | TypeError String deriving (Show, Eq)
-
+data LexError = FieldNameError String | FilterNameError String | AllowedTypeError String | AllowedValError String | FieldNotFoundError String | GenError String | MissingFilesError String | MissingConfigFile String | RedecError String | MissingConfigField String | TypeError String | ComputationTypeMismatch String deriving (Show, Eq)
 
 --we should also define a list of aliases perhaps that we pass
 data Config =  Config (M.Map FilterName FieldMap) deriving(Eq, Show)
