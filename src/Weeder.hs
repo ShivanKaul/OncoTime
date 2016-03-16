@@ -363,22 +363,12 @@ isInLoopableScope = error
 emptyScope :: HashMap.HashMap Var ComputationType
 emptyScope = HashMap.fromList []
 
---type symbol=[HashMap.HashMap Var ComputationType]
-
--- isInScope :: [HashMap.HashMap Var ComputationType] -> Var -> Maybe ComputationType
--- isInScope xlist var = 
---     case xlist of 
---         []->Nothing
---         (x:xs) -> 
---             case (isInScope xs var) of
---                 Nothing -> testIfScopeContains x var
---                 r -> r
  
 weedAndTypeCheckComp :: CompSymTable -> Computation -> Either LexError CompSymTable
 weedAndTypeCheckComp symtable  (Table variable constructor (FilterField field)) =
     evaluateInTopScope symtable (\sym -> if ((subFieldExists loopables constructor field))
-                    then Right $ addToSymTable sym  variable TTable --(TFilter constructor)
-                    else Left $ SubFieldNameError $ "Subfield "++field++ " does not belong to " ++ constructor )  
+        then Right $ addToSymTable sym  variable TTable --(TFilter constructor)
+        else Left $ SubFieldNameError $ "Subfield "++field++ " does not belong to " ++ constructor )  
 
 weedAndTypeCheckComp symtable (List variable seqlist) =  
     evaluateInTopScope symtable (\sym->foldl' foldWeedList (Right $ addToSymTable sym  variable TList) seqlist) 
@@ -391,11 +381,16 @@ weedAndTypeCheckComp symtable (Barchart variable) =
 weedAndTypeCheckComp symtable _ = Left $ ComputationWrongScope "Unimplemented"
 
 weedSequence :: SeqField -> Either String Bool
-weedSequence (Bar evlist) = foldl' (\prev (Event curr) -> if ( elem curr events) then prev else Left curr) (Right True) evlist
-weedSequence (Comma evlist) = foldl' (\prev (Event curr) -> if ( elem curr events) then prev else Left curr) (Right True) evlist
-weedSequence (Star evlist) = foldl' (\prev (Event curr) -> if ( elem curr events) then prev else Left curr) (Right True) evlist
-weedSequence (Neg (Event curr)) = if (elem curr events) then (Right True) else Left curr
+weedSequence (Bar evlist) = checkEvents evlist
+weedSequence (Comma evlist) = checkEvents evlist
+weedSequence (Star evlist) = checkEvents evlist
+weedSequence (Neg (ev)) = checkEvents [ev]
 
+checkEvents evlist = foldl' (\prev (Event curr) -> 
+        if ( elem curr events) 
+        then prev 
+        else Left curr) 
+    (Right True) evlist
 foldWeedList :: (Either LexError CompSymTable) -> SeqField -> (Either LexError CompSymTable)
 foldWeedList prev curr = 
     case weedSequence curr of  
