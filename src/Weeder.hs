@@ -281,6 +281,54 @@ compareFieldTypes (FieldType "Date") g@(GroupDate _ _ _) = Right ()
 compareFieldTypes b a = Left $ TypeError ("Type Error between " ++ (show a) ++ " and " ++ (show b))
 
 
+
+
+
+
+weedComputationList :: [Computation]->[Computation]
+weedComputationList _ = let {
+-- correct1 = [Table ( (Var "t") "patients" (GroupValString "Birthyear")),Print (PrintLength (Var "t")),
+-- Foreach (ForEachFilter "patient" (Var "p")) [Print (PrintFilters ["sex","postal_code"] (Var "p")),
+-- Foreach (ForEachFilter "doctor" (Var "d")) [Foreach (ForEachFilter "diagnosis" (Var "i")) []]],
+-- List (Var "s") [Single (Event "ct_sim_completed"),Single (Event "ct_sim_booked"),Single (Event "treatment_began"),Single (Event "patient_arrives")],
+-- Foreach (ForEachList (Var "i") (Var "s")) [Print (PrintVar (Var "i"))]];
+
+correct1=[Table (Var "t") "patients" (FilterField "birthyear"),Print (PrintLength (Var "t")),
+Foreach (ForEachFilter "patient" (Var "p")) [Print (PrintFilters ["sex","postal_code"] (Var "p")),
+Foreach (ForEachFilter "doctor" (Var "d")) [Foreach (ForEachFilter "diagnosis" (Var "i")) []]],
+List (Var "s") [Bar [Event "ct_sim_completed"],Bar [Event "ct_sim_booked"],Bar [Event "treatment_began"],
+Bar [Event "patient_arrives"]],Foreach (ForEachList (Var "i") (Var "s")) [Print (PrintVar (Var "i"))]];
+correct2 =  [List (Var "s") [Single (Event "ct_sim_completed"),Single (Event "ct_sim_booked"),
+Single (Event "treatment_began"),Single (Event "patient_arrives")],Foreach (ForEachList (Var "i") (Var "s")) [Barchart (Var "i")]];
+
+
+compSymbolTable=[emptyScope];
+
+} in correct2
+
+loopables:: Config
+loopables = Config (M.fromList [("diagnosis",SubMap (M.fromList [("name",("string",[]))])),
+    ("doctor",SubMap (M.fromList [("id",("string",[])),("oncologist",("string",["true","false"]))])),
+    ("patient",SubMap (M.fromList [("birthyear",("string",[])),("diagnosis",("string",[])),
+        ("gender",("string",[])),("id",("string",[])),("postalcode",("string",[]))]))])
+
+addToSymTable :: CompSymTable -> Var -> ComputationType-> CompSymTable
+addToSymTable symtable v  comptype = 
+    let prev= init symtable
+        local = last symtable
+        updated = HashMap.insert  v comptype local
+        in prev++[updated]
+
+type Scope = HashMap.HashMap Var ComputationType
+type CompSymTable = [Scope]
+testIfScopeContains:: Scope ->Var-> Maybe ComputationType
+testIfScopeContains  hashmap v = (HashMap.lookup v hashmap)
+
+isNowInTopScope::CompSymTable -> Bool
+isNowInTopScope  symtable  = (null $ tail symtable) -- && (elem v $ testIfScopeContains $ head symtable v)
+
+isInLoopableScope = error
+
 --checks erroneous subfields
 emptyScope :: HashMap.HashMap Var ComputationType
 emptyScope = HashMap.fromList []
@@ -295,47 +343,12 @@ isInScope  xlist  var=
             case (isInScope xs var) of
                 Nothing -> testIfScopeContains x var
                 r -> r
-
-type Scope = HashMap.HashMap Var ComputationType
-type CompSymTable = [Scope]
-testIfScopeContains:: Scope ->Var-> Maybe ComputationType
-testIfScopeContains  hashmap v = (HashMap.lookup v hashmap)
-
-isNowInTopScope::CompSymTable -> Bool
-isNowInTopScope  symtable  = (null $ tail symtable) -- && (elem v $ testIfScopeContains $ head symtable v)
-
-isInLoopableScope = id
-
-weedComputationList :: [Computation]->[Computation]
-weedComputationList _ = let {correct1 = [Table ( (Var "t") "patients" (GroupValString "Birthyear")),Print (PrintLength (Var "t")),
-Foreach (ForEachFilter "patient" (Var "p")) [Print (PrintFilters ["sex","postal_code"] (Var "p")),
-Foreach (ForEachFilter "doctor" (Var "d")) [Foreach (ForEachFilter "diagnosis" (Var "i")) []]],
-List (Var "s") [Single (Event "ct_sim_completed"),Single (Event "ct_sim_booked"),Single (Event "treatment_began"),Single (Event "patient_arrives")],
-Foreach (ForEachList (Var "i") (Var "s")) [Print (PrintVar (Var "i"))]];
-correct2 =  [List (Var "s") [Single (Event "ct_sim_completed"),Single (Event "ct_sim_booked"),
-Single (Event "treatment_began"),Single (Event "patient_arrives")],Foreach (ForEachList (Var "i") (Var "s")) [Barchart (Var "i")]];
-compSymbolTable=[emptyScope];
-
-} in correct1
-
-loopables:: Config
-loopables = Config (M.fromList [("diagnosis",SubMap (M.fromList [("name",("string",[]))])),("doctor",SubMap (M.fromList [("id",("string",[])),("oncologist",("string",["true","false"]))])),("patient",SubMap (M.fromList [("birthyear",("string",[])),("diagnosis",("string",[])),("gender",("string",[])),("id",("string",[])),("postalcode",("string",[]))]))])
-
-addToSymTable :: CompSymTable -> Var -> ComputationType-> CompSymTable
-addToSymTable symtable v  comptype= 
-    let prev= init symtable
-        local = last symtable
-        updated = HashMap.insert  v comptype local
-        in prev++[updated]
-
-
  
 weedAndTypeCheckComp :: CompSymTable -> Computation -> Either LexError CompSymTable
-weedAndTypeCheckComp symtable  (Table variable constructor (GroupItem field)) =
-    if isNowInTopScope 
+weedAndTypeCheckComp symtable  (Table variable constructor (FilterField field)) =
+    if isNowInTopScope symtable
     then if (subFieldExists loopables constructor field)
-            then addToSymTable symtable  variable (TFilter constructor)
+            then Right $ addToSymTable symtable  variable TTable --(TFilter constructor)
             else Left $ SubFieldNameError $ "Subfield "++field++ " does not belong to " ++ constructor   
     else Left $ ComputationWrongScope "Can only be in top scope"
-weedAndTypeCheckComp symtable _ = Left $ ComputationWrongScope "Unimplemented"
 

@@ -315,9 +315,9 @@ table = lexeme (
         reserved "count";
         fn <- filterName;
         reserved "by";
-        fv <-filterVal;
+        ffield <- identifier;
         semi;
-        return $ Table v fn fv}<?>"Table Statement")
+        return $ Table v fn (FilterField (map toLower ffield))}<?>"Table Statement")
 
 list::Parser Computation
 list = lexeme (

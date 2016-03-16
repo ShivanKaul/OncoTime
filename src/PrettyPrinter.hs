@@ -56,8 +56,8 @@ instance PrettyPrint Sequence where
 instance PrettyPrint Computation where
     prettyIndent  (indent) (Foreach foreachdef comps) = indent ++ prettyPrint foreachdef ++ 
         " " ++ "\n" ++ indent ++ "{\n" ++ (intercalate "\n" (map (prettyIndent (indent ++ "\t")) comps)) ++ "\n" ++ indent ++ "}"
-    prettyIndent (indent) (Table var fname fval) = indent ++"table " ++ prettyPrint var ++ " = " ++
-        "count " ++ fname ++ " by " ++ prettyPrint fval
+    prettyIndent (indent) (Table var fname ffield) = indent ++"table " ++ prettyPrint var ++ " = " ++
+        "count " ++ fname ++ " by " ++ prettyPrint ffield
     prettyIndent (indent) (List var seq) = indent ++ "list " ++ prettyPrint var ++ " = " ++ "sequences like " 
         ++ prettyPrint seq
     prettyIndent (indent) (Print p) = indent ++ prettyPrint p

@@ -52,7 +52,7 @@ type StringValue = String
 
 data Computation
     = Foreach ForEachDef [Computation] --for nested for loops, slide 38 is confusing
-    | Table Var FilterName FilterVal
+    | Table Var FilterName FilterField
     | List Var Sequence
     | Print PrintAction
     | Barchart Var
@@ -123,6 +123,8 @@ data ComputationType
      | TSequence
      | TFilter String
      | TIndex
-     | TUndefined
+     | TEvent
+     deriving(Eq, Show)
+
 
 
