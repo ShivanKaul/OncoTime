@@ -52,15 +52,21 @@ type StringValue = String
 
 data Computation
     = Foreach ForEachDef [Computation] --for nested for loops, slide 38 is confusing
-    | Table TableAction
+    | Table Var FilterName FilterVal
     | List Var Sequence
     | Print PrintAction
     | Barchart Var
     deriving (Show, Eq)
     
+<<<<<<< 6c8fe2b3d887b8a57143d9891c233599091f1b0b
 data TableAction
     = TableCount Var FieldName FieldVal 
     deriving (Show, Eq) 
+=======
+-- data TableAction
+--     = TableCount Var FilterName FilterVal 
+--     deriving (Show, Eq) 
+>>>>>>> fixed tables computation type error
 
 data PrintAction 
      = PrintVar Var
@@ -93,7 +99,11 @@ data ForEachDef
      | ForEachList Var Var
      deriving (Show, Eq)
 
-data LexError = FieldNameError String | FilterNameError String | AllowedTypeError String | AllowedValError String | FieldNotFoundError String | GenError String | MissingFilesError String | MissingConfigFile String | RedecError String | MissingConfigField String | TypeError String | ComputationTypeMismatch String deriving (Show, Eq)
+
+data LexError   = FieldNameError String | FilterNameError String | AllowedTypeError String 
+                | AllowedValError String | FieldNotFoundError String | GenError String | MissingFilesError String 
+                | MissingConfigFile String | RedecError String | MissingConfigField String | TypeError String
+                | ComputationTypeMismatch String | ComputationWrongScope String deriving (Show, Eq)
 
 --we should also define a list of aliases perhaps that we pass
 data Config =  Config (M.Map FilterName FieldMap) deriving(Eq, Show)
@@ -107,5 +117,12 @@ data Field = FieldType String | FieldValue [AllowedVal] | FieldLoopVals [Allowed
 type FieldName = String
 type AllowedType = String
 type AllowedVal = String
+
+data ComputationType  
+     = TTable
+     | TSequence
+     | TFilter String
+     | TIndex
+     | TUndefined
 
 

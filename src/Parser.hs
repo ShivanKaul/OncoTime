@@ -301,12 +301,12 @@ singleComp = lexeme(
 computation::Parser Computation
 computation =
     try (liftM2 Foreach foreach  manyComp {-(try-} {- <|> singleComp)-})
-    <|> try (liftM Table table)
+    <|> try (table)
     <|> try (list)
     <|> try (liftM Print prints)
     <|> try (liftM Barchart barchart)
 
-table::Parser TableAction
+table::Parser Computation
 table = lexeme (
     do {
         reserved "table";
@@ -317,7 +317,7 @@ table = lexeme (
         reserved "by";
         fv <-filterVal;
         semi;
-        return $ TableCount v fn fv}<?>"Table Statement")
+        return $ Table v fn fv}<?>"Table Statement")
 
 list::Parser Computation
 list = lexeme (
@@ -359,7 +359,7 @@ seqField =
 seqStar :: Parser SeqField
 seqStar =
     do
-        e <- curlies $ sepBy event comma
+        e <- curlies $ sepBy (do {(optional semi) ; e<-event; (optional semi);return e}) comma
         star
         return $ Star e
 seqNeg::Parser SeqField
@@ -377,12 +377,12 @@ seqComma :: Parser SeqField
 seqComma =
     do
         
-        e <- curlies $ sepBy event comma
+        e <- curlies $ sepBy (do {(optional semi) ; e<-event; (optional semi);return e}) comma
         return $ Comma e
 seqBar :: Parser SeqField
 seqBar =
     do
-        e <- sepBy1 event bar
+        e <- sepBy1 (do {(optional semi) ; e<-event; (optional semi);return e}) bar
         return $ Bar e
 
 event::Parser Event
