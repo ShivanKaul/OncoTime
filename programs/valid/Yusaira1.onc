@@ -4,15 +4,15 @@ use file1.grp, file2.grp
 
 
 group BirthYear x = {1971,1972}
-group BirthYear z = {1971,1972, <y>}
+group BirthYear z = {1971,1972, <k>}
 
 Patient are
 	Sex : M, F
-	BirthYear : <x>
+	BirthYear : <k>
 
 period is
 	Years: 2012, 2012, 2014, 2013-01-02
-	Days: Mon, Tues, Wed, Thurs, Fri
+	Days: Mon, Tues, Wed, Thurs, Fri 
 
 {	
 	table t = count Patients by Birthyear

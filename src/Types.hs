@@ -100,7 +100,8 @@ data ForEachDef
      deriving (Show, Eq)
 
 
-data LexError   = FieldNameError String | FilterNameError String | AllowedTypeError String 
+data LexError   = FieldNameError String | FilterNameError String | AllowedTypeError String | UndefinedVariable String
+
                 | AllowedValError String | FieldNotFoundError String | GenError String | MissingFilesError String 
                 | MissingConfigFile String | RedecError String | MissingConfigField String | TypeError String | IncorrectEvent String
                 | ComputationTypeMismatch String | ComputationWrongScope String deriving (Show, Eq)

@@ -288,36 +288,7 @@ compareFieldTypes b a = Left $ TypeError ("Type Error between " ++ (show a) ++ "
 
 
 
-weedComputationList :: [Computation]->String
-weedComputationList _ = let {
-correct1=[Table (Var "t") "patients" (FilterField "birthyear"),Print (PrintLength (Var "t")),
-Foreach (ForEachFilter "patient" (Var "p")) [Print (PrintFilters ["sex","postal_code"] (Var "p")),
-Foreach (ForEachFilter "doctor" (Var "d")) [Foreach (ForEachFilter "diagnosis" (Var "i")) []]],
-List (Var "s") [Bar [Event "ct_sim_completed"],Bar [Event "ct_sim_booked"],Bar [Event "treatment_began"],
-Bar [Event "consult_referral_received"]],Foreach (ForEachList (Var "i") (Var "s")) [Print (PrintVar (Var "i"))]];
-correct2 =  [List (Var "s") [Single (Event "ct_sim_completed"),Single (Event "ct_sim_booked"),
-Single (Event "treatment_began"),Single (Event "consult_referral_received")],Foreach (ForEachList (Var "i") (Var "s")) [Barchart (Var "i")]];
 
-
-t=Table (Var "t") "patients" (FilterField "birthyear");
-
-l=List (Var "s") [Bar [Event "ct_sim_completed"],Bar [Event "ct_sim_booked"],Bar [Event "ready_for_treatment"],
-Bar [Event "consult_referral_received"]];
-
-compSymbolTable=[emptyScope];
-x=(weedFold compSymbolTable [l]);
-s = show x
-} in trace s x 
-
-weedFold symtable computations = printFold (foldl' weedEach symtable computations)
-weedEach sym comp =  case (weedAndTypeCheckComp sym comp) of
-    Left x ->  error $ show  x
-    Right x -> x
-printFold symtable = 
-    let 
-        len = show $ length symtable
-        curr= last symtable
-    in HashMap.foldrWithKey  (\(Var s) t p -> p ++ s ++ "\t" ++ (tail $ show t) ++"\t" ++len++ "\n" )  "" curr
  
 
 loopables:: Config
@@ -334,7 +305,30 @@ events = ["consult_referral_received","initial_consult_booked","initial_consult_
             "ct_sim_booked","ready_for_ct_sim","ct_sim_completed","ready_for_initial_contour","ready_for_md_contour",
             "ready_for_dose_calculation","prescription_approved_by_md","ready_for_physics_qa","ready_for_treatment",
             "machine_rooms_booked","patient_contacted","end"]
---
+
+weedComputationList :: [Computation]->String
+weedComputationList comps = 
+    let 
+        compSymbolTable = [emptyScope,emptyScope]
+        t= [List (Var "s") [Bar [Event "ct_sim_completed"],Bar [Event "ct_sim_booked"],Bar [Event "treatment_began"],
+            Bar [Event "consult_referral_received"]],Foreach (ForEachList (Var "i") (Var "s")) [Print (PrintVar (Var "i"))]]
+        x=(weedFold compSymbolTable comps)
+        s = show x
+    in trace s x 
+weedFold :: CompSymTable -> [Computation] -> String
+weedFold symtable computations = printFold (foldl' weedEach symtable computations)
+weedEach sym comp =  case (weedAndTypeCheckComp sym comp) of
+    Left x ->  trace ("Error! "++ (show x) ++ " occured but not handled") sym
+    Right x -> x
+
+printFold :: CompSymTable -> String
+printFold symtable = 
+    let 
+        len = show $ length symtable
+        curr= last symtable
+    in HashMap.foldrWithKey  (\(Var s) t p -> p ++ s ++ "\t" ++ (tail $ show t) ++"\t" ++len++ "\n" )  "" curr
+
+
 
 addToSymTable :: CompSymTable -> Var -> ComputationType-> CompSymTable
 addToSymTable symtable v  comptype = 
@@ -345,11 +339,23 @@ addToSymTable symtable v  comptype =
 
 type Scope = HashMap.HashMap Var ComputationType
 type CompSymTable = [Scope]
-testIfScopeContains:: Scope ->Var-> Maybe ComputationType
-testIfScopeContains  hashmap v = (HashMap.lookup v hashmap)
+getFromScope:: Scope ->Var-> Maybe ComputationType
+getFromScope  hashmap v = (HashMap.lookup v hashmap)
+
+getFromSymbolTable :: CompSymTable -> Var -> Maybe ComputationType
+getFromSymbolTable  sym v = 
+    foldr fun Nothing sym  
+    where fun  scope prev = case (prev) of
+                            Nothing -> getFromScope scope v
+                            _ -> prev
 
 isNowInTopScope::CompSymTable -> Bool
 isNowInTopScope  symtable  = (null $ tail symtable) -- && (elem v $ testIfScopeContains $ head symtable v)
+
+--evaluateInTopScope :: CompSymTable
+evaluateInTopScope symtable f = if isNowInTopScope symtable
+    then f symtable
+    else Left $ ComputationWrongScope "Can only be in top scope"
 
 isInLoopableScope = error
 
@@ -359,27 +365,29 @@ emptyScope = HashMap.fromList []
 
 --type symbol=[HashMap.HashMap Var ComputationType]
 
-isInScope :: [HashMap.HashMap Var ComputationType] -> Var -> Maybe ComputationType
-isInScope xlist var = 
-    case xlist of 
-        []->Nothing
-        (x:xs) -> 
-            case (isInScope xs var) of
-                Nothing -> testIfScopeContains x var
-                r -> r
+-- isInScope :: [HashMap.HashMap Var ComputationType] -> Var -> Maybe ComputationType
+-- isInScope xlist var = 
+--     case xlist of 
+--         []->Nothing
+--         (x:xs) -> 
+--             case (isInScope xs var) of
+--                 Nothing -> testIfScopeContains x var
+--                 r -> r
  
 weedAndTypeCheckComp :: CompSymTable -> Computation -> Either LexError CompSymTable
 weedAndTypeCheckComp symtable  (Table variable constructor (FilterField field)) =
+    evaluateInTopScope symtable (\sym -> if ((subFieldExists loopables constructor field))
+                    then Right $ addToSymTable sym  variable TTable --(TFilter constructor)
+                    else Left $ SubFieldNameError $ "Subfield "++field++ " does not belong to " ++ constructor )  
+
+weedAndTypeCheckComp symtable (List variable seqlist) =  
+    evaluateInTopScope symtable (\sym->foldl' foldWeedList (Right $ addToSymTable sym  variable TList) seqlist) 
+
+
+weedAndTypeCheckComp symtable (Barchart variable) = 
     if isNowInTopScope symtable
-    then if (trace "looking in loopables" (subFieldExists loopables constructor field))
-            then Right $ addToSymTable symtable  variable TTable --(TFilter constructor)
-            else Left $ SubFieldNameError $ "Subfield "++field++ " does not belong to " ++ constructor   
     else Left $ ComputationWrongScope "Can only be in top scope"
 
-weedAndTypeCheckComp symtable (List variable seqlist) = 
-    if isNowInTopScope symtable
-    then foldl' foldWeedList (Right $ addToSymTable symtable  variable TList) seqlist
-    else Left $ ComputationWrongScope "Can only be in top scope"
 weedAndTypeCheckComp symtable _ = Left $ ComputationWrongScope "Unimplemented"
 
 weedSequence :: SeqField -> Either String Bool
