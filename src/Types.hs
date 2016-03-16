@@ -93,7 +93,7 @@ data ForEachDef
      | ForEachList Var Var
      deriving (Show, Eq)
 
-data LexError = FieldNameError String | FilterNameError String | AllowedTypeError String | AllowedValError String | FieldNotFoundError String | GenError String | MissingFilesError String | MissingConfigFile String | RedecError String | MissingConfigField String deriving (Show, Eq)
+data LexError = FieldNameError String | FilterNameError String | AllowedTypeError String | AllowedValError String | FieldNotFoundError String | GenError String | MissingFilesError String | MissingConfigFile String | RedecError String | MissingConfigField String | TypeError String deriving (Show, Eq)
 
 
 --we should also define a list of aliases perhaps that we pass
@@ -101,7 +101,7 @@ data Config =  Config (M.Map FilterName FieldMap) deriving(Eq, Show)
 
 data FieldMap = FieldMap (M.Map FieldName (Field)) deriving(Eq, Show)
 
-data Field = FieldType String | FieldVal [AllowedVal] | FieldLoopVals [AllowedVal] deriving(Eq, Show)
+data Field = FieldType String | FieldValue [AllowedVal] | FieldLoopVals [AllowedVal] deriving(Eq, Show)
 
 --type Field = (AllowedType, [AllowedVal])
 

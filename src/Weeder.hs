@@ -204,8 +204,8 @@ getFieldName (FieldDef ff _ ) = ff
 --getFilterFieldStr::FilterField->String
 --getFilterFieldStr (FilterField s) = s
 
-getFilterValList::FieldDef->[FieldVal]
-getFilterValList (FieldDef _ fv ) = fv
+getFieldValList::FieldDef->[FieldVal]
+getFieldValList (FieldDef _ fv ) = fv
 
 fieldExists::Config->FieldName->Bool
 fieldExists (Config confmap) fname = M.member fname confmap 
@@ -243,28 +243,73 @@ checkFieldsEx conf (x:xs) l =
 --give conf
 --GOAL: check that the types of the filter
 --phase 1: check to see that all 
-{-
-checkFilterTypes::(M.Map FilterName FieldMap)->(HashMap.HashMap Var GroupType)->[Filter]->[Filter]
+
+
+checkFilterTypes::(M.Map FilterName FieldMap)->(HashMap.HashMap Var GroupType)->[Filter]->Either LexError [Filter]
 checkFilterTypes conf hmap (x:xs) = 
     do
         --from fields
         let filterName = (getFilterName x)
-        let filterDefs = getFilterDefList x
+        let fieldDefs = getFieldDefList x -- list of possible FieldDefs for a filter
+        
         --from confmap
-        let fieldMap = (M.lookup fn conf)
+        fieldMap <- (M.lookup filterName conf) --things to check against for that filter
+
+        mapM () 
+
+
+
+
+checkFilterTypes::(M.Map FilterName FieldMap)->(HashMap.HashMap Var GroupType)->[Filter]->Either LexError [Filter]
+checkFilterTypes conf hmap [] = Right []
+checkFilterTypes conf hmap (x:xs) = 
+
+
+    do
+        --from fields
+        let filterName = (getFilterName x)
+        let fieldDefs = getFieldDefList x -- list of possible FieldDefs for a filter
+        
+        --from confmap
+        fieldMap <- (M.lookup filterName conf) --things to check against for that filter
+       
+
+        case mapM (typeCheckFieldMap fieldMap) fieldDefs of
+            Left e -> e
+            Right r -> r
+
+
+{-
+        case fieldMap of
+            Nothing -> Left $ TypeError "Missing Field"
+            Just a ->
+                case (map (typeCheckFieldMap a) fieldDefs) of
+                    [] -> case checkFilterTypes conf hmap xs of
+                        e ->e
+                        r -> r
+                _ -> Left $ TypeError "ERROR" --print out list of stuff I just accumulated here
+
         --behaviour. Gyou have the Filter name. You have the filter definitions.
         --for each definition
-  -}
+        
+        --type check the things in the filter Def against the fieldMAp
+-}
 
---checkFieldTypes::
+--return a list of things that don't type check
+typeCheckFieldMap::FieldMap->[FieldDef]->Either LexError [FieldDef] 
+--typeCheckFieldMap (FieldMap fm) (((FieldDef x fvList)):xs) = compareFieldTypesB fvList [] (M.lookup x fm)
+typeCheckFieldMAp (FieldMap fm)  (((FieldDef x fvList)):xs) = 
+    case mapM compareFieldTypesB fvList [] (M.lookup x fm) of
+        Left e -> e
+        Right r -> r
 
 
---compare against group types to see if exists:w
---
 
-
-        --the submap. Here is a map of all the subfields the config specifes for particular field fn
---given a list of filters, and a config, makes sure each filter is defined in the config
-        --xs
-
-
+compareFieldTypes::GroupItem->Field->Either LexError GroupItem
+compareFieldTypes (GroupValString s) (FieldValue allValList) = 
+    if (s `elem` allValList) then s 
+    else  (AllowedValError ("Error. " ++ s ++ " is not defined in the config file"))
+compareFieldTypes g@(GroupValString _) (FieldType "String") = g
+compareFieldTypes g@(GroupRange _) (FieldType "Int") = g
+compareFieldTypes g@(GroupDate _ _ _) (FieldType "Date") = g
+compareFieldTypes a b = (TypeError "Type Error between " ++ a ++ " and " ++  b)

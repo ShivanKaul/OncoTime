@@ -58,7 +58,7 @@ subfieldval::Parser Field
 subfieldval = lexeme $
     do
         p <-( squares  (sepBy identifier comma) )
-        return $ FieldVal p
+        return $ FieldValue p
 
 subfieldloopvals::Parser Field
 subfieldloopvals = lexeme $
