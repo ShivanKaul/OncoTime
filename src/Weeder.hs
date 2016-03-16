@@ -156,9 +156,9 @@ testGroupFiles useFiles grpFiles =
 checkFilters::[Filter]->Config->Either LexError [Filter] 
 checkFilters filList conf = case (checkFilRedec filList ) of
     Right r -> 
-        case (checkSubFieldsEx conf r [] ) of
+        case (checkFieldsEx conf r [] ) of
             [] -> Right filList
-            l -> Left $ MissingConfigField $ "Error. Subfields Missing in " ++ (M.showTreeWith (\k x -> show (k,x)) True False (M.fromList l) )
+            l -> Left $ MissingConfigField $ "Error. Fields Missing in " ++ (M.showTreeWith (\k x -> show (k,x)) True False (M.fromList l) )
     Left e -> Left e 
 --Highest level, checkFilters. Is in the either monad to give us error checking
 
@@ -213,29 +213,35 @@ getFilterValList::FilterDef->[FilterVal]
 getFilterValList (FilterDef _ fv ) = fv
 
 
-
 --given a list of filters, makes sure each thing int he map belongs
 --COULD ALSO DO TYPE CHEKING HERE, GIVEN THE SYMBOL TABLE
-checkSubFieldsEx::Config->[Filter]->[(FilterName, [SubFieldName])]->[(FilterName, [SubFieldName])] 
-checkSubFieldsEx conf [] [] = [] 
-checkSubFieldsEx conf [] l = l
-checkSubFieldsEx conf (x:xs) l = 
+checkFieldsEx::Config->[Filter]->[(FilterName, [FilterName])]->[(FilterName, [FilterName])] 
+checkFieldsEx conf [] [] = [] 
+checkFieldsEx conf [] l = l
+checkFieldsEx conf (x:xs) l = 
     do
         let fn = (getFilterName x) --first arg to subfield exists, the name of the field we are checking
         let confMap =  configToMap conf
         let submap = (M.lookup fn confMap)  --the submap. Here is a map of all the subfields the config specifes for particular field fn
         --list of filter definitions for that particular field. i.e., if the field is Doctor, this specifes all the lists of [ID: vals_here, etc]
         let fdefList = (getFilterDefList x)
-        let missingSubFields = filter (not . (subFieldExists conf fn)) (map (getFilterFieldStr . getFilterField) fdefList) 
+        let missingFields = filter (not . (subFieldExists conf fn)) (map (getFilterFieldStr . getFilterField) fdefList) 
         --For each field in the list, we are going to check that it exists int he list, we are going to check 
-        if (missingSubFields == []) then checkSubFieldsEx conf xs l 
-            else checkSubFieldsEx conf xs ((fn, missingSubFields) : l)
+        if (missingFields == []) then checkFieldsEx conf xs l 
+            else checkFieldsEx conf xs ((fn, missingFields) : l)
 
 
 
---checkSubFieldTypes::Config
---checkSubFieldValues
+--checkFieldTypes::Config
+--checkFieldValues
 
 
+--filter 
 
+--give hmap from var to grouptype
+--give conf
+--GOAL: check that the types of the filter
+--phase 1: check to see that all 
+--checkFieldTypes::Config->(HashMap.HashMap Var GroupType)->[Filter]->[Filter]
+--checkFieldTypes conf hmap x:xs =  
 --given a list of filters, and a config, makes sure each filter is defined in the config

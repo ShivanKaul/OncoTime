@@ -35,8 +35,8 @@ typeMapMaker =
         tup <- parens $ typeTuple
         return ((map toLower name), tup) 
 -}
---subFieldMapMaker::Parser (Map SubFieldName (AllowedType, [AllowedVal]))
-subFieldMapMaker::Parser (Map SubFieldName SubField)
+--subFieldMapMaker::Parser (Map FieldName (AllowedType, [AllowedVal]))
+subFieldMapMaker::Parser (Map FieldName Field)
 subFieldMapMaker = lexeme $
     do
         name <- stringLit 
@@ -46,7 +46,7 @@ subFieldMapMaker = lexeme $
         --tup <- parens $ typeTuple 
         --return (M.singleton (map toLower name) tup) 
 
-subfield::Parser SubField 
+subfield::Parser Field 
 subfield = --lexeme $
     do
         sf <-  try subfieldval <|>  try subfieldtype<|> try subfieldloopvals <?> "stupid"               --sf <- choice [ (squares (sepBy identifier comma)), (curlies (sepBy identifier comma)), identifier]
@@ -54,24 +54,24 @@ subfield = --lexeme $
         
         return sf
 
-subfieldval::Parser SubField
+subfieldval::Parser Field
 subfieldval = lexeme $
     do
         p <-( squares  (sepBy identifier comma) )
-        return $ SubFieldVal p
+        return $ FieldVal p
 
-subfieldloopvals::Parser SubField
+subfieldloopvals::Parser Field
 subfieldloopvals = lexeme $
     do
         p <-( curlies  (sepBy identifier comma) )
-        return $ SubFieldLoopVals p
+        return $ FieldLoopVals p
 
 
-subfieldtype::Parser SubField
+subfieldtype::Parser Field
 subfieldtype = lexeme $
     do
         p <- identifier
-        return $ SubFieldType p 
+        return $ FieldType p 
 
 
 
@@ -86,18 +86,18 @@ configParser = lexeme $
         --let subMapList = foldr M.union M.empty typeMapList 
         let subMapList = M.unions typeMapList
         semi
-        return $ Config (M.singleton (map toLower fieldName) (SubMap $  subMapList))
+        return $ Config (M.singleton (map toLower fieldName) (FieldMap $  subMapList))
 
 {-
-getTypeFromMap::(SubField)->AllowedType
+getTypeFromMap::(Field)->AllowedType
 getTypeFromMap (a,b) = a
 
-getValFromMap::(SubField)->[AllowedVal]
+getValFromMap::(Field)->[AllowedVal]
 getValFromMap (a,b) = b
 -}
 
---configListToMap::[Config]->(Map FieldName (Map SubFieldName (SubField)))
-configListToMap::[Config]->(Map FieldName SubMap)
+--configListToMap::[Config]->(Map FieldName (Map FieldName (Field)))
+configListToMap::[Config]->(Map FieldName FieldMap)
 --configLisToMap ((Config (Map fn (Map sfn (sf)))):xs) = M.union 
 configListToMap ((Config (x)):[]) = 
     case M.toList x of
@@ -106,18 +106,18 @@ configListToMap ((Config (x)):[]) =
         mapList -> x 
 configListToMap ((Config x):xs) = M.union x $ configListToMap xs
 
-configToMap::Config->(Map FieldName SubMap)
+configToMap::Config->(Map FieldName FieldMap)
 configToMap (Config conf) = conf
---data Config =  Config (Map FieldName (Map SubFieldName (SubField))) deriving(Eq, Show)
+--data Config =  Config (Map FieldName (Map FieldName (Field))) deriving(Eq, Show)
 
 fieldExists::Config->FieldName->Bool
 fieldExists (Config confmap) fname = M.member fname confmap 
 
-subFieldExists::Config->FieldName->SubFieldName->Bool
+subFieldExists::Config->FieldName->FieldName->Bool
 subFieldExists (Config confmap) fname sfname =  
     case (M.lookup fname confmap) of
         Nothing -> False
-        Just (SubMap m) -> M.member sfname m
+        Just (FieldMap m) -> M.member sfname m
 
 testFieldStuff::IO()
 testFieldStuff = 
