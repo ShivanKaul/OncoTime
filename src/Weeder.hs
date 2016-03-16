@@ -34,6 +34,7 @@ import Formatter
 weed::String->Program->IO(Program)
 weed file prg@(Program hdr docs useList groupDefs filters comps) =
     do
+        putStrLn "ohai"
         --get Config file
         conf <- readConfig file
         putStrLn $ show conf
@@ -79,6 +80,9 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         --table syntax checking
 
         --verify filters
+
+        putStrLn $ weedComputationList comps
+
         -- SAMPLE USES OF SYMBOL TABLE
         -- testIfSymbolTableContains symbolTable1 (Var "x")
 
@@ -314,13 +318,16 @@ printFold symtable =
     let 
         len = show $ length symtable
         curr= last symtable
-    in HashMap.foldrWithKey  (\(Var s) t p -> p ++ s ++ " \t " ++ (tail $ show t) ++"\t" ++len++ "\n" )  "" curr
+    in HashMap.foldrWithKey  (\(Var s) t p -> p ++ s ++ "\t" ++ (tail $ show t) ++"\t" ++len++ "\n" )  "" curr
  
 
 loopables:: Config
 loopables = Config (M.fromList [("diagnosis",SubMap (M.fromList [("name",("string",[]))])),
     ("doctor",SubMap (M.fromList [("id",("string",[])),("oncologist",("string",["true","false"]))])),
+    ("doctors",SubMap (M.fromList [("id",("string",[])),("oncologist",("string",["true","false"]))])),
     ("patient",SubMap (M.fromList [("birthyear",("string",[])),("diagnosis",("string",[])),
+        ("gender",("string",[])),("id",("string",[])),("postalcode",("string",[]))])),
+    ("patients",SubMap (M.fromList [("birthyear",("string",[])),("diagnosis",("string",[])),
         ("gender",("string",[])),("id",("string",[])),("postalcode",("string",[]))]))])
 
 addToSymTable :: CompSymTable -> Var -> ComputationType-> CompSymTable
@@ -358,7 +365,7 @@ isInScope xlist var =
 weedAndTypeCheckComp :: CompSymTable -> Computation -> Either LexError CompSymTable
 weedAndTypeCheckComp symtable  (Table variable constructor (FilterField field)) =
     if isNowInTopScope symtable
-    then if (subFieldExists loopables constructor field)
+    then if (trace "looking in loopables" (subFieldExists loopables constructor field))
             then Right $ addToSymTable symtable  variable TTable --(TFilter constructor)
             else Left $ SubFieldNameError $ "Subfield "++field++ " does not belong to " ++ constructor   
     else Left $ ComputationWrongScope "Can only be in top scope"
