@@ -79,12 +79,11 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         --table syntax checking
 
         --verify filters
-
         -- SAMPLE USES OF SYMBOL TABLE
         -- testIfSymbolTableContains symbolTable1 (Var "x")
 
         putStrLn "Weeded successfully"
-        return (Program hdr docs [] (allGroups) filters (weedComputationList comps))
+        return (Program hdr docs [] (allGroups) filters (comps))
 
 -- Make Var hashable
 instance (Hashable Var) where
@@ -285,7 +284,7 @@ compareFieldTypes b a = Left $ TypeError ("Type Error between " ++ (show a) ++ "
 
 
 
-weedComputationList :: [Computation]->[Computation]
+weedComputationList :: [Computation]->String
 weedComputationList _ = let {
 -- correct1 = [Table ( (Var "t") "patients" (GroupValString "Birthyear")),Print (PrintLength (Var "t")),
 -- Foreach (ForEachFilter "patient" (Var "p")) [Print (PrintFilters ["sex","postal_code"] (Var "p")),
@@ -300,11 +299,23 @@ List (Var "s") [Bar [Event "ct_sim_completed"],Bar [Event "ct_sim_booked"],Bar [
 Bar [Event "patient_arrives"]],Foreach (ForEachList (Var "i") (Var "s")) [Print (PrintVar (Var "i"))]];
 correct2 =  [List (Var "s") [Single (Event "ct_sim_completed"),Single (Event "ct_sim_booked"),
 Single (Event "treatment_began"),Single (Event "patient_arrives")],Foreach (ForEachList (Var "i") (Var "s")) [Barchart (Var "i")]];
-
+t=Table (Var "t") "patients" (FilterField "birthyear");
 
 compSymbolTable=[emptyScope];
+x=(weedFold compSymbolTable [t]);
+s = show x
+} in trace s x 
 
-} in correct2
+weedFold symtable computations = printFold (foldl' weedEach symtable computations)
+weedEach sym comp =  case (weedAndTypeCheckComp sym comp) of
+    Left x ->  error $ show  x
+    Right x -> x
+printFold symtable = 
+    let 
+        len = show $ length symtable
+        curr= last symtable
+    in HashMap.foldrWithKey  (\(Var s) t p -> p ++ s ++ " \t " ++ (tail $ show t) ++"\t" ++len++ "\n" )  "" curr
+ 
 
 loopables:: Config
 loopables = Config (M.fromList [("diagnosis",SubMap (M.fromList [("name",("string",[]))])),
@@ -317,7 +328,7 @@ addToSymTable symtable v  comptype =
     let prev= init symtable
         local = last symtable
         updated = HashMap.insert  v comptype local
-        in prev++[updated]
+    in prev++[updated]
 
 type Scope = HashMap.HashMap Var ComputationType
 type CompSymTable = [Scope]
@@ -336,7 +347,7 @@ emptyScope = HashMap.fromList []
 --type symbol=[HashMap.HashMap Var ComputationType]
 
 isInScope :: [HashMap.HashMap Var ComputationType] -> Var -> Maybe ComputationType
-isInScope  xlist  var= 
+isInScope xlist var = 
     case xlist of 
         []->Nothing
         (x:xs) -> 
