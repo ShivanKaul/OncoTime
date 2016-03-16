@@ -290,23 +290,22 @@ compareFieldTypes b a = Left $ TypeError ("Type Error between " ++ (show a) ++ "
 
 weedComputationList :: [Computation]->String
 weedComputationList _ = let {
--- correct1 = [Table ( (Var "t") "patients" (GroupValString "Birthyear")),Print (PrintLength (Var "t")),
--- Foreach (ForEachFilter "patient" (Var "p")) [Print (PrintFilters ["sex","postal_code"] (Var "p")),
--- Foreach (ForEachFilter "doctor" (Var "d")) [Foreach (ForEachFilter "diagnosis" (Var "i")) []]],
--- List (Var "s") [Single (Event "ct_sim_completed"),Single (Event "ct_sim_booked"),Single (Event "treatment_began"),Single (Event "patient_arrives")],
--- Foreach (ForEachList (Var "i") (Var "s")) [Print (PrintVar (Var "i"))]];
-
 correct1=[Table (Var "t") "patients" (FilterField "birthyear"),Print (PrintLength (Var "t")),
 Foreach (ForEachFilter "patient" (Var "p")) [Print (PrintFilters ["sex","postal_code"] (Var "p")),
 Foreach (ForEachFilter "doctor" (Var "d")) [Foreach (ForEachFilter "diagnosis" (Var "i")) []]],
 List (Var "s") [Bar [Event "ct_sim_completed"],Bar [Event "ct_sim_booked"],Bar [Event "treatment_began"],
-Bar [Event "patient_arrives"]],Foreach (ForEachList (Var "i") (Var "s")) [Print (PrintVar (Var "i"))]];
+Bar [Event "consult_referral_received"]],Foreach (ForEachList (Var "i") (Var "s")) [Print (PrintVar (Var "i"))]];
 correct2 =  [List (Var "s") [Single (Event "ct_sim_completed"),Single (Event "ct_sim_booked"),
-Single (Event "treatment_began"),Single (Event "patient_arrives")],Foreach (ForEachList (Var "i") (Var "s")) [Barchart (Var "i")]];
+Single (Event "treatment_began"),Single (Event "consult_referral_received")],Foreach (ForEachList (Var "i") (Var "s")) [Barchart (Var "i")]];
+
+
 t=Table (Var "t") "patients" (FilterField "birthyear");
 
+l=List (Var "s") [Bar [Event "ct_sim_completed"],Bar [Event "ct_sim_booked"],Bar [Event "ready_for_treatment"],
+Bar [Event "consult_referral_received"]];
+
 compSymbolTable=[emptyScope];
-x=(weedFold compSymbolTable [t]);
+x=(weedFold compSymbolTable [l]);
 s = show x
 } in trace s x 
 
@@ -329,6 +328,13 @@ loopables = Config (M.fromList [("diagnosis",SubMap (M.fromList [("name",("strin
         ("gender",("string",[])),("id",("string",[])),("postalcode",("string",[]))])),
     ("patients",SubMap (M.fromList [("birthyear",("string",[])),("diagnosis",("string",[])),
         ("gender",("string",[])),("id",("string",[])),("postalcode",("string",[]))]))])
+
+events :: [String]
+events = ["consult_referral_received","initial_consult_booked","initial_consult_completed",
+            "ct_sim_booked","ready_for_ct_sim","ct_sim_completed","ready_for_initial_contour","ready_for_md_contour",
+            "ready_for_dose_calculation","prescription_approved_by_md","ready_for_physics_qa","ready_for_treatment",
+            "machine_rooms_booked","patient_contacted","end"]
+--
 
 addToSymTable :: CompSymTable -> Var -> ComputationType-> CompSymTable
 addToSymTable symtable v  comptype = 
@@ -369,4 +375,22 @@ weedAndTypeCheckComp symtable  (Table variable constructor (FilterField field)) 
             then Right $ addToSymTable symtable  variable TTable --(TFilter constructor)
             else Left $ SubFieldNameError $ "Subfield "++field++ " does not belong to " ++ constructor   
     else Left $ ComputationWrongScope "Can only be in top scope"
+
+weedAndTypeCheckComp symtable (List variable seqlist) = 
+    if isNowInTopScope symtable
+    then foldl' foldWeedList (Right $ addToSymTable symtable  variable TList) seqlist
+    else Left $ ComputationWrongScope "Can only be in top scope"
+weedAndTypeCheckComp symtable _ = Left $ ComputationWrongScope "Unimplemented"
+
+weedSequence :: SeqField -> Either String Bool
+weedSequence (Bar evlist) = foldl' (\prev (Event curr) -> if ( elem curr events) then prev else Left curr) (Right True) evlist
+weedSequence (Comma evlist) = foldl' (\prev (Event curr) -> if ( elem curr events) then prev else Left curr) (Right True) evlist
+weedSequence (Star evlist) = foldl' (\prev (Event curr) -> if ( elem curr events) then prev else Left curr) (Right True) evlist
+weedSequence (Neg (Event curr)) = if (elem curr events) then (Right True) else Left curr
+
+foldWeedList :: (Either LexError CompSymTable) -> SeqField -> (Either LexError CompSymTable)
+foldWeedList prev curr = 
+    case weedSequence curr of  
+        Left evname -> Left $ IncorrectEvent evname
+        _-> prev
 

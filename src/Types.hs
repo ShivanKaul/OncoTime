@@ -102,7 +102,7 @@ data ForEachDef
 
 data LexError   = FieldNameError String | FilterNameError String | AllowedTypeError String 
                 | AllowedValError String | FieldNotFoundError String | GenError String | MissingFilesError String 
-                | MissingConfigFile String | RedecError String | MissingConfigField String | TypeError String
+                | MissingConfigFile String | RedecError String | MissingConfigField String | TypeError String | IncorrectEvent String
                 | ComputationTypeMismatch String | ComputationWrongScope String deriving (Show, Eq)
 
 --we should also define a list of aliases perhaps that we pass
@@ -120,10 +120,10 @@ type AllowedVal = String
 
 data ComputationType  
      = TTable
-     | TSequence
+     | TList
      | TFilter String
      | TIndex
-     | TEvent
+     | TSequence
      deriving(Eq, Show)
 
 

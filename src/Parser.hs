@@ -359,25 +359,25 @@ seqField =
 seqStar :: Parser SeqField
 seqStar =
     do
-        e <- curlies $ sepBy (do {(optional semi) ; e<-event; (optional semi);return e}) comma
+        e <- curlies $ sepBy1 (do {(optional semi) ; e<-event; (optional semi);return e}) comma
         star
         return $ Star e
 seqNeg::Parser SeqField
 seqNeg =
     do
-        e <- parens $ seqNot --TODO: Write this better
+        e <- parens $ reserved "not" >> event --TODO: Write this better
         return $ Neg e
-seqNot::Parser Event
-seqNot =
-    do
-        reserved "not"
-        event
+-- seqNot::Parser Event
+-- seqNot =
+--     do
+--         reserved "not"
+--         event
 
 seqComma :: Parser SeqField
 seqComma =
     do
         
-        e <- curlies $ sepBy (do {(optional semi) ; e<-event; (optional semi);return e}) comma
+        e <- curlies $ sepBy1 (do {(optional semi) ; e<-event; (optional semi);return e}) comma
         return $ Comma e
 seqBar :: Parser SeqField
 seqBar =
@@ -487,7 +487,7 @@ printFilters::Parser PrintAction
 printFilters =
     do
         reserved "print"
-        filterList <- sepBy filterName comma
+        filterList <- sepBy1 filterName comma
         reserved "of"
         v <- var
         semi  
@@ -533,7 +533,7 @@ filterDefs = lexeme (
     do {
         ffield <- identifier;
         colon;
-        fval <- sepBy filterVal comma;
+        fval <- sepBy1 filterVal comma;
         semi;
         return $ FieldDef ((map toLower ffield)) fval
         } <?> "Field Definition ")
@@ -543,7 +543,7 @@ useList :: Parser UseFile
 useList = lexeme (
     do {
         reserved "use";
-        names <- sepBy grpFile comma;
+        names <- sepBy1 grpFile comma;
         semi;
         return $ UseFile names;}<?> "Use statement")
 
