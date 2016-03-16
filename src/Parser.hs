@@ -346,16 +346,16 @@ seqField::Parser SeqField
 seqField =
     do
         (optional semi)
-        x <- lexeme ((try(seqSingle) <|> try(seqBar) <|> try(seqComma) <|> try(seqNeg) <|> try(seqStar))<?>" Sequence Event")
+        x <-    try(seqStar)<|> try (seqComma) <|>  try(seqNeg) <|>  try(seqBar)<?>"Sequence Event"
         (optional semi)
         return x
 
-
-seqSingle::Parser SeqField
-seqSingle =
-    do
-        e <- event
-        return $ Single e
+ -- try(seqSingle) <|>
+-- seqSingle::Parser SeqField
+-- seqSingle = lexeme (
+--     do{
+--         e <- event;
+--         return $ Single e}<?>"Single Event")
 seqStar :: Parser SeqField
 seqStar =
     do
@@ -376,12 +376,13 @@ seqNot =
 seqComma :: Parser SeqField
 seqComma =
     do
+        
         e <- curlies $ sepBy event comma
         return $ Comma e
 seqBar :: Parser SeqField
 seqBar =
     do
-        e <- sepBy event bar
+        e <- sepBy1 event bar
         return $ Bar e
 
 event::Parser Event
