@@ -110,15 +110,6 @@ configToMap::Config->(Map FieldName FieldMap)
 configToMap (Config conf) = conf
 --data Config =  Config (Map FieldName (Map FieldName (Field))) deriving(Eq, Show)
 
-fieldExists::Config->FieldName->Bool
-fieldExists (Config confmap) fname = M.member fname confmap 
-
-subFieldExists::Config->FieldName->FieldName->Bool
-subFieldExists (Config confmap) fname sfname =  
-    case (M.lookup fname confmap) of
-        Nothing -> False
-        Just (FieldMap m) -> M.member sfname m
-
 testFieldStuff::IO()
 testFieldStuff = 
     do

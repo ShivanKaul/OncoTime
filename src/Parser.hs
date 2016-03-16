@@ -508,7 +508,7 @@ filterName = lexeme $
         f <- identifier
         return (map toLower f)
 
-filterVal::Parser FilterVal
+filterVal::Parser FieldVal
 filterVal = lexeme( groupItem <?> "Field Options")
         
 
@@ -528,14 +528,14 @@ manyFilters = lexeme (
         } <?> "Filters Block")
 
 
-filterDefs :: Parser FilterDef
+filterDefs :: Parser FieldDef 
 filterDefs = lexeme (
     do {
         ffield <- identifier;
         colon;
         fval <- sepBy filterVal comma;
         semi;
-        return $ FilterDef (FilterField (map toLower ffield)) fval
+        return $ FieldDef ((map toLower ffield)) fval
         } <?> "Field Definition ")
 
 

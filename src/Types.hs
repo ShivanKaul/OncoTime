@@ -37,12 +37,12 @@ data GroupItem = GroupValString String | GroupVar Var | GroupRange RangeType | G
 
 --better field for GroupVal than string?
 
-data Filter =  Filter FilterName [FilterDef] deriving (Show, Eq) 
-data FilterDef = FilterDef FilterField [FilterVal] deriving (Show, Eq)
+data Filter =  Filter FilterName [FieldDef] deriving (Show, Eq) 
+data FieldDef = FieldDef FieldName [FieldVal] deriving (Show, Eq)
 type FilterName = String
 --data FilterVal = FilterString String | FilterVar Var |FilterRange RangeType  -- to be defined in config
-type FilterVal = GroupItem -- deriving (Show, Eq)
-data FilterField = FilterField String deriving (Show, Eq)
+type FieldVal = GroupItem -- deriving (Show, Eq)
+--data FilterField = FilterField String deriving (Show, Eq)
 
 data RangeType = Before IntValue | After IntValue | Between IntValue IntValue | SingleInt IntValue 
      deriving (Show, Eq)
@@ -59,7 +59,7 @@ data Computation
     deriving (Show, Eq)
     
 data TableAction
-    = TableCount Var FilterName FilterVal 
+    = TableCount Var FieldName FieldVal 
     deriving (Show, Eq) 
 
 data PrintAction 
@@ -102,7 +102,6 @@ data Config =  Config (M.Map FilterName FieldMap) deriving(Eq, Show)
 data FieldMap = FieldMap (M.Map FieldName (Field)) deriving(Eq, Show)
 
 data Field = FieldType String | FieldVal [AllowedVal] | FieldLoopVals [AllowedVal] deriving(Eq, Show)
-
 
 --type Field = (AllowedType, [AllowedVal])
 

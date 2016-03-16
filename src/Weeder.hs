@@ -39,10 +39,6 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         putStrLn $ "File "++file++"\n"
        --grpFile weeding
         curContents <- (getDirectoryContents  $ dropFileName file) 
-        --valContents <-  (getDirectoryContents "./programs/valid/" ) 
-        
-        --dirContents <-  (getDirectoryContents "./programs/valid/" ) 
-        --invContents <- (getDirectoryContents "./programs/invalid/")
         let dirContents = curContents -- ++ valContents ++ invContents
         let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
         let grpFileNames = map dropExtension grpFiles
@@ -55,8 +51,8 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
             Right r -> putStrLn $ file ++ ": All Group files exist"
 
         --parsing each group file
-        --let grpAllFilesContents = map (readFile) (useFilesToParse)
-        --newGroups <- sequence (map (getGroupDefs) (grpAllFilesContents))
+        let grpAllFilesContents = map (readFile) (useFilesToParse)
+        newGroups <- sequence (map (getGroupDefs) (grpAllFilesContents))
 
         --check erroneous subfields i.e. whether all fields exist
        
@@ -75,8 +71,7 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         --table syntax checking
 
         --verify filters
-        --let allGroups = (concat (newGroups)) ++ groupDefs
-        let allGroups = groupDefs
+        let allGroups = (concat (newGroups)) ++ groupDefs
 
         -- SAMPLE USES OF SYMBOL TABLE
         -- let symbolTable1 = buildSymbolTable allGroups hdr
@@ -200,18 +195,26 @@ checkFields conf (x:xs) notIncList =
         True -> checkFields conf xs notIncList
         False -> checkFields conf xs (x:notIncList)
 
-getFilterDefList::Filter->[FilterDef]
-getFilterDefList (Filter _ fd) = fd
+getFieldDefList::Filter->[FieldDef]
+getFieldDefList (Filter _ fd) = fd
 
-getFilterField::FilterDef->FilterField
-getFilterField (FilterDef ff _ ) = ff
+getFieldName::FieldDef->FieldName
+getFieldName (FieldDef ff _ ) = ff
 
-getFilterFieldStr::FilterField->String
-getFilterFieldStr (FilterField s) = s
+--getFilterFieldStr::FilterField->String
+--getFilterFieldStr (FilterField s) = s
 
-getFilterValList::FilterDef->[FilterVal]
-getFilterValList (FilterDef _ fv ) = fv
+getFilterValList::FieldDef->[FieldVal]
+getFilterValList (FieldDef _ fv ) = fv
 
+fieldExists::Config->FieldName->Bool
+fieldExists (Config confmap) fname = M.member fname confmap 
+
+subFieldExists::Config->FieldName->FieldName->Bool
+subFieldExists (Config confmap) fname sfname =  
+    case (M.lookup fname confmap) of
+        Nothing -> False
+        Just (FieldMap m) -> M.member sfname m
 
 --given a list of filters, makes sure each thing int he map belongs
 --COULD ALSO DO TYPE CHEKING HERE, GIVEN THE SYMBOL TABLE
@@ -221,27 +224,47 @@ checkFieldsEx conf [] l = l
 checkFieldsEx conf (x:xs) l = 
     do
         let fn = (getFilterName x) --first arg to subfield exists, the name of the field we are checking
-        let confMap =  configToMap conf
-        let submap = (M.lookup fn confMap)  --the submap. Here is a map of all the subfields the config specifes for particular field fn
+        --let confMap =  configToMap conf
         --list of filter definitions for that particular field. i.e., if the field is Doctor, this specifes all the lists of [ID: vals_here, etc]
-        let fdefList = (getFilterDefList x)
-        let missingFields = filter (not . (subFieldExists conf fn)) (map (getFilterFieldStr . getFilterField) fdefList) 
+        let fdefList = (getFieldDefList x)
+        let missingFields = filter (not . (subFieldExists conf fn)) (map (getFieldName) fdefList) 
         --For each field in the list, we are going to check that it exists int he list, we are going to check 
         if (missingFields == []) then checkFieldsEx conf xs l 
             else checkFieldsEx conf xs ((fn, missingFields) : l)
 
-
-
 --checkFieldTypes::Config
 --checkFieldValues
 
+--typeCheckFilters::Config->(HashMap.HashMap Var GroupType)->[Filter]->Either LexError [Filter]
+--typeCheckFilters conf hmap flist = case checkFieldTypes )of
 
 --filter 
-
 --give hmap from var to grouptype
 --give conf
 --GOAL: check that the types of the filter
 --phase 1: check to see that all 
---checkFieldTypes::Config->(HashMap.HashMap Var GroupType)->[Filter]->[Filter]
---checkFieldTypes conf hmap x:xs =  
+{-
+checkFilterTypes::(M.Map FilterName FieldMap)->(HashMap.HashMap Var GroupType)->[Filter]->[Filter]
+checkFilterTypes conf hmap (x:xs) = 
+    do
+        --from fields
+        let filterName = (getFilterName x)
+        let filterDefs = getFilterDefList x
+        --from confmap
+        let fieldMap = (M.lookup fn conf)
+        --behaviour. Gyou have the Filter name. You have the filter definitions.
+        --for each definition
+  -}
+
+--checkFieldTypes::
+
+
+--compare against group types to see if exists:w
+--
+
+
+        --the submap. Here is a map of all the subfields the config specifes for particular field fn
 --given a list of filters, and a config, makes sure each filter is defined in the config
+        --xs
+
+

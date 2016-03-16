@@ -86,11 +86,11 @@ instance PrettyPrint GroupItem where
     prettyPrint (GroupVar gvar) = "<" ++ prettyPrint gvar ++ ">"
     prettyPrint (GroupRange grange) = prettyPrint grange
 
-instance PrettyPrint FilterField where
-    prettyPrint (FilterField ffield) = ffield
+instance PrettyPrint FieldName where
+    prettyPrint (ffield) = ffield
 
-instance PrettyPrint FilterDef where
-    prettyPrint (FilterDef ffield fvals) = "\t" ++ prettyPrint ffield ++ " : " ++ 
+instance PrettyPrint FieldDef where
+    prettyPrint (FieldDef ffield fvals) = "\t" ++ prettyPrint ffield ++ " : " ++ 
         (intercalate ", " (map prettyPrint fvals))
 
 instance PrettyPrint Filter where
