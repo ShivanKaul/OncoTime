@@ -359,7 +359,7 @@ evaluateInTopScope symtable f = if isNowInTopScope symtable
 
 isInLoopableScope = error
 
---checks erroneous subfields
+
 emptyScope :: HashMap.HashMap Var ComputationType
 emptyScope = HashMap.fromList []
 
@@ -387,7 +387,14 @@ weedAndTypeCheckComp symtable (Barchart variable) =
                     "Cannot draw Barchart of "++ (show variable)++". It is a " ++ (show t) ++ "Not a Table"
                 ) 
 
-weedAndTypeCheckComp symtable _ = Left $ ComputationWrongScope "Unimplemented"
+weedAndTypeCheckComp symtable (Print print) = weedPrintAction  symtable print
+weedAndTypeCheckComp symtable (Foreach def comps) = weedForEach  symtable comps def
+
+weedPrintAction :: CompSymTable -> PrintAction -> Either LexError CompSymTable
+weedPrintAction symtable print = Left $ ComputationWrongScope "Unimplemented"
+
+weedForEach :: CompSymTable -> [Computation] ->ForEachDef -> Either LexError CompSymTable
+weedForEach symtable newcomp foreach  = Left $ ComputationWrongScope "Unimplemented"
 
 weedSequence :: SeqField -> Either String Bool
 weedSequence (Bar evlist) = checkEvents evlist
@@ -395,6 +402,7 @@ weedSequence (Comma evlist) = checkEvents evlist
 weedSequence (Star evlist) = checkEvents evlist
 weedSequence (Neg (ev)) = checkEvents [ev]
 
+checkEvents :: [Event] -> Either String Bool
 checkEvents evlist = foldl' (\prev (Event curr) -> 
         if ( elem curr events) 
         then prev 
