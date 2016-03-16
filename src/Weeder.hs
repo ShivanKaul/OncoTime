@@ -366,17 +366,26 @@ emptyScope = HashMap.fromList []
  
 weedAndTypeCheckComp :: CompSymTable -> Computation -> Either LexError CompSymTable
 weedAndTypeCheckComp symtable  (Table variable constructor (FilterField field)) =
-    evaluateInTopScope symtable (\sym -> if ((subFieldExists loopables constructor field))
-        then Right $ addToSymTable sym  variable TTable --(TFilter constructor)
-        else Left $ SubFieldNameError $ "Subfield "++field++ " does not belong to " ++ constructor )  
+    evaluateInTopScope symtable fun 
+    where fun sym = if ((subFieldExists loopables constructor field))
+            then Right $ addToSymTable sym  variable TTable --(TFilter constructor)
+            else Left . SubFieldNameError $ "Subfield "++field++
+             " does not belong to " ++ constructor 
 
 weedAndTypeCheckComp symtable (List variable seqlist) =  
-    evaluateInTopScope symtable (\sym->foldl' foldWeedList (Right $ addToSymTable sym  variable TList) seqlist) 
+    evaluateInTopScope symtable fun 
+    where fun sym = foldl' foldWeedList (Right $ addToSymTable sym  variable TList) seqlist
 
 
 weedAndTypeCheckComp symtable (Barchart variable) = 
-    if isNowInTopScope symtable
-    else Left $ ComputationWrongScope "Can only be in top scope"
+    evaluateInTopScope symtable (\sym->
+        case getFromSymbolTable sym variable of
+            Nothing -> Left . UndefinedVariable $ show  variable 
+            Just t -> if t == TTable 
+                then Right symtable
+                else Left . ComputationTypeMismatch $ 
+                    "Cannot draw Barchart of "++ (show variable)++". It is a " ++ (show t) ++ "Not a Table"
+                ) 
 
 weedAndTypeCheckComp symtable _ = Left $ ComputationWrongScope "Unimplemented"
 
