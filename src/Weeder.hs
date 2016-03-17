@@ -61,17 +61,25 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
             Right r -> putStrLn "All Fields valid"
 
        
-        mapM checkFilterTypes filters con
+        let allGroups = (concat (newGroups)) ++ groupDefs
+        let symbolTable1 = buildSymbolTable allGroups hdr
+       
         
+        case  mapM_ (checkFilterTypes (conf) symbolTable1) [filters] of
+            Left e -> print e >> exitFailure
+            Right r -> putStrLn "all field types check out"
         --redeclarations of foreach
+
+        --forM_ filters $ \x -> do
+            --case (checkFilterTypes conf symbolTable1 x) of
+                --Left e -> print e
+                --Right r -> putStrLn "all field types check"
 
         --table syntax checking
 
         --verify filters
-        let allGroups = (concat (newGroups)) ++ groupDefs
 
         -- SAMPLE USES OF SYMBOL TABLE
-        -- let symbolTable1 = buildSymbolTable allGroups hdr
         -- testIfSymbolTableContains symbolTable1 (Var "x")
 
         putStrLn "Weeded successfully"
@@ -237,8 +245,8 @@ checkFieldsEx conf (x:xs) l =
 --give conf
 --GOAL: check that the types of the filter
 --phase 1: check to see that all 
-checkFilterTypes::(M.Map FilterName FieldMap)->(HashMap.HashMap Var GroupType)->[Filter]->Either LexError ()--[Filter]
-checkFilterTypes conf hmap ms = 
+checkFilterTypes::Config->(HashMap.HashMap Var GroupType)->[Filter]->Either LexError ()--[Filter]
+checkFilterTypes (Config conf) hmap ms = 
     do 
         forM_ ms $ \x -> do
             --from fields
