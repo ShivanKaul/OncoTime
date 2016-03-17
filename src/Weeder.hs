@@ -60,6 +60,10 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
             Left e -> print e >>  putStrLn "FILTERS:" >> print filters >> putStrLn "CONF:" >> print conf >>  exitFailure 
             Right r -> putStrLn "All Fields valid"
 
+       
+        --mapM checkFilterTypes filters con
+        
+        
         
         --case checkFilterTypes filters con
 
@@ -147,7 +151,6 @@ testGroupFiles useFiles grpFiles =
         case (sort declaredUseFiles) == (sort grpFiles) of
             False -> Left $ MissingFilesError "ERROR: Group files Missing" --Better error messages for other cases. Maybe see what files are missing exactly. Doesn't need to be true false exactly
             True -> Right $ useFiles
-
 checkFilters::[Filter]->Config->Either LexError [Filter] 
 checkFilters filList conf = case (checkFilRedec filList ) of
     Right r -> 
@@ -225,6 +228,7 @@ checkFieldsEx conf (x:xs) l =
     do
         let fn = (getFilterName x) --first arg to subfield exists, the name of the field we are checking
         --let confMap =  configToMap conf
+
         --list of filter definitions for that particular field. i.e., if the field is Doctor, this specifes all the lists of [ID: vals_here, etc]
         let fdefList = (getFieldDefList x)
         let missingFields = filter (not . (subFieldExists conf fn)) (map (getFieldName) fdefList) 
@@ -243,73 +247,36 @@ checkFieldsEx conf (x:xs) l =
 --give conf
 --GOAL: check that the types of the filter
 --phase 1: check to see that all 
-
-
-checkFilterTypes::(M.Map FilterName FieldMap)->(HashMap.HashMap Var GroupType)->[Filter]->Either LexError [Filter]
-checkFilterTypes conf hmap (x:xs) = 
-    do
-        --from fields
-        let filterName = (getFilterName x)
-        let fieldDefs = getFieldDefList x -- list of possible FieldDefs for a filter
-        
-        --from confmap
-        fieldMap <- (M.lookup filterName conf) --things to check against for that filter
-
-        mapM () 
-
-
-
-
-checkFilterTypes::(M.Map FilterName FieldMap)->(HashMap.HashMap Var GroupType)->[Filter]->Either LexError [Filter]
-checkFilterTypes conf hmap [] = Right []
-checkFilterTypes conf hmap (x:xs) = 
-
-
-    do
-        --from fields
-        let filterName = (getFilterName x)
-        let fieldDefs = getFieldDefList x -- list of possible FieldDefs for a filter
-        
-        --from confmap
-        fieldMap <- (M.lookup filterName conf) --things to check against for that filter
-       
-
-        case mapM (typeCheckFieldMap fieldMap) fieldDefs of
-            Left e -> e
-            Right r -> r
-
-
-{-
-        case fieldMap of
-            Nothing -> Left $ TypeError "Missing Field"
-            Just a ->
-                case (map (typeCheckFieldMap a) fieldDefs) of
-                    [] -> case checkFilterTypes conf hmap xs of
-                        e ->e
-                        r -> r
-                _ -> Left $ TypeError "ERROR" --print out list of stuff I just accumulated here
-
-        --behaviour. Gyou have the Filter name. You have the filter definitions.
-        --for each definition
-        
-        --type check the things in the filter Def against the fieldMAp
--}
+checkFilterTypes::(M.Map FilterName FieldMap)->(HashMap.HashMap Var GroupType)->[Filter]->Either LexError ()--[Filter]
+checkFilterTypes conf hmap ms = 
+    do 
+        forM_ ms $ \x -> do
+            --from fields
+            let filterName = (getFilterName x)
+            let fieldDefs = getFieldDefList x -- list of possible FieldDefs for a filter
+            --from confmap
+            case (M.lookup filterName conf) of--things to check against for that filter
+                Nothing -> Left $ GenError "not in map"     
+                Just val ->  (typeCheckFieldMap val) fieldDefs
 
 --return a list of things that don't type check
-typeCheckFieldMap::FieldMap->[FieldDef]->Either LexError [FieldDef] 
---typeCheckFieldMap (FieldMap fm) (((FieldDef x fvList)):xs) = compareFieldTypesB fvList [] (M.lookup x fm)
-typeCheckFieldMAp (FieldMap fm)  (((FieldDef x fvList)):xs) = 
-    case mapM compareFieldTypesB fvList [] (M.lookup x fm) of
-        Left e -> e
-        Right r -> r
+typeCheckFieldMap::FieldMap->[FieldDef]->Either LexError () --[FieldDef] 
+typeCheckFieldMap (FieldMap fm)  fdList = do
+    forM fdList $ \x ->
+        do
+            let fieldName = getFieldName x 
+            let fvalList  = getFieldValList x
+            case (M.lookup  fm) of
+                Nothing -> Left $ GenError "Not somethign"
+                Just val -> mapM_ (compareFieldTypes val) fvalList
 
 
-
-compareFieldTypes::GroupItem->Field->Either LexError GroupItem
-compareFieldTypes (GroupValString s) (FieldValue allValList) = 
-    if (s `elem` allValList) then s 
-    else  (AllowedValError ("Error. " ++ s ++ " is not defined in the config file"))
-compareFieldTypes g@(GroupValString _) (FieldType "String") = g
-compareFieldTypes g@(GroupRange _) (FieldType "Int") = g
-compareFieldTypes g@(GroupDate _ _ _) (FieldType "Date") = g
-compareFieldTypes a b = (TypeError "Type Error between " ++ a ++ " and " ++  b)
+--take fieldDefs anda  fieldMap, return an error or a field deaf after calling Field
+compareFieldTypes::Field->GroupItem->Either LexError ()--GroupItem
+compareFieldTypes (FieldValue allValList)(GroupValString s)  = 
+    if (s `elem` allValList) then Right (GroupValString s) 
+    else Left (AllowedValError ("Error. " ++ s ++ " is not defined in the config file"))
+compareFieldTypes (FieldType "String")g@(GroupValString _)  = Right g
+compareFieldTypes (FieldType "Int") g@(GroupRange _) = Right g
+compareFieldTypes (FieldType "Date") g@(GroupDate _ _ _) = Right g
+compareFieldTypes b a = Left $ TypeError ("Type Error between " ++ (show a) ++ " and " ++ (show b))
