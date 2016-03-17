@@ -61,15 +61,8 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
             Right r -> putStrLn "All Fields valid"
 
        
-        --mapM checkFilterTypes filters con
+        mapM checkFilterTypes filters con
         
-        
-        
-        --case checkFilterTypes filters con
-
-        --checking field redeclarations
-        --checkFilterRedec filters [] conf
-
         --redeclarations of foreach
 
         --table syntax checking
@@ -204,9 +197,6 @@ getFieldDefList (Filter _ fd) = fd
 getFieldName::FieldDef->FieldName
 getFieldName (FieldDef ff _ ) = ff
 
---getFilterFieldStr::FilterField->String
---getFilterFieldStr (FilterField s) = s
-
 getFieldValList::FieldDef->[FieldVal]
 getFieldValList (FieldDef _ fv ) = fv
 
@@ -262,11 +252,11 @@ checkFilterTypes conf hmap ms =
 --return a list of things that don't type check
 typeCheckFieldMap::FieldMap->[FieldDef]->Either LexError () --[FieldDef] 
 typeCheckFieldMap (FieldMap fm)  fdList = do
-    forM fdList $ \x ->
+    forM_ fdList $ \x ->
         do
             let fieldName = getFieldName x 
             let fvalList  = getFieldValList x
-            case (M.lookup  fm) of
+            case (M.lookup fieldName fm) of
                 Nothing -> Left $ GenError "Not somethign"
                 Just val -> mapM_ (compareFieldTypes val) fvalList
 
@@ -274,9 +264,9 @@ typeCheckFieldMap (FieldMap fm)  fdList = do
 --take fieldDefs anda  fieldMap, return an error or a field deaf after calling Field
 compareFieldTypes::Field->GroupItem->Either LexError ()--GroupItem
 compareFieldTypes (FieldValue allValList)(GroupValString s)  = 
-    if (s `elem` allValList) then Right (GroupValString s) 
+    if (s `elem` allValList) then Right ()--Right (GroupValString s) 
     else Left (AllowedValError ("Error. " ++ s ++ " is not defined in the config file"))
-compareFieldTypes (FieldType "String")g@(GroupValString _)  = Right g
-compareFieldTypes (FieldType "Int") g@(GroupRange _) = Right g
-compareFieldTypes (FieldType "Date") g@(GroupDate _ _ _) = Right g
+compareFieldTypes (FieldType "String")g@(GroupValString _)  = Right ()
+compareFieldTypes (FieldType "Int") g@(GroupRange _) = Right ()
+compareFieldTypes (FieldType "Date") g@(GroupDate _ _ _) = Right ()
 compareFieldTypes b a = Left $ TypeError ("Type Error between " ++ (show a) ++ " and " ++ (show b))
