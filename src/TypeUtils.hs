@@ -35,40 +35,40 @@ typeMapMaker =
         tup <- parens $ typeTuple
         return ((map toLower name), tup) 
 -}
---subFieldMapMaker::Parser (Map FieldName (AllowedType, [AllowedVal]))
-subFieldMapMaker::Parser (Map FieldName Field)
-subFieldMapMaker = lexeme $
+--fieldMapMaker::Parser (Map FieldName (AllowedType, [AllowedVal]))
+fieldMapMaker::Parser (Map FieldName Field)
+fieldMapMaker = lexeme $
     do
         name <- stringLit 
         colon
-        subf <- parents $ subfield
+        subf <- parents $ fieldParse
         return (M.singleton (map toLower name) subf)
         --tup <- parens $ typeTuple 
         --return (M.singleton (map toLower name) tup) 
 
-subfield::Parser Field 
-subfield = --lexeme $
+fieldParse::Parser Field 
+fieldParse = --lexeme $
     do
-        sf <-  try subfieldval <|>  try subfieldtype<|> try subfieldloopvals <?> "stupid"               --sf <- choice [ (squares (sepBy identifier comma)), (curlies (sepBy identifier comma)), identifier]
+        sf <-  try fieldval <|>  try fieldtype<|> try fieldloopvals <?> "stupid haha"               --sf <- choice [ (squares (sepBy identifier comma)), (curlies (sepBy identifier comma)), identifier]
 
         
         return sf
 
-subfieldval::Parser Field
-subfieldval = lexeme $
+fieldval::Parser Field
+fieldval = lexeme $
     do
         p <-( squares  (sepBy identifier comma) )
-        return $ FieldValue p
+        return $ FieldVal p
 
-subfieldloopvals::Parser Field
-subfieldloopvals = lexeme $
+fieldloopvals::Parser Field
+fieldloopvals = lexeme $
     do
         p <-( curlies  (sepBy identifier comma) )
         return $ FieldLoopVals p
 
 
-subfieldtype::Parser Field
-subfieldtype = lexeme $
+fieldtype::Parser Field
+fieldtype = lexeme $
     do
         p <- identifier
         return $ FieldType p 
@@ -81,34 +81,24 @@ configParser = lexeme $
         whiteSpace
         fieldName <- identifier
         colon
-        typeMapList <- squares $ sepBy subFieldMapMaker comma
+        typeMapList <- squares $ sepBy fieldMapMaker comma
         --concat list of maps to a single one
         --let subMapList = foldr M.union M.empty typeMapList 
-        let subMapList = M.unions typeMapList
+        let fieldMapList = M.unions typeMapList
         semi
-        return $ Config (M.singleton (map toLower fieldName) (FieldMap $  subMapList))
+        return $ Config (M.singleton (map toLower fieldName) (FieldMap $  fieldMapList))
 
-{-
-getTypeFromMap::(Field)->AllowedType
-getTypeFromMap (a,b) = a
-
-getValFromMap::(Field)->[AllowedVal]
-getValFromMap (a,b) = b
--}
-
---configListToMap::[Config]->(Map FieldName (Map FieldName (Field)))
 configListToMap::[Config]->(Map FieldName FieldMap)
---configLisToMap ((Config (Map fn (Map sfn (sf)))):xs) = M.union 
 configListToMap ((Config (x)):[]) = 
     case M.toList x of
         [] -> M.empty
         (fname, sub):[] -> M.singleton fname sub
         mapList -> x 
+
 configListToMap ((Config x):xs) = M.union x $ configListToMap xs
 
 configToMap::Config->(Map FieldName FieldMap)
 configToMap (Config conf) = conf
---data Config =  Config (Map FieldName (Map FieldName (Field))) deriving(Eq, Show)
 
 testFieldStuff::IO()
 testFieldStuff = 
@@ -122,7 +112,7 @@ testFieldStuff =
         --print $ M.toList totalMap
         --print $ fieldExists (Config totalMap) "Population" 
         --print $ fieldExists (Config totalMap) "population" 
-        --print $ subFieldExists (Config totalMap) "Population" "Sex"
-        --print $ subFieldExists (Config totalMap) "Population" "Flarf"
+        --print $ fieldExists (Config totalMap) "Population" "Sex"
+        --print $ fieldExists (Config totalMap) "Population" "Flarf"
         --print $ getConfWithField listOfMaps "Population"
         print "fields tested" 

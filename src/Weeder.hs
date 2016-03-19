@@ -18,7 +18,6 @@ import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
 import Text.ParserCombinators.Parsec.Char
-
 import qualified Text.ParserCombinators.Parsec.Token as Token
 
 import TypeUtils
@@ -27,7 +26,7 @@ import Debug.Trace
 --Our modules
 import Types
 import Parser
-import PrettyPrinter
+import PrettyPrinter 
 import Formatter
 
 --the function that does all weeding
@@ -47,7 +46,7 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
 
         --putStrLn ("Group files are " ++ (show useFilesToParse))
         case grpFileList of
-            Left e -> putStrLn (file ++ ": ") >> print e >> exitFailure
+            Left e -> putStrLn (file ++ ": ") >> (hPrint stderr) e >> exitFailure
             Right r -> putStrLn $ file ++ ": All Group files exist"
 
         --parsing each group file
@@ -57,30 +56,39 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         --check erroneous subfields i.e. whether all fields exist
        
         case (checkFilters filters conf) of
-            Left e -> print e >>  putStrLn "FILTERS:" >> print filters >> putStrLn "CONF:" >> print conf >>  exitFailure 
+            Left e -> hPrint stderr e >>  putStrLn "FILTERS:" >> (hPrint stderr) filters >> putStrLn "CONF:" >> hPrint stderr conf >>  exitFailure 
             Right r -> putStrLn "All Fields valid"
 
        
         let allGroups = (concat (newGroups)) ++ groupDefs
-        let symbolTable1 = buildSymbolTable allGroups hdr
+        let symbolTableH = buildHeadSymbolTable allGroups hdr
        
         
-        case  mapM_ (checkFilterTypes (conf) symbolTable1) [filters] of
-            Left e -> print e >> exitFailure
+        case  mapM_ (checkFilterTypes (conf) symbolTableH) [filters] of
+            Left e -> hPrint stderr e >> exitFailure
             Right r -> putStrLn "all field types check out"
         --redeclarations of foreach
 
         --forM_ filters $ \x -> do
             --case (checkFilterTypes conf symbolTable1 x) of
-                --Left e -> print e
+                --Left e -> hPrint stderr e
                 --Right r -> putStrLn "all field types check"
 
         --table syntax checking
 
-        --verify filters
-
         -- SAMPLE USES OF SYMBOL TABLE
         -- testIfSymbolTableContains symbolTable1 (Var "x")
+    
+        -------------------------------------------------------------------------
+        ---------------- ************ typecheck computations ***********----------------
+        -------------------------------------------------------------------------
+       
+       --build the compuation symbol table
+       
+        --checkComps
+        --build 
+
+
 
         putStrLn "Weeded successfully"
         return (Program hdr docs [] (allGroups) filters comps)
@@ -90,16 +98,16 @@ instance (Hashable Var) where
   hashWithSalt s (Var v) = s + (hash v)
 
 -- Utility test function to check if symbol table contains a key
-testIfSymbolTableContains :: HashMap.HashMap Var GroupType -> Var -> IO()
-testIfSymbolTableContains hashmap (Var v) =
+testIfHSymbolTableContains :: HashMap.HashMap Var GroupType -> Var -> IO()
+testIfHSymbolTableContains hashmap (Var v) =
         case (HashMap.lookup (Var v) hashmap) of
-            Nothing -> print "nothing found!"
+            Nothing -> hPrint stderr "nothing found!"
             Just r -> print ("Found VALUE " ++ show r ++ " for KEY " ++
                 v ++ " in symboltable1")
 
 -- Build symbol table from groups
-buildSymbolTable :: [GroupDefs] -> Header -> HashMap.HashMap Var GroupType
-buildSymbolTable groups (Header _ args) =
+buildHeadSymbolTable :: [GroupDefs] -> Header -> HashMap.HashMap Var GroupType
+buildHeadSymbolTable groups (Header _ args) =
     do
         let keyValuesGroups = map (\(Group (t) (v) _) -> (v, t)) (groups)
         let keyValuesHeader = map (\(Arg (t) (v)) -> (v, t)) (args)
@@ -118,7 +126,13 @@ weedGroupFiles useList grpFiles =
                     False -> Left $ MissingFilesError ("ERROR: Missing one of group files: " ++ ( intercalate ","  declaredUseFiles) ++ " out of: " ++ (intercalate "," grpFiles)) --Better error messages for other cases. Maybe see what files are missing exactly. Doesn't need to be true false exactly
                     True -> Right $ useList
 
-getGroupDefs :: IO(String) -> IO([GroupDefs])
+
+--what is the symbol table doing exactly?
+--buildBodySymbolTable::[Computation]->M.Map Var  Type??
+--Table
+--List
+
+getGroupDefs::IO(String) -> IO([GroupDefs])
 getGroupDefs grpFileData =
     do
         readData <- grpFileData
@@ -133,7 +147,7 @@ readConfig file =
         readData <- readFile "config.conf"
         let l= lines readData
         let totalMap = configListToMap $ map makeConfig l
-        --print $ M.showTree $ totalMap 
+        --hPrint stderr $ M.showTree $ totalMap 
         return $ Config totalMap
 
 
@@ -245,6 +259,7 @@ checkFieldsEx conf (x:xs) l =
 --give conf
 --GOAL: check that the types of the filter
 --phase 1: check to see that all 
+
 checkFilterTypes::Config->(HashMap.HashMap Var GroupType)->[Filter]->Either LexError ()--[Filter]
 checkFilterTypes (Config conf) hmap ms = 
     do 
@@ -255,26 +270,39 @@ checkFilterTypes (Config conf) hmap ms =
             --from confmap
             case (M.lookup filterName conf) of--things to check against for that filter
                 Nothing -> Left $ GenError "not in map"     
-                Just val ->  (typeCheckFieldMap val) fieldDefs
+                Just val ->  (typeCheckFieldMap val hmap) fieldDefs
 
 --return a list of things that don't type check
-typeCheckFieldMap::FieldMap->[FieldDef]->Either LexError () --[FieldDef] 
-typeCheckFieldMap (FieldMap fm)  fdList = do
+typeCheckFieldMap::FieldMap->(HashMap.HashMap Var GroupType)->[FieldDef]->Either LexError () --[FieldDef] 
+typeCheckFieldMap (FieldMap fm) hmap fdList = do
     forM_ fdList $ \x ->
         do
             let fieldName = getFieldName x 
             let fvalList  = getFieldValList x
             case (M.lookup fieldName fm) of
                 Nothing -> Left $ GenError "Not somethign"
-                Just val -> mapM_ (compareFieldTypes val) fvalList
+                Just val -> mapM_ (compareFieldTypes val (FieldMap fm) hmap) fvalList
 
 
 --take fieldDefs anda  fieldMap, return an error or a field deaf after calling Field
-compareFieldTypes::Field->GroupItem->Either LexError ()--GroupItem
-compareFieldTypes (FieldValue allValList)(GroupValString s)  = 
+compareFieldTypes::Field->FieldMap->(HashMap.HashMap Var GroupType)->GroupItem->Either LexError ()--GroupItem
+compareFieldTypes (FieldVal allValList) fm hm (GroupValString s)  = 
     if (s `elem` allValList) then Right ()--Right (GroupValString s) 
     else Left (AllowedValError ("Error. " ++ s ++ " is not defined in the config file"))
-compareFieldTypes (FieldType "String")g@(GroupValString _)  = Right ()
-compareFieldTypes (FieldType "Int") g@(GroupRange _) = Right ()
-compareFieldTypes (FieldType "Date") g@(GroupDate _ _ _) = Right ()
-compareFieldTypes b a = Left $ TypeError ("Type Error between " ++ (show a) ++ " and " ++ (show b))
+compareFieldTypes (FieldType "String") fm hm (GroupValString _)  = Right ()
+compareFieldTypes (FieldType "Int") fm hm (GroupRange _) = Right ()
+compareFieldTypes (FieldType "Date") fm hm (GroupDate _ _ _) = Right ()
+--I need a new type that allows me to pull out the type of var 
+compareFieldTypes _ (FieldMap fm) hm  (GroupVar var) =
+    case (HashMap.lookup var hm) of
+        Nothing -> Left $ TypeError ("ERROR. var " ++ (varToStr var) ++ "not declared")
+        Just a -> case (M.member ((groupTypeToStr a)::FieldName) fm) of --if it is declared, we want to make sure it is used in the right case. i.e. with the right field
+                False -> Left $ TypeError ("ERROR. variable " ++ (varToStr var) ++" is used with wrong field")
+                True  -> Right () 
+compareFieldTypes b fm hm a = Left $ TypeError ("Type Error between " ++ (show a) ++ " and " ++ (show b))
+
+varToStr::Var->String
+varToStr (Var v) = v
+
+groupTypeToStr::GroupType->String
+groupTypeToStr (GroupType s) = s

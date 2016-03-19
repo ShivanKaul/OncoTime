@@ -127,6 +127,14 @@ getScriptName =
         reserved "script"
         fname <- filename
         return fname
+{-
+arg :: Parser Arg
+arg =
+    do
+        t <- groupType
+        v <- var
+        return $ Arg t v
+-}
 
 arg :: Parser Arg
 arg =
@@ -134,6 +142,7 @@ arg =
         t <- groupType
         v <- var
         return $ Arg t v
+
 
 --just gets the next string
 var:: Parser Var
