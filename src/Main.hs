@@ -111,7 +111,7 @@ tparseFileCheck file =
         case parse ((testParserCheck totalMap) <* eof) file program of
             Left e ->
                 do
-                    putStrLn "ERROR"
+                    hPutStrLn stderr "ERROR"
                     print e
             Right r -> print r
 main =
