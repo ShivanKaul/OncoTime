@@ -101,9 +101,11 @@ data Config =  Config (M.Map FilterName FieldMap) deriving(Eq, Show)
 
 data FieldMap = FieldMap (M.Map FieldName (Field)) deriving(Eq, Show)
 
-data Field = FieldType String | FieldVal [AllowedVal] | FieldLoopVals [AllowedVal] deriving(Eq, Show)
+data Field = FieldType String | FieldVal [AllowedVal]  deriving(Eq, Show)
 
 --type Field = (AllowedType, [AllowedVal])
+
+type Loopable = Bool
 
 type FieldName = String
 type AllowedType = String

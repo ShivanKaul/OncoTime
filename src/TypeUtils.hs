@@ -27,6 +27,7 @@ makeConfig str =
         Left e-> error $ show e
         Right r -> r
 {-
+
 typeMapMaker::Parser (String, (String, [String])) 
 typeMapMaker =
     do
@@ -34,7 +35,10 @@ typeMapMaker =
         colon
         tup <- parens $ typeTuple
         return ((map toLower name), tup) 
+
 -}
+
+
 --fieldMapMaker::Parser (Map FieldName (AllowedType, [AllowedVal]))
 fieldMapMaker::Parser (Map FieldName Field)
 fieldMapMaker = lexeme $
@@ -49,7 +53,7 @@ fieldMapMaker = lexeme $
 fieldParse::Parser Field 
 fieldParse = --lexeme $
     do
-        sf <-  try fieldval <|>  try fieldtype<|> try fieldloopvals <?> "stupid haha"               --sf <- choice [ (squares (sepBy identifier comma)), (curlies (sepBy identifier comma)), identifier]
+        sf <-  try fieldval <|>  try fieldtype <?> "stupid haha"               --sf <- choice [ (squares (sepBy identifier comma)), (curlies (sepBy identifier comma)), identifier]
 
         
         return sf
@@ -59,12 +63,6 @@ fieldval = lexeme $
     do
         p <-( squares  (sepBy identifier comma) )
         return $ FieldVal p
-
-fieldloopvals::Parser Field
-fieldloopvals = lexeme $
-    do
-        p <-( curlies  (sepBy identifier comma) )
-        return $ FieldLoopVals p
 
 
 fieldtype::Parser Field

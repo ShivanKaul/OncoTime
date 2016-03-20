@@ -113,6 +113,11 @@ buildHeadSymbolTable groups (Header _ args) =
         let keyValuesHeader = map (\(Arg (t) (v)) -> (v, t)) (args)
         (HashMap.fromList (keyValuesGroups ++ keyValuesHeader))
 
+buildCompSymbolTable::[Computation]->HashMap.HashMap Var 
+
+
+
+
 weedGroupFiles::[UseFile]->[String]->Either LexError [UseFile]
 weedGroupFiles useList grpFiles =
     do
@@ -248,17 +253,6 @@ checkFieldsEx conf (x:xs) l =
         if (missingFields == []) then checkFieldsEx conf xs l 
             else checkFieldsEx conf xs ((fn, missingFields) : l)
 
---checkFieldTypes::Config
---checkFieldValues
-
---typeCheckFilters::Config->(HashMap.HashMap Var GroupType)->[Filter]->Either LexError [Filter]
---typeCheckFilters conf hmap flist = case checkFieldTypes )of
-
---filter 
---give hmap from var to grouptype
---give conf
---GOAL: check that the types of the filter
---phase 1: check to see that all 
 
 checkFilterTypes::Config->(HashMap.HashMap Var GroupType)->[Filter]->Either LexError ()--[Filter]
 checkFilterTypes (Config conf) hmap ms = 
