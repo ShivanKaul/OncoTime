@@ -371,12 +371,9 @@ weedAndTypeCheckComp symtable  (Table variable constructor (FilterField field)) 
             then Right $ addToSymTable sym  variable TTable --(TFilter constructor)
             else Left . SubFieldNameError $ "Subfield "++field++
              " does not belong to " ++ constructor 
-
 weedAndTypeCheckComp symtable (List variable seqlist) =  
     evaluateInTopScope symtable fun 
     where fun sym = foldl' foldWeedList (Right $ addToSymTable sym  variable TList) seqlist
-
-
 weedAndTypeCheckComp symtable (Barchart variable) = 
     evaluateInTopScope symtable (\sym->
         case getFromSymbolTable sym variable of
@@ -387,14 +384,56 @@ weedAndTypeCheckComp symtable (Barchart variable) =
                     "Cannot draw Barchart of "++ (show variable)++". It is a " ++ (show t) ++ "Not a Table"
                 ) 
 
-weedAndTypeCheckComp symtable (Print print) = weedPrintAction  symtable print
+weedAndTypeCheckComp symtable (Print printAction) = weedPrintAction  symtable printAction
 weedAndTypeCheckComp symtable (Foreach def comps) = weedForEach  symtable comps def
 
 weedPrintAction :: CompSymTable -> PrintAction -> Either LexError CompSymTable
-weedPrintAction symtable print = Left $ ComputationWrongScope "Unimplemented"
+weedPrintAction symtable printAction = Left $ ComputationWrongScope "Unimplemented"
 
 weedForEach :: CompSymTable -> [Computation] ->ForEachDef -> Either LexError CompSymTable
-weedForEach symtable newcomp foreach  = Left $ ComputationWrongScope "Unimplemented"
+weedForEach symtable newcomp (ForEachFilter filterName var )  = 
+    if (fieldExists loopables filterName) 
+    then    if (isValidInNestedLoopables symtable filterName)
+
+            then let 
+                    newsym =(addToSymTable (symtable++[emptyScope]) var (TFilter filterName))
+                    str = (weedFold newsym newcomp)  
+                    force = null (trace str str)
+                in if (force)
+                    then Right $ symtable
+                    else Left $ ComputationWrongScope ":("
+            else Left $  ComputationWrongScope "Foreach is not valid in this scope"
+    else Left $  SubFieldNameError $ "\""++filterName++"\" is not a valid loopable Filter"
+
+weedForEach symtable newcomp (ForEachTable indexVar tableVar)  = evaluateInTopScope symtable (\sym->
+        case getFromSymbolTable sym tableVar of
+            Nothing -> Left . UndefinedVariable $ show  tableVar 
+            Just t -> if t == TTable 
+                then let 
+                    newsym =(addToSymTable (symtable++[emptyScope]) indexVar TIndex)
+                    str = (weedFold newsym newcomp)  
+                    force = null (trace str str)
+                    in if (force)
+                        then Right $ symtable
+                        else Left $ ComputationWrongScope ":("
+                else Left . ComputationTypeMismatch $ 
+                    "CAnnot Go through loop for "++ (show tableVar)++". It is a " ++ (show t) ++ "Not a Table"
+                ) 
+weedForEach symtable newcomp (ForEachSequence memberVar unusedSequence)  = Left $ ComputationWrongScope "Unimplemented"
+weedForEach symtable newcomp (ForEachList memberVar listVar)  = evaluateInTopScope symtable (\sym->
+        case getFromSymbolTable sym listVar of
+            Nothing -> Left . UndefinedVariable $ show  listVar 
+            Just t -> if t == TList 
+                then let 
+                    newsym =(addToSymTable (symtable++[emptyScope]) memberVar TSequence)
+                    str = (weedFold newsym newcomp)  
+                    force = null (trace str str)
+                    in if (force)
+                        then Right $ symtable
+                        else Left $ ComputationWrongScope ":("
+                else Left . ComputationTypeMismatch $ 
+                    "CAnnot Go through loop for "++ (show listVar)++". It is a " ++ (show t) ++ "Not a List"
+                ) 
 
 weedSequence :: SeqField -> Either String Bool
 weedSequence (Bar evlist) = checkEvents evlist
@@ -414,3 +453,24 @@ foldWeedList prev curr =
         Left evname -> Left $ IncorrectEvent evname
         _-> prev
 
+<<<<<<< 5e5254dbcf3c89dc809aec3b00cd080de6dd1e28
+=======
+isValidInNestedLoopables :: CompSymTable -> FilterName -> Bool
+isValidInNestedLoopables symtable filterName = 
+    let 
+        (counts, filtersUsed) = unzip (findAllFilters symtable)
+    in ((null filtersUsed) || ( not (elem filterName filtersUsed)))
+
+
+findAllFilters :: CompSymTable -> [(Int,FilterName)]
+findAllFilters symtable = foldl' (\ p  (c,s)-> let f =find1Filter s
+                                        in if (not $ null f)  
+                                            then p++[(c,f)]
+                                            else p) [] (zip [1..] symtable)
+find1Filter :: Scope -> FilterName
+find1Filter curr = HashMap.foldr  (\ t p -> if (null p)
+                                    then case t of 
+                                        TFilter val -> val
+                                        _ -> p
+                                    else p)  "" curr 
+>>>>>>> Foreach compiles for all-1 cases
