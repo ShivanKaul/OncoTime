@@ -80,7 +80,7 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
 
         --verify filters
 
-        putStrLn $ weedComputationList comps
+        putStrLn $ weedComputationList conf comps
 
         -- SAMPLE USES OF SYMBOL TABLE
         -- testIfSymbolTableContains symbolTable1 (Var "x")
@@ -320,35 +320,26 @@ groupTypeToStr (GroupType s) = s
 
 
  
-
-loopables:: Config
-loopables = Config (M.fromList [("diagnosis",FieldMap (M.fromList [("name",(FieldType "string"))])),
-    ("doctor",FieldMap (M.fromList [("id",(FieldType "string")),("oncologist",(FieldType "string"))])),
-    ("doctors",FieldMap (M.fromList [("id",(FieldType "string")),("oncologist",(FieldType "string"))])),
-    ("patient",FieldMap (M.fromList [("birthyear",(FieldType "string")),("diagnosis",(FieldType "string")),
-        ("gender",(FieldType "string")),("id",(FieldType "string")),("postalcode",(FieldType "string"))])),
-    ("patients",FieldMap (M.fromList [("birthyear",(FieldType "string")),("diagnosis",(FieldType "string")),
-        ("gender",(FieldType "string")),("id",(FieldType "string")),("postalcode",(FieldType "string"))]))
-    ])
-
 events :: [String]
 events = ["consult_referral_received","initial_consult_booked","initial_consult_completed",
             "ct_sim_booked","ready_for_ct_sim","ct_sim_completed","ready_for_initial_contour","ready_for_md_contour",
             "ready_for_dose_calculation","prescription_approved_by_md","ready_for_physics_qa","ready_for_treatment",
             "machine_rooms_booked","patient_contacted","end"]
 
-weedComputationList :: [Computation]->String
-weedComputationList comps = 
+weedComputationList :: Config->[Computation]->String
+weedComputationList config comps = 
     let 
         compSymbolTable = [emptyScope]
         t= [List (Var "s") [Bar [Event "ct_sim_completed"],Bar [Event "ct_sim_booked"],Bar [Event "treatment_began"],
             Bar [Event "consult_referral_received"]],Foreach (ForEachList (Var "i") (Var "s")) [Print (PrintVar (Var "i"))]]
-        x=(weedFold compSymbolTable comps)
+        x=(weedFold config compSymbolTable comps)
         s = "OHAI"++show x 
     in trace s x 
-weedFold :: CompSymTable -> [Computation] -> String
-weedFold symtable computations = printFold (foldl' weedEach symtable computations)
-weedEach sym comp =  case (weedAndTypeCheckComp sym comp) of
+weedFold :: Config->CompSymTable -> [Computation] -> String
+weedFold conf symtable computations = printFold (foldl' (weedEach conf) symtable computations)
+
+weedEach::Config->CompSymTable->Computation->CompSymTable
+weedEach conf sym comp =  case (weedAndTypeCheckComp conf sym comp) of
     Left x ->  trace ("Error! "++ (show x) ++ " occured but not handled") sym
     Right x -> x
 
@@ -369,7 +360,9 @@ addToSymTable symtable v  comptype =
     in prev++[updated]
 
 type Scope = HashMap.HashMap Var ComputationType
+
 type CompSymTable = [Scope]
+
 getFromScope:: Scope ->Var-> Maybe ComputationType
 getFromScope  hashmap v = (HashMap.lookup v hashmap)
 
@@ -395,17 +388,17 @@ emptyScope :: HashMap.HashMap Var ComputationType
 emptyScope = HashMap.fromList []
 
  
-weedAndTypeCheckComp :: CompSymTable -> Computation -> Either LexError CompSymTable
-weedAndTypeCheckComp symtable  (Table variable constructor  field) =
+weedAndTypeCheckComp :: Config->CompSymTable -> Computation -> Either LexError CompSymTable
+weedAndTypeCheckComp conf symtable  (Table variable constructor  field) =
     evaluateInTopScope symtable fun 
-    where fun sym = if ((subFieldExists loopables constructor field))
+    where fun sym = if ((subFieldExists conf constructor field))
             then Right $ addToSymTable sym  variable TTable --(TFilter constructor)
             else Left . FieldNameError $ "Field "++field++
              " does not belong to " ++ constructor 
-weedAndTypeCheckComp symtable (List variable seqlist) =  
+weedAndTypeCheckComp conf symtable (List variable seqlist) =  
     evaluateInTopScope symtable fun 
     where fun sym = foldl' foldWeedList (Right $ addToSymTable sym  variable TList) seqlist
-weedAndTypeCheckComp symtable (Barchart variable) = 
+weedAndTypeCheckComp conf symtable (Barchart variable) = 
     evaluateInTopScope symtable (\sym->
         case getFromSymbolTable sym variable of
             Nothing -> Left . UndefinedVariable $ show  variable 
@@ -415,8 +408,8 @@ weedAndTypeCheckComp symtable (Barchart variable) =
                     "Cannot draw Barchart of "++ (show variable)++". It is a " ++ (show t) ++ "Not a Table"
                 ) 
 
-weedAndTypeCheckComp symtable (Print printAction) = weedPrintAction  symtable printAction
-weedAndTypeCheckComp symtable (Foreach def comps) = weedForEach  symtable comps def
+weedAndTypeCheckComp conf symtable (Print printAction) = weedPrintAction  symtable printAction
+weedAndTypeCheckComp conf symtable (Foreach def comps) = weedForEach conf symtable comps def
 
 weedPrintAction :: CompSymTable -> PrintAction -> Either LexError CompSymTable
 weedPrintAction symtable (PrintVar var) = case getFromSymbolTable symtable var of
@@ -431,14 +424,14 @@ weedPrintAction symtable (PrintLength variable) = case getFromSymbolTable symtab
                 
 weedPrintAction symtable printAction = Left $ ComputationWrongScope "Unimplemented"
 
-weedForEach :: CompSymTable -> [Computation] ->ForEachDef -> Either LexError CompSymTable
-weedForEach symtable newcomp (ForEachFilter filterName var )  = 
-    if (fieldExists loopables filterName) 
-    then    if (isValidInNestedLoopables symtable filterName)
+weedForEach :: Config->CompSymTable -> [Computation] ->ForEachDef -> Either LexError CompSymTable
+weedForEach conf symtable newcomp (ForEachFilter filterName var )  = 
+    if (fieldExists conf filterName) 
+    then    if (isValidInNestedLoopables conf symtable filterName)
 
             then let 
                     newsym =(addToSymTable (symtable++[emptyScope]) var (TFilter filterName))
-                    str = (weedFold newsym newcomp)  
+                    str = (weedFold conf newsym newcomp)  
                     force = null (trace (str) str)
                 in if (not force)
                     then Right $ symtable
@@ -446,13 +439,13 @@ weedForEach symtable newcomp (ForEachFilter filterName var )  =
             else Left $  ComputationWrongScope "Foreach is not valid in this scope"
     else Left $  FieldNameError $ "\""++filterName++"\" is not a valid loopable Filter"
 
-weedForEach symtable newcomp (ForEachTable indexVar tableVar)  = evaluateInTopScope symtable (\sym->
+weedForEach config symtable newcomp (ForEachTable indexVar tableVar)  = evaluateInTopScope symtable (\sym->
         case getFromSymbolTable sym tableVar of
             Nothing -> Left . UndefinedVariable $ show  tableVar 
             Just t -> if t == TTable 
                 then let 
                     newsym =(addToSymTable (symtable++[emptyScope]) indexVar TIndex)
-                    str = (weedFold newsym newcomp)  
+                    str = (weedFold config newsym newcomp)  
                     force = null (trace (str) str)
                     in if (not force)
                         then Right $ symtable
@@ -460,14 +453,14 @@ weedForEach symtable newcomp (ForEachTable indexVar tableVar)  = evaluateInTopSc
                 else Left . ComputationTypeMismatch $ 
                     "CAnnot Go through loop for "++ (show tableVar)++". It is a " ++ (show t) ++ "Not a Table"
                 ) 
-weedForEach symtable newcomp (ForEachSequence memberVar unusedSequence)  = Left $ ComputationWrongScope "Unimplemented"
-weedForEach symtable newcomp (ForEachList memberVar listVar)  = evaluateInTopScope symtable (\sym->
+weedForEach config symtable newcomp (ForEachSequence memberVar unusedSequence)  = Left $ ComputationWrongScope "Unimplemented"
+weedForEach config symtable newcomp (ForEachList memberVar listVar)  = evaluateInTopScope symtable (\sym->
         case getFromSymbolTable sym listVar of
             Nothing -> Left . UndefinedVariable $ show  listVar 
             Just t -> if t == TList 
                 then let 
                     newsym =(addToSymTable (symtable++[emptyScope]) memberVar TSequence)
-                    str = (weedFold newsym newcomp)  
+                    str = (weedFold config newsym newcomp)  
                     force = null (trace (str) str)
                     in if (not force)
                         then Right $ symtable
@@ -495,8 +488,8 @@ foldWeedList prev curr =
         _-> prev
 
 
-isValidInNestedLoopables :: CompSymTable -> FilterName -> Bool
-isValidInNestedLoopables symtable filterName = 
+isValidInNestedLoopables ::Config-> CompSymTable -> FilterName -> Bool
+isValidInNestedLoopables conf symtable filterName = 
     let 
         (counts, filtersUsed) = unzip (findAllFilters symtable)
     in ((null filtersUsed) || ( not (elem filterName filtersUsed)))
