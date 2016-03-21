@@ -408,7 +408,7 @@ weedForEach symtable newcomp (ForEachFilter filterName var )  =
             then let 
                     newsym =(addToSymTable (symtable++[emptyScope]) var (TFilter filterName))
                     str = (weedFold newsym newcomp)  
-                    force = null (trace (show $ null str) str)
+                    force = null (trace (str) str)
                 in if (not force)
                     then Right $ symtable
                     else Left $ ComputationWrongScope ":("
@@ -422,7 +422,7 @@ weedForEach symtable newcomp (ForEachTable indexVar tableVar)  = evaluateInTopSc
                 then let 
                     newsym =(addToSymTable (symtable++[emptyScope]) indexVar TIndex)
                     str = (weedFold newsym newcomp)  
-                    force = null (trace (show $ null str) str)
+                    force = null (trace (str) str)
                     in if (not force)
                         then Right $ symtable
                         else Left $ ComputationWrongScope ":("
@@ -437,7 +437,7 @@ weedForEach symtable newcomp (ForEachList memberVar listVar)  = evaluateInTopSco
                 then let 
                     newsym =(addToSymTable (symtable++[emptyScope]) memberVar TSequence)
                     str = (weedFold newsym newcomp)  
-                    force = null (trace str str)
+                    force = null (trace (str) str)
                     in if (not force)
                         then Right $ symtable
                         else Left $ ComputationWrongScope ":("

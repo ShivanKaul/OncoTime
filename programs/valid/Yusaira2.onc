@@ -14,12 +14,12 @@ Events are
 
 {	
 
-	table i = count Patient by Id
-	barchart i
-	print i.length
-	foreach element j of i
+	//table i = count Patient by Id
+	//barchart i
+	//print i.length
+	foreach Patient p
 	{
-		print j
+		print p
 	}
 
 }
