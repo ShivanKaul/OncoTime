@@ -64,7 +64,10 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
 
         let allGroups = (concat (newGroups)) ++ groupDefs
         let symbolTableH = buildHeadSymbolTable allGroups hdr
-       
+      
+        
+
+
         
         case  mapM_ (checkFilterTypes (conf) symbolTableH) [filters] of
             Left e -> hPrint stderr e >> exitFailure
