@@ -113,7 +113,7 @@ buildHeadSymbolTable groups (Header _ args) =
         let keyValuesHeader = map (\(Arg (t) (v)) -> (v, t)) (args)
         (HashMap.fromList (keyValuesGroups ++ keyValuesHeader))
 
-buildCompSymbolTable::[Computation]->HashMap.HashMap Var 
+--buildCompSymbolTable::[Computation]->HashMap.HashMap Var 
 
 
 
@@ -229,12 +229,14 @@ getFieldValList::FieldDef->[FieldVal]
 getFieldValList (FieldDef _ fv ) = fv
 
 fieldExists::Config->FieldName->Bool
-fieldExists (Config confmap) fname = M.member fname confmap
+fieldExists (Config confmap) fname = (M.member (fname, True) confmap) || (M.member (fname, False) confmap) 
 
 subFieldExists::Config->FieldName->FieldName->Bool
 subFieldExists (Config confmap) fname sfname =
-    case (M.lookup fname confmap) of
-        Nothing -> False
+    case (M.lookup (fname, True) confmap) of
+        Nothing -> case (M.lookup (fname, False) confmap) of
+            Nothing-> False
+            Just (FieldMap m) -> M.member sfname m
         Just (FieldMap m) -> M.member sfname m
 
 --given a list of filters, makes sure each thing int he map belongs
@@ -260,7 +262,6 @@ checkFieldsEx conf (x:xs) l =
 --give conf
 --GOAL: check that the types of the filter
 --phase 1: check to see that all
->>>>>>> 9703905f3753ebc21f94fcda629ac3de30275f7a
 checkFilterTypes::Config->(HashMap.HashMap Var GroupType)->[Filter]->Either LexError ()--[Filter]
 checkFilterTypes (Config conf) hmap ms =
     do
@@ -269,8 +270,11 @@ checkFilterTypes (Config conf) hmap ms =
             let filterName = (getFilterName x)
             let fieldDefs = getFieldDefList x -- list of possible FieldDefs for a filter
             --from confmap
-            case (M.lookup filterName conf) of--things to check against for that filter
-                Nothing -> Left $ GenError "not in map"     
+            case (M.lookup (filterName, True) conf) of--things to check against for that filter
+                Nothing -> case (M.lookup (filterName, True) conf) of
+                    Nothing -> Left $ GenError "not in map"     
+                    Just val -> (typeCheckFieldMap val hmap) fieldDefs
+
                 Just val ->  (typeCheckFieldMap val hmap) fieldDefs
 
 --return a list of things that don't type check

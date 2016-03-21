@@ -167,6 +167,7 @@ docLiteral :: Parser String
 docLiteral   = lexeme (
     do{ str <- between (symbol "/*" <?> "Start of Documentation String (/*)")
         (symbol "*/" <?> "end of Documentation String (*/)")
+        --(many anyChar) 
         (many docChar)
         ; return (foldr (maybe id (:)) "" str)
     }  <?> "Documentation String")

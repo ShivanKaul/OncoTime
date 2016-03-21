@@ -53,7 +53,7 @@ fieldMapMaker = lexeme $
 fieldParse::Parser Field 
 fieldParse = --lexeme $
     do
-        sf <-  try fieldval <|>  try fieldtype <?> "stupid haha"               --sf <- choice [ (squares (sepBy identifier comma)), (curlies (sepBy identifier comma)), identifier]
+        sf <-  try fieldval <|>  try fieldtype <?> "not a val list or a valid type"               --sf <- choice [ (squares (sepBy identifier comma)), (curlies (sepBy identifier comma)), identifier]
 
         
         return sf
@@ -79,23 +79,39 @@ configParser = lexeme $
         whiteSpace
         fieldName <- identifier
         colon
-        typeMapList <- squares $ sepBy fieldMapMaker comma
+        --typeMapList <- squares $ sepBy fieldMapMaker comma
+ 
+        b <- optionMaybe (oneOf "{") 
+        
+        let c = case b of
+                Just a -> True 
+                Nothing -> False
+        
+        typeMapList <- case c of 
+            True -> do 
+                p <- sepBy fieldMapMaker comma
+                char '}'
+                return p
+            False ->  (squares $ sepBy fieldMapMaker comma)
+        
+       -- let typeMapList = reg
+
         --concat list of maps to a single one
         --let subMapList = foldr M.union M.empty typeMapList 
         let fieldMapList = M.unions typeMapList
         semi
-        return $ Config (M.singleton (map toLower fieldName) (FieldMap $  fieldMapList))
+        return $ Config (M.singleton ((map toLower fieldName), (c)) (FieldMap $  fieldMapList))
 
-configListToMap::[Config]->(Map FieldName FieldMap)
+configListToMap::[Config]->(Map (FieldName, Bool) FieldMap)
 configListToMap ((Config (x)):[]) = 
     case M.toList x of
         [] -> M.empty
-        (fname, sub):[] -> M.singleton fname sub
+        ((fname,loop), sub):[] -> M.singleton (fname,loop) sub
         mapList -> x 
 
 configListToMap ((Config x):xs) = M.union x $ configListToMap xs
 
-configToMap::Config->(Map FieldName FieldMap)
+configToMap::Config->(Map (FieldName, Bool) FieldMap)
 configToMap (Config conf) = conf
 
 testFieldStuff::IO()
