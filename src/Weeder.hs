@@ -318,18 +318,6 @@ varToStr (Var v) = v
 groupTypeToStr::GroupType->String
 groupTypeToStr (GroupType s) = s
 
-compareFieldTypes::Field->GroupItem->Either LexError ()--GroupItem
-compareFieldTypes (FieldValue allValList)(GroupValString s)  =
-    if (s `elem` allValList) then Right ()--Right (GroupValString s)
-    else Left (AllowedValError ("Error. " ++ s ++ " is not defined in the config file"))
-compareFieldTypes (FieldType "String")g@(GroupValString _)  = Right ()
-compareFieldTypes (FieldType "Int") g@(GroupRange _) = Right ()
-compareFieldTypes (FieldType "Date") g@(GroupDate _ _ _) = Right ()
-compareFieldTypes b a = Left $ TypeError ("Type Error between " ++ (show a) ++ " and " ++ (show b))
-
-
-
-
 
  
 
