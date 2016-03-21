@@ -81,14 +81,7 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
 
         --verify filters
 
-<<<<<<< HEAD
         putStrLn $ weedComputationList conf comps
-=======
-        if (weedComputationList comps) /= "" then
-            print "WEEDED COMPUTATIONS SUCCESSFULLY"
-        else
-            print "EMPTY SYMBOL TABLE FOR COMPUTATIONS"
->>>>>>> f9d628d... pptype functionality - implement group printing.
 
         -- SAMPLE USES OF SYMBOL TABLE
         -- testIfSymbolTableContains symbolTable1 (Var "x")
@@ -306,7 +299,6 @@ typeCheckFieldMap (FieldMap fm) hmap fdList = do
 
 
 --take fieldDefs anda  fieldMap, return an error or a field deaf after calling Field
-<<<<<<< HEAD
 compareFieldTypes::Field->FieldMap->(HashMap.HashMap Var GroupType)->GroupItem->Either LexError ()--GroupItem
 compareFieldTypes (FieldVal allValList) fm hm (GroupValString s)  =
     if (s `elem` allValList) then Right ()--Right (GroupValString s)
@@ -330,35 +322,12 @@ groupTypeToStr::GroupType->String
 groupTypeToStr (GroupType s) = s
 
 
-
-=======
-compareFieldTypes::Field->GroupItem->Either LexError ()--GroupItem
-compareFieldTypes (FieldValue allValList)(GroupValString s)  =
-    if (s `elem` allValList) then Right ()--Right (GroupValString s)
-    else Left (AllowedValError ("Error. " ++ s ++ " is not defined in the config file"))
-compareFieldTypes (FieldType "String")g@(GroupValString _)  = Right ()
-compareFieldTypes (FieldType "Int") g@(GroupRange _) = Right ()
-compareFieldTypes (FieldType "Date") g@(GroupDate _ _ _) = Right ()
-compareFieldTypes b a = Left $ TypeError ("Type Error between " ++ (show a) ++ " and " ++ (show b))
-
-loopables:: Config
-loopables = Config (M.fromList [("diagnosis",FieldMap (M.fromList [("name",(FieldType "string"))])),
-    ("doctor",FieldMap (M.fromList [("id",(FieldType "string")),("oncologist",(FieldType "string"))])),
-    ("doctors",FieldMap (M.fromList [("id",(FieldType "string")),("oncologist",(FieldType "string"))])),
-    ("patient",FieldMap (M.fromList [("birthyear",(FieldType "string")),("diagnosis",(FieldType "string")),
-        ("gender",(FieldType "string")),("id",(FieldType "string")),("postalcode",(FieldType "string"))])),
-    ("patients",FieldMap (M.fromList [("birthyear",(FieldType "string")),("diagnosis",(FieldType "string")),
-        ("gender",(FieldType "string")),("id",(FieldType "string")),("postalcode",(FieldType "string"))]))
-    ])
-
->>>>>>> f9d628d... pptype functionality - implement group printing.
 events :: [String]
 events = ["consult_referral_received","initial_consult_booked","initial_consult_completed",
             "ct_sim_booked","ready_for_ct_sim","ct_sim_completed","ready_for_initial_contour","ready_for_md_contour",
             "ready_for_dose_calculation","prescription_approved_by_md","ready_for_physics_qa","ready_for_treatment",
             "machine_rooms_booked","patient_contacted","end"]
 
-<<<<<<< HEAD
 weedComputationList :: Config->[Computation]->String
 weedComputationList config comps =
     let
@@ -373,22 +342,7 @@ weedFold conf symtable computations = printFold (foldl' (weedEach conf) symtable
 
 weedEach::Config->CompSymTable->Computation->CompSymTable
 weedEach conf sym comp =  case (weedAndTypeCheckComp conf sym comp) of
-=======
-weedComputationList :: [Computation]->String
-weedComputationList comps =
-    let
-        compSymbolTable = [emptyScope]
-        t= [List (Var "s") [Bar [Event "ct_sim_completed"],Bar [Event "ct_sim_booked"],Bar [Event "treatment_began"],
-            Bar [Event "consult_referral_received"]],Foreach (ForEachList (Var "i") (Var "s")) [Print (PrintVar (Var "i"))]]
-        x=(weedFold compSymbolTable comps)
-        -- s = "OHAI"++show x
-    -- in trace s x
-    in (x)
-weedFold :: CompSymTable -> [Computation] -> String
-weedFold symtable computations = printFold (foldl' weedEach symtable computations)
-weedEach sym comp =  case (weedAndTypeCheckComp sym comp) of
-    -- TODO: Propagate these errors
->>>>>>> f9d628d... pptype functionality - implement group printing.
+
     Left x ->  trace ("Error! "++ (show x) ++ " occured but not handled") sym
     Right x -> x
 
@@ -437,7 +391,6 @@ isInLoopableScope = error
 emptyScope :: HashMap.HashMap Var ComputationType
 emptyScope = HashMap.fromList []
 
-<<<<<<< HEAD
 
 weedAndTypeCheckComp :: Config->CompSymTable -> Computation -> Either LexError CompSymTable
 weedAndTypeCheckComp conf symtable  (Table variable constructor  field) =
@@ -450,20 +403,7 @@ weedAndTypeCheckComp conf symtable (List variable seqlist) =
     evaluateInTopScope symtable fun
     where fun sym = foldl' foldWeedList (Right $ addToSymTable sym  variable TList) seqlist
 weedAndTypeCheckComp conf symtable (Barchart variable) =
-=======
 
-weedAndTypeCheckComp :: CompSymTable -> Computation -> Either LexError CompSymTable
-weedAndTypeCheckComp symtable  (Table variable constructor  field) =
-    evaluateInTopScope symtable fun
-    where fun sym = if ((subFieldExists loopables constructor field))
-            then Right $ addToSymTable sym  variable TTable --(TFilter constructor)
-            else Left . FieldNameError $ "Field "++field++
-             " does not belong to " ++ constructor
-weedAndTypeCheckComp symtable (List variable seqlist) =
-    evaluateInTopScope symtable fun
-    where fun sym = foldl' foldWeedList (Right $ addToSymTable sym  variable TList) seqlist
-weedAndTypeCheckComp symtable (Barchart variable) =
->>>>>>> f9d628d... pptype functionality - implement group printing.
     evaluateInTopScope symtable (\sym->
         case getFromSymbolTable sym variable of
             Nothing -> Left . UndefinedVariable $ show  variable
@@ -489,27 +429,14 @@ weedPrintAction symtable (PrintLength variable) = case getFromSymbolTable symtab
 
 weedPrintAction symtable printAction = Left $ ComputationWrongScope "Unimplemented"
 
-<<<<<<< HEAD
 weedForEach :: Config->CompSymTable -> [Computation] ->ForEachDef -> Either LexError CompSymTable
 weedForEach conf symtable newcomp (ForEachFilter filterName var )  =
     if (fieldExists conf filterName)
     then    if (isValidInNestedLoopables conf symtable filterName)
-=======
-weedForEach :: CompSymTable -> [Computation] ->ForEachDef -> Either LexError CompSymTable
-weedForEach symtable newcomp (ForEachFilter filterName var )  =
-    if (fieldExists loopables filterName)
-    then    if (isValidInNestedLoopables symtable filterName)
->>>>>>> f9d628d... pptype functionality - implement group printing.
-
             then let
                     newsym =(addToSymTable (symtable++[emptyScope]) var (TFilter filterName))
-<<<<<<< HEAD
                     str = (weedFold conf newsym newcomp)
                     force = null (trace (str) str)
-=======
-                    str = (weedFold newsym newcomp)
-                    force = null ({-trace (str)-} str)
->>>>>>> f9d628d... pptype functionality - implement group printing.
                 in if (not force)
                     then Right $ symtable
                     else Left $ ComputationWrongScope ":("
@@ -522,38 +449,25 @@ weedForEach config symtable newcomp (ForEachTable indexVar tableVar)  = evaluate
             Just t -> if t == TTable
                 then let
                     newsym =(addToSymTable (symtable++[emptyScope]) indexVar TIndex)
-<<<<<<< HEAD
                     str = (weedFold config newsym newcomp)
-=======
-                    str = (weedFold newsym newcomp)
->>>>>>> f9d628d... pptype functionality - implement group printing.
                     force = null (trace (str) str)
                     in if (not force)
                         then Right $ symtable
                         else Left $ ComputationWrongScope ":("
                 else Left . ComputationTypeMismatch $
-                    "CAnnot Go through loop for "++ (show tableVar)++". It is a " ++ (show t) ++ "Not a Table"
-<<<<<<< HEAD
+                    "Cannot go through loop for "++ (show tableVar)++". It is a " ++ (show t) ++ "Not a Table"
                 )
 weedForEach config symtable newcomp (ForEachSequence memberVar unusedSequence)  = Left $ ComputationWrongScope "Unimplemented"
 weedForEach config symtable newcomp (ForEachList memberVar listVar)  = evaluateInTopScope symtable (\sym->
-=======
-                )
-weedForEach symtable newcomp (ForEachSequence memberVar unusedSequence)  = Left $ ComputationWrongScope "Unimplemented"
-weedForEach symtable newcomp (ForEachList memberVar listVar)  = evaluateInTopScope symtable (\sym->
->>>>>>> f9d628d... pptype functionality - implement group printing.
+
         case getFromSymbolTable sym listVar of
             Nothing -> Left . UndefinedVariable $ show  listVar
             Just t -> if t == TList
                 then let
                     newsym =(addToSymTable (symtable++[emptyScope]) memberVar TSequence)
-<<<<<<< HEAD
                     str = (weedFold config newsym newcomp)
                     force = null (trace (str) str)
-=======
-                    str = (weedFold newsym newcomp)
-                    force = null ({-trace (str)-} str)
->>>>>>> f9d628d... pptype functionality - implement group printing.
+
                     in if (not force)
                         then Right $ symtable
                         else Left $ ComputationWrongScope ":("
@@ -580,15 +494,10 @@ foldWeedList prev curr =
         _-> prev
 
 
-<<<<<<< HEAD
 isValidInNestedLoopables ::Config-> CompSymTable -> FilterName -> Bool
 isValidInNestedLoopables conf symtable filterName =
     let
-=======
-isValidInNestedLoopables :: CompSymTable -> FilterName -> Bool
-isValidInNestedLoopables symtable filterName =
-    let
->>>>>>> f9d628d... pptype functionality - implement group printing.
+
         (counts, filtersUsed) = unzip (findAllFilters symtable)
     in ((null filtersUsed) || ( not (elem filterName filtersUsed)))
 
