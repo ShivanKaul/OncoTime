@@ -312,7 +312,7 @@ weedComputationList comps =
         t= [List (Var "s") [Bar [Event "ct_sim_completed"],Bar [Event "ct_sim_booked"],Bar [Event "treatment_began"],
             Bar [Event "consult_referral_received"]],Foreach (ForEachList (Var "i") (Var "s")) [Print (PrintVar (Var "i"))]]
         x=(weedFold compSymbolTable comps)
-        s = show x
+        s = "OHAI"++show x 
     in trace s x 
 weedFold :: CompSymTable -> [Computation] -> String
 weedFold symtable computations = printFold (foldl' weedEach symtable computations)
