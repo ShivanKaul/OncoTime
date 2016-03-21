@@ -15,7 +15,7 @@ import Text.ParserCombinators.Parsec.Language
 import Text.ParserCombinators.Parsec.Char
 import qualified Text.ParserCombinators.Parsec.Token as Token
 import Data.Char
---import Debug.Trace
+import Debug.Trace
 import Types
 -- import PrettyPrinter
 import Lexer
@@ -119,6 +119,18 @@ configListToMap ((Config x):xs) = M.union x $ configListToMap xs
 
 configToMap::Config->(Map (FieldName, Bool) FieldMap)
 configToMap (Config conf) = conf
+
+--data Config =  Config (Map FieldName (Map SubFieldName (SubField))) deriving(Eq, Show)
+
+---fieldExists::Config->FieldName->Bool
+--fieldExists (Config confmap) fname = M.member fname confmap 
+
+--subFieldExists::Config->FieldName->SubFieldName->Bool
+--subFieldExists (Config confmap) fname sfname =  
+ --   case trace (show (M.lookup fname confmap)) (M.lookup fname confmap) of
+--        Nothing -> False
+--        Just (SubMap m) -> M.member sfname m
+
 
 testFieldStuff::IO()
 testFieldStuff = 

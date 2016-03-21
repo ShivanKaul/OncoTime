@@ -311,12 +311,12 @@ singleComp = lexeme(
 computation::Parser Computation
 computation =
     try (liftM2 Foreach foreach  manyComp {-(try-} {- <|> singleComp)-})
-    <|> try (liftM Table table)
+    <|> try (table)
     <|> try (list)
     <|> try (liftM Print prints)
     <|> try (liftM Barchart barchart)
 
-table::Parser TableAction
+table::Parser Computation
 table = lexeme (
     do {
         reserved "table";
@@ -325,9 +325,9 @@ table = lexeme (
         reserved "count";
         fn <- filterName;
         reserved "by";
-        fv <-filterVal;
+        ffield <- identifier;
         semi;
-        return $ TableCount v fn fv}<?>"Table Statement")
+        return $ Table v fn ((map toLower ffield))}<?>"Table Statement")
 
 list::Parser Computation
 list = lexeme (
@@ -341,11 +341,11 @@ list = lexeme (
         semi;
         return $ List v e} <?> "List Statement")
 
-seqList::Parser [[SeqField]]
-seqList= lexeme ( (squares $ sepBy singleSequence bar)<?> "Sequence")  
+seqList::Parser [SeqField]
+seqList= lexeme ( (squares $  formattedSequence )<?> "Sequence")  
 
-singleSequence::Parser [SeqField]
-singleSequence =
+formattedSequence::Parser [SeqField]
+formattedSequence =
     do
         (optional semi)
         x <- sepBy seqField arrow
@@ -356,51 +356,51 @@ seqField::Parser SeqField
 seqField =
     do
         (optional semi)
-        x <- lexeme ((try(seqSingle) <|> try(seqDisj) <|> try(seqNeg) <|> try(seqStar))<?>" Sequence Event")
+        x <-    try(seqStar)<|> try (seqComma) <|>  try(seqNeg) <|>  try(seqBar)<?>"Sequence Event"
         (optional semi)
         return x
 
-seqSingle::Parser SeqField
-seqSingle =
-    do
-        e <- event
-        return $ Single e
+ -- try(seqSingle) <|>
+-- seqSingle::Parser SeqField
+-- seqSingle = lexeme (
+--     do{
+--         e <- event;
+--         return $ Single e}<?>"Single Event")
 seqStar :: Parser SeqField
 seqStar =
     do
-        e <- curlies $ sepBy event comma
+        e <- curlies $ sepBy1 (do {(optional semi) ; e<-event; (optional semi);return e}) comma
         star
         return $ Star e
 seqNeg::Parser SeqField
 seqNeg =
     do
-        e <- parens $ seqNot --TODO: Write this better
+        e <- parens $ reserved "not" >> event --TODO: Write this better
         return $ Neg e
-seqNot::Parser Event
-seqNot =
-    do
-        reserved "not"
-        event
+-- seqNot::Parser Event
+-- seqNot =
+--     do
+--         reserved "not"
+--         event
 
-seqDisj :: Parser SeqField
-seqDisj =
+seqComma :: Parser SeqField
+seqComma =
     do
-        e <- curlies $ sepBy event comma
-        return $ Disj e
+        
+        e <- curlies $ sepBy1 (do {(optional semi) ; e<-event; (optional semi);return e}) comma
+        return $ Comma e
+seqBar :: Parser SeqField
+seqBar =
+    do
+        e <- sepBy1 (do {(optional semi) ; e<-event; (optional semi);return e}) bar
+        return $ Bar e
 
 event::Parser Event
-event =  lexeme ((try (eSome) <|> try (liftM EAll eventName))<?>"Event")
-eSome::Parser Event
-eSome = do
-    e<-eventName
-    param<-parens $ sepBy var comma
-    return $ ESome e param
+event =  lexeme ((liftM Event eventName)<?>"Event")
 
 eventName :: Parser EventName
-eventName =
-    do
-        ename <- identifier
-        return $ ename
+eventName = identifier
+
 barchart::Parser Var
 barchart =  lexeme (
     do{
@@ -497,7 +497,7 @@ printFilters::Parser PrintAction
 printFilters =
     do
         reserved "print"
-        filterList <- sepBy filterName comma
+        filterList <- sepBy1 filterName comma
         reserved "of"
         v <- var
         semi  
@@ -543,7 +543,7 @@ filterDefs = lexeme (
     do {
         ffield <- identifier;
         colon;
-        fval <- sepBy filterVal comma;
+        fval <- sepBy1 filterVal comma;
         semi;
         return $ FieldDef ((map toLower ffield)) fval
         } <?> "Field Definition ")
@@ -553,7 +553,7 @@ useList :: Parser UseFile
 useList = lexeme (
     do {
         reserved "use";
-        names <- sepBy grpFile comma;
+        names <- sepBy1 grpFile comma;
         semi;
         return $ UseFile names;}<?> "Use statement")
 

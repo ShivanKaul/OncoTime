@@ -4,24 +4,33 @@ use file1.grp, file2.grp
 
 
 group BirthYear x = {1971,1972}
-group BirthYear z = {1971,1972, <y>}
+group BirthYear z = {1971,1972, <k>}
 
 Patient are
 	Sex : M, F
-	BirthYear : <x>
+	BirthYear : <k>
 
 period is
 	Years: 2012, 2012, 2014, 2013-01-02
-	Days: Mon, Tues, Wed, Thurs, Fri
+	Days: Mon, Tues, Wed, Thurs, Fri 
 
 {	
 	table t = count Patients by Birthyear
 	print t.length
 	foreach Patient p{
 	print Sex, Postal_Code of p	
+	foreach Doctor d{
+	 foreach Diagnosis i {
+	 
+	 }
 	}
-		
-	table t = count Patients by Birthyear 
+	}
+	list s = sequences like [ct_sim_completed->	ct_sim_booked->treatment_began-> patient_arrives]
+
+	foreach member i in s
+	{	
+	print i
+	}
 	
 	
 	

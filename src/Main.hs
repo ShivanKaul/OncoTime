@@ -118,5 +118,6 @@ main =
     do
         (args:_) <- getArgs
         parsed <- parseFile args
+        putStrLn $ show parsed
         weededProg <- weed args parsed
         prettyPrintFile parsed args

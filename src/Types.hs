@@ -52,15 +52,12 @@ type StringValue = String
 
 data Computation
     = Foreach ForEachDef [Computation] --for nested for loops, slide 38 is confusing
-    | Table TableAction
+    | Table Var FilterName FieldName
     | List Var Sequence
     | Print PrintAction
     | Barchart Var
     deriving (Show, Eq)
     
-data TableAction
-    = TableCount Var FieldName FieldVal 
-    deriving (Show, Eq) 
 
 data PrintAction 
      = PrintVar Var
@@ -70,18 +67,18 @@ data PrintAction
      | PrintElement Var Var --like array indexing, slide 39
      deriving (Show, Eq)
 
-type Sequence = [[SeqField{- separated by ->-}] {-separated by | -}] 
+type Sequence = [SeqField{- separated by ->-}]  
 
 type EventName = String
 
 data Event 
-    = EAll EventName
-    | ESome EventName [Var]
+    = Event EventName
     deriving(Show,Eq)
 
 data SeqField
-    = Single Event
-    | Disj [Event]
+    = Single Event 
+    | Comma [Event]
+    | Bar [Event]
     | Star [Event]
     | Neg Event
     deriving(Show,Eq)
@@ -93,8 +90,12 @@ data ForEachDef
      | ForEachList Var Var
      deriving (Show, Eq)
 
-data LexError = FieldNameError String | FilterNameError String | AllowedTypeError String | AllowedValError String | FieldNotFoundError String | GenError String | MissingFilesError String | MissingConfigFile String | RedecError String | MissingConfigField String | TypeError String deriving (Show, Eq)
 
+data LexError   = FieldNameError String | FilterNameError String | AllowedTypeError String | UndefinedVariable String
+
+                | AllowedValError String | FieldNotFoundError String | GenError String | MissingFilesError String 
+                | MissingConfigFile String | RedecError String | MissingConfigField String | TypeError String | IncorrectEvent String
+                | ComputationTypeMismatch String | ComputationWrongScope String deriving (Show, Eq)
 
 --we should also define a list of aliases perhaps that we pass
 data Config =  Config (M.Map (FilterName, Bool) FieldMap) deriving(Eq, Show)
@@ -110,5 +111,14 @@ type Loopable = Bool
 type FieldName = String
 type AllowedType = String
 type AllowedVal = String
+
+data ComputationType  
+     = TTable
+     | TList
+     | TFilter String
+     | TIndex
+     | TSequence
+     deriving(Eq, Show)
+
 
 

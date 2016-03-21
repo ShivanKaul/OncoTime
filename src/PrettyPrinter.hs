@@ -27,9 +27,9 @@ instance PrettyPrint PrintAction where
     prettyPrint (PrintElement v1 v2) = "print " ++ prettyPrint v1 ++ "[" ++ prettyPrint v2 ++ "]"
 
 
-instance PrettyPrint TableAction where
-    prettyPrint (TableCount var fname fval) = "table " ++ prettyPrint var ++ " = " ++
-        "count " ++ fname ++ " by " ++ prettyPrint fval
+-- instance PrettyPrint TableAction where
+--     prettyPrint (TableCount var fname fval) = "table " ++ prettyPrint var ++ " = " ++
+--         "count " ++ fname ++ " by " ++ prettyPrint fval
 
 instance PrettyPrint ForEachDef where
     prettyPrint (ForEachFilter fname var) = "foreach " ++ fname ++ " " ++ prettyPrint var 
@@ -39,25 +39,25 @@ instance PrettyPrint ForEachDef where
         " in " ++ prettyPrint var2
 
 instance PrettyPrint Event where
-    prettyPrint (EAll ename) = ename
-    prettyPrint (ESome ename vars) = ename ++ "(" ++ (intercalate ", " (map prettyPrint vars)) ++ ")"
+    prettyPrint (Event ename) = ename
 
 instance PrettyPrint SeqField where
     prettyPrint (Single event) = prettyPrint event
-    prettyPrint (Disj events) = "{" ++ (intercalate ", " (map prettyPrint events)) ++ "}"
+    prettyPrint (Comma events) = "{" ++ (intercalate ", " (map prettyPrint events)) ++ "}"
+    prettyPrint (Bar events) = (intercalate " | " (map prettyPrint events))
     prettyPrint (Star events) = "{" ++ (intercalate ", " (map prettyPrint events)) ++ "}" ++ "*"
     prettyPrint (Neg event) = "(not" ++ prettyPrint event ++ ")"
 
 instance PrettyPrint Sequence where
-    prettyPrint seqs = "[" ++ (intercalate " | " (map prettyPrint seqs)) ++ "]"
+    prettyPrint seqs = "[ " ++ (intercalate " -> " (map prettyPrint seqs)) ++ " ]"
 
-instance PrettyPrint [SeqField] where
-    prettyPrint seqs = (intercalate " -> " (map prettyPrint seqs))
+
 
 instance PrettyPrint Computation where
     prettyIndent  (indent) (Foreach foreachdef comps) = indent ++ prettyPrint foreachdef ++ 
         " " ++ "\n" ++ indent ++ "{\n" ++ (intercalate "\n" (map (prettyIndent (indent ++ "\t")) comps)) ++ "\n" ++ indent ++ "}"
-    prettyIndent (indent) (Table taction) = indent ++ prettyPrint taction
+    prettyIndent (indent) (Table var fname ffield) = indent ++"table " ++ prettyPrint var ++ " = " ++
+        "count " ++ fname ++ " by " ++ prettyPrint ffield
     prettyIndent (indent) (List var seq) = indent ++ "list " ++ prettyPrint var ++ " = " ++ "sequences like " 
         ++ prettyPrint seq
     prettyIndent (indent) (Print p) = indent ++ prettyPrint p

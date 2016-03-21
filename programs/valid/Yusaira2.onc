@@ -2,23 +2,24 @@ script Yusaira2(Events y)
 /** no star signs are allowed in the  */
 
 
-group Event z = {ct_sim,<y>}
+//group Event z = {ct_sim,<y>}
 
 
-Patient are
-	Id : 30,5000
-	Sex : M, F
+//Patient are
+//	Id : 30,5000
+//	Sex : M, F
 
-Events are
-	Events: <z>
+//Events are
+//	Events: <z>
 
 {	
 
-	list s = sequences like [ct_sim-> completed | arrives -> end]
-
-	foreach member i in s
-	{	
-	barchart i
+	//table i = count Patient by Id
+	//barchart i
+	//print i.length
+	foreach Patient p
+	{
+		print p
 	}
 
 }
