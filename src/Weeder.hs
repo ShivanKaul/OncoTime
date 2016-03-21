@@ -80,7 +80,9 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
 
         --verify filters
 
-        putStrLn $ weedComputationList conf comps
+        case  weedComputationList conf comps of
+            Left e-> hPrint stderr e >>exitFailure
+            Right r -> putStrLn r
 
         -- SAMPLE USES OF SYMBOL TABLE
         -- testIfSymbolTableContains symbolTable1 (Var "x")
@@ -120,10 +122,6 @@ buildHeadSymbolTable groups (Header _ args) =
         (HashMap.fromList (keyValuesGroups ++ keyValuesHeader))
 
 --buildCompSymbolTable::[Computation]->HashMap.HashMap Var 
-
-
-
-
 weedGroupFiles::[UseFile]->[String]->Either LexError [UseFile]
 weedGroupFiles useList grpFiles =
     do
@@ -262,7 +260,6 @@ checkFieldsEx conf (x:xs) l =
         if (missingFields == []) then checkFieldsEx conf xs l
             else checkFieldsEx conf xs ((fn, missingFields) : l)
 
-
 --filter
 --give hmap from var to grouptype
 --give conf
@@ -294,7 +291,6 @@ typeCheckFieldMap (FieldMap fm) hmap fdList = do
                 Nothing -> Left $ GenError "Not somethign"
                 Just val -> mapM_ (compareFieldTypes val (FieldMap fm) hmap) fvalList
 
-
 --take fieldDefs anda  fieldMap, return an error or a field deaf after calling Field
 compareFieldTypes::Field->FieldMap->(HashMap.HashMap Var GroupType)->GroupItem->Either LexError ()--GroupItem
 compareFieldTypes (FieldVal allValList) fm hm (GroupValString s)  = 
@@ -319,29 +315,36 @@ groupTypeToStr::GroupType->String
 groupTypeToStr (GroupType s) = s
 
 
- 
 events :: [String]
 events = ["consult_referral_received","initial_consult_booked","initial_consult_completed",
             "ct_sim_booked","ready_for_ct_sim","ct_sim_completed","ready_for_initial_contour","ready_for_md_contour",
             "ready_for_dose_calculation","prescription_approved_by_md","ready_for_physics_qa","ready_for_treatment",
             "machine_rooms_booked","patient_contacted","end"]
 
-weedComputationList :: Config->[Computation]->String
+weedComputationList :: Config->[Computation]->Either LexError String
 weedComputationList config comps = 
-    let 
-        compSymbolTable = [emptyScope]
-        t= [List (Var "s") [Bar [Event "ct_sim_completed"],Bar [Event "ct_sim_booked"],Bar [Event "treatment_began"],
-            Bar [Event "consult_referral_received"]],Foreach (ForEachList (Var "i") (Var "s")) [Print (PrintVar (Var "i"))]]
-        x=(weedFold config compSymbolTable comps)
-        s = "OHAI"++show x 
-    in trace s x 
-weedFold :: Config->CompSymTable -> [Computation] -> String
-weedFold conf symtable computations = printFold (foldl' (weedEach conf) symtable computations)
+    do
+    
+        let compSymbolTable = [emptyScope]
+        case (weedFold config compSymbolTable comps) of
+            Right r -> Right  r--(trace ("OH" ++ (show r)) r )
+            Left e -> Left e 
 
-weedEach::Config->CompSymTable->Computation->CompSymTable
+weedFold :: Config->CompSymTable -> [Computation] -> Either LexError String
+weedFold conf symtable computations = 
+    do
+        case mapM (weedEach conf symtable) computations of
+            Right r -> Right $ printFold ((concat r) )
+            Left l -> Left l
+        --res <-  printFold (foldl' (weedEach conf) symtable computations)
+        --return res
+            --Left e -> Left e
+            --Right r -> Right r
+
+weedEach::Config->CompSymTable->Computation->Either LexError CompSymTable
 weedEach conf sym comp =  case (weedAndTypeCheckComp conf sym comp) of
-    Left x ->  trace ("Error! "++ (show x) ++ " occured but not handled") sym
-    Right x -> x
+    Left x ->  Left x --trace ("Error! "++ (show x) ++ " occured but not handled") sym
+    Right x -> Right x
 
 printFold :: CompSymTable -> String
 printFold symtable = 
@@ -404,7 +407,7 @@ weedAndTypeCheckComp conf symtable (Barchart variable) =
             Nothing -> Left . UndefinedVariable $ show  variable 
             Just t -> if t == TTable 
                 then Right symtable
-                else Left . ComputationTypeMismatch $ 
+                else Left $ ComputationTypeMismatch $ 
                     "Cannot draw Barchart of "++ (show variable)++". It is a " ++ (show t) ++ "Not a Table"
                 ) 
 
@@ -425,17 +428,15 @@ weedPrintAction symtable (PrintLength variable) = case getFromSymbolTable symtab
 weedPrintAction symtable printAction = Left $ ComputationWrongScope "Unimplemented"
 
 weedForEach :: Config->CompSymTable -> [Computation] ->ForEachDef -> Either LexError CompSymTable
-weedForEach conf symtable newcomp (ForEachFilter filterName var )  = 
-    if (fieldExists conf filterName) 
-    then    if (isValidInNestedLoopables conf symtable filterName)
-
-            then let 
-                    newsym =(addToSymTable (symtable++[emptyScope]) var (TFilter filterName))
-                    str = (weedFold conf newsym newcomp)  
-                    force = null (trace (str) str)
-                in if (not force)
-                    then Right $ symtable
-                    else Left $ ComputationWrongScope ":("
+weedForEach config symtable newcomp (ForEachFilter filterName var )  = 
+    if (fieldExists config filterName) 
+    then    if (isValidInNestedLoopables config symtable filterName)
+            then 
+                do
+                    let newsym =(addToSymTable (symtable++[emptyScope]) var (TFilter filterName))
+                    case (weedFold config newsym newcomp) of
+                            Right r -> Right symtable 
+                            Left e -> Left e 
             else Left $  ComputationWrongScope "Foreach is not valid in this scope"
     else Left $  FieldNameError $ "\""++filterName++"\" is not a valid loopable Filter"
 
@@ -443,28 +444,29 @@ weedForEach config symtable newcomp (ForEachTable indexVar tableVar)  = evaluate
         case getFromSymbolTable sym tableVar of
             Nothing -> Left . UndefinedVariable $ show  tableVar 
             Just t -> if t == TTable 
-                then let 
-                    newsym =(addToSymTable (symtable++[emptyScope]) indexVar TIndex)
-                    str = (weedFold config newsym newcomp)  
-                    force = null (trace (str) str)
-                    in if (not force)
-                        then Right $ symtable
-                        else Left $ ComputationWrongScope ":("
+                then 
+                    do 
+                        let newsym =(addToSymTable (symtable++[emptyScope]) indexVar TIndex)
+                        case (weedFold config newsym newcomp) of
+                            Right r -> Right symtable 
+                            Left e -> Left e 
                 else Left . ComputationTypeMismatch $ 
                     "CAnnot Go through loop for "++ (show tableVar)++". It is a " ++ (show t) ++ "Not a Table"
                 ) 
+
+
 weedForEach config symtable newcomp (ForEachSequence memberVar unusedSequence)  = Left $ ComputationWrongScope "Unimplemented"
 weedForEach config symtable newcomp (ForEachList memberVar listVar)  = evaluateInTopScope symtable (\sym->
         case getFromSymbolTable sym listVar of
             Nothing -> Left . UndefinedVariable $ show  listVar 
             Just t -> if t == TList 
-                then let 
-                    newsym =(addToSymTable (symtable++[emptyScope]) memberVar TSequence)
-                    str = (weedFold config newsym newcomp)  
-                    force = null (trace (str) str)
-                    in if (not force)
-                        then Right $ symtable
-                        else Left $ ComputationWrongScope ":("
+                then 
+                    do
+                        let newsym =(addToSymTable (symtable++[emptyScope]) memberVar TSequence)
+                    
+                        case (weedFold config newsym newcomp) of
+                            Right r -> Right symtable 
+                            Left e -> Left e 
                 else Left . ComputationTypeMismatch $ 
                     "CAnnot Go through loop for "++ (show listVar)++". It is a " ++ (show t) ++ "Not a List"
                 ) 
