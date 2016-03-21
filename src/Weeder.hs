@@ -309,7 +309,7 @@ events = ["consult_referral_received","initial_consult_booked","initial_consult_
 weedComputationList :: [Computation]->String
 weedComputationList comps = 
     let 
-        compSymbolTable = [emptyScope,emptyScope]
+        compSymbolTable = [emptyScope]
         t= [List (Var "s") [Bar [Event "ct_sim_completed"],Bar [Event "ct_sim_booked"],Bar [Event "treatment_began"],
             Bar [Event "consult_referral_received"]],Foreach (ForEachList (Var "i") (Var "s")) [Print (PrintVar (Var "i"))]]
         x=(weedFold compSymbolTable comps)
@@ -350,7 +350,7 @@ getFromSymbolTable  sym v =
                             _ -> prev
 
 isNowInTopScope::CompSymTable -> Bool
-isNowInTopScope  symtable  = (null $ tail symtable) -- && (elem v $ testIfScopeContains $ head symtable v)
+isNowInTopScope  symtable  = trace (show symtable) (null $ tail symtable) -- && (elem v $ testIfScopeContains $ head symtable v)
 
 --evaluateInTopScope :: CompSymTable
 evaluateInTopScope symtable f = if isNowInTopScope symtable
@@ -388,6 +388,16 @@ weedAndTypeCheckComp symtable (Print printAction) = weedPrintAction  symtable pr
 weedAndTypeCheckComp symtable (Foreach def comps) = weedForEach  symtable comps def
 
 weedPrintAction :: CompSymTable -> PrintAction -> Either LexError CompSymTable
+weedPrintAction symtable (PrintVar var) = case getFromSymbolTable symtable var of
+            Nothing -> Left . UndefinedVariable $ show  var 
+            Just t -> Right symtable
+weedPrintAction symtable (PrintLength variable) = case getFromSymbolTable symtable variable of
+            Nothing -> Left . UndefinedVariable $ show  variable 
+            Just t -> if t == TTable 
+                then Right symtable
+                else Left . ComputationTypeMismatch $ 
+                    "Cannot have length of "++ (show variable)++". It is a " ++ (show t) ++ "Not a Table"
+                
 weedPrintAction symtable printAction = Left $ ComputationWrongScope "Unimplemented"
 
 weedForEach :: CompSymTable -> [Computation] ->ForEachDef -> Either LexError CompSymTable
@@ -398,8 +408,8 @@ weedForEach symtable newcomp (ForEachFilter filterName var )  =
             then let 
                     newsym =(addToSymTable (symtable++[emptyScope]) var (TFilter filterName))
                     str = (weedFold newsym newcomp)  
-                    force = null (trace str str)
-                in if (force)
+                    force = null (trace (show $ null str) str)
+                in if (not force)
                     then Right $ symtable
                     else Left $ ComputationWrongScope ":("
             else Left $  ComputationWrongScope "Foreach is not valid in this scope"
@@ -412,8 +422,8 @@ weedForEach symtable newcomp (ForEachTable indexVar tableVar)  = evaluateInTopSc
                 then let 
                     newsym =(addToSymTable (symtable++[emptyScope]) indexVar TIndex)
                     str = (weedFold newsym newcomp)  
-                    force = null (trace str str)
-                    in if (force)
+                    force = null (trace (show $ null str) str)
+                    in if (not force)
                         then Right $ symtable
                         else Left $ ComputationWrongScope ":("
                 else Left . ComputationTypeMismatch $ 
@@ -428,7 +438,7 @@ weedForEach symtable newcomp (ForEachList memberVar listVar)  = evaluateInTopSco
                     newsym =(addToSymTable (symtable++[emptyScope]) memberVar TSequence)
                     str = (weedFold newsym newcomp)  
                     force = null (trace str str)
-                    in if (force)
+                    in if (not force)
                         then Right $ symtable
                         else Left $ ComputationWrongScope ":("
                 else Left . ComputationTypeMismatch $ 
