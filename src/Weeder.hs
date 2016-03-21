@@ -80,7 +80,7 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         --table syntax checking
 
         --verify filters
-
+        putStrLn $ show conf
         putStrLn $ weedComputationList conf comps
 
         -- SAMPLE USES OF SYMBOL TABLE
