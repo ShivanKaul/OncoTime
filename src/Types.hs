@@ -52,21 +52,12 @@ type StringValue = String
 
 data Computation
     = Foreach ForEachDef [Computation] --for nested for loops, slide 38 is confusing
-    | Table Var FilterName FilterField
+    | Table Var FilterName FieldName
     | List Var Sequence
     | Print PrintAction
     | Barchart Var
     deriving (Show, Eq)
     
-<<<<<<< 6c8fe2b3d887b8a57143d9891c233599091f1b0b
-data TableAction
-    = TableCount Var FieldName FieldVal 
-    deriving (Show, Eq) 
-=======
--- data TableAction
---     = TableCount Var FilterName FilterVal 
---     deriving (Show, Eq) 
->>>>>>> fixed tables computation type error
 
 data PrintAction 
      = PrintVar Var

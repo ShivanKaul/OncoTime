@@ -287,18 +287,17 @@ compareFieldTypes b a = Left $ TypeError ("Type Error between " ++ (show a) ++ "
 
 
 
-
-
  
 
 loopables:: Config
-loopables = Config (M.fromList [("diagnosis",SubMap (M.fromList [("name",("string",[]))])),
-    ("doctor",SubMap (M.fromList [("id",("string",[])),("oncologist",("string",["true","false"]))])),
-    ("doctors",SubMap (M.fromList [("id",("string",[])),("oncologist",("string",["true","false"]))])),
-    ("patient",SubMap (M.fromList [("birthyear",("string",[])),("diagnosis",("string",[])),
-        ("gender",("string",[])),("id",("string",[])),("postalcode",("string",[]))])),
-    ("patients",SubMap (M.fromList [("birthyear",("string",[])),("diagnosis",("string",[])),
-        ("gender",("string",[])),("id",("string",[])),("postalcode",("string",[]))]))])
+loopables = Config (M.fromList [("diagnosis",FieldMap (M.fromList [("name",(FieldType "string"))])),
+    ("doctor",FieldMap (M.fromList [("id",(FieldType "string")),("oncologist",(FieldType "string"))])),
+    ("doctors",FieldMap (M.fromList [("id",(FieldType "string")),("oncologist",(FieldType "string"))])),
+    ("patient",FieldMap (M.fromList [("birthyear",(FieldType "string")),("diagnosis",(FieldType "string")),
+        ("gender",(FieldType "string")),("id",(FieldType "string")),("postalcode",(FieldType "string"))])),
+    ("patients",FieldMap (M.fromList [("birthyear",(FieldType "string")),("diagnosis",(FieldType "string")),
+        ("gender",(FieldType "string")),("id",(FieldType "string")),("postalcode",(FieldType "string"))]))
+    ])
 
 events :: [String]
 events = ["consult_referral_received","initial_consult_booked","initial_consult_completed",
@@ -365,11 +364,11 @@ emptyScope = HashMap.fromList []
 
  
 weedAndTypeCheckComp :: CompSymTable -> Computation -> Either LexError CompSymTable
-weedAndTypeCheckComp symtable  (Table variable constructor (FilterField field)) =
+weedAndTypeCheckComp symtable  (Table variable constructor  field) =
     evaluateInTopScope symtable fun 
     where fun sym = if ((subFieldExists loopables constructor field))
             then Right $ addToSymTable sym  variable TTable --(TFilter constructor)
-            else Left . SubFieldNameError $ "Subfield "++field++
+            else Left . FieldNameError $ "Field "++field++
              " does not belong to " ++ constructor 
 weedAndTypeCheckComp symtable (List variable seqlist) =  
     evaluateInTopScope symtable fun 
@@ -413,7 +412,7 @@ weedForEach symtable newcomp (ForEachFilter filterName var )  =
                     then Right $ symtable
                     else Left $ ComputationWrongScope ":("
             else Left $  ComputationWrongScope "Foreach is not valid in this scope"
-    else Left $  SubFieldNameError $ "\""++filterName++"\" is not a valid loopable Filter"
+    else Left $  FieldNameError $ "\""++filterName++"\" is not a valid loopable Filter"
 
 weedForEach symtable newcomp (ForEachTable indexVar tableVar)  = evaluateInTopScope symtable (\sym->
         case getFromSymbolTable sym tableVar of
@@ -463,8 +462,7 @@ foldWeedList prev curr =
         Left evname -> Left $ IncorrectEvent evname
         _-> prev
 
-<<<<<<< 5e5254dbcf3c89dc809aec3b00cd080de6dd1e28
-=======
+
 isValidInNestedLoopables :: CompSymTable -> FilterName -> Bool
 isValidInNestedLoopables symtable filterName = 
     let 
@@ -483,4 +481,4 @@ find1Filter curr = HashMap.foldr  (\ t p -> if (null p)
                                         TFilter val -> val
                                         _ -> p
                                     else p)  "" curr 
->>>>>>> Foreach compiles for all-1 cases
+
