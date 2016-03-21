@@ -1,4 +1,4 @@
-script example5(Sex s, Birthyear b1, Birthyear b2, Events e)
+script example4(Sex s, Birthyear b1, Birthyear b2, Events e)
 // Example 5 from Reference Compiler
 /**
 Parameter example.

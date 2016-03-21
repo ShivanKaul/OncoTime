@@ -53,7 +53,7 @@ fieldMapMaker = lexeme $
 fieldParse::Parser Field 
 fieldParse = --lexeme $
     do
-        sf <-  try fieldval <|>  try fieldtype <?> "not a val list or a valid type"               --sf <- choice [ (squares (sepBy identifier comma)), (curlies (sepBy identifier comma)), identifier]
+        sf <-  try fieldtype  <|> try fieldval <?> "not a val list or a valid type"               --sf <- choice [ (squares (sepBy identifier comma)), (curlies (sepBy identifier comma)), identifier]
 
         
         return sf
@@ -61,15 +61,21 @@ fieldParse = --lexeme $
 fieldval::Parser Field
 fieldval = lexeme $
     do
-        p <-( squares  (sepBy identifier comma) )
+        p <-( squares  (sepBy (some alphaNum) comma) )
         return $ FieldVal p
 
 
 fieldtype::Parser Field
 fieldtype = lexeme $
     do
-        p <- identifier
-        return $ FieldType p 
+        p <- some alphaNum
+    
+        case p of
+            "String" -> return (FieldType "String")
+            "Int" -> return (FieldType "Int")
+            _ -> case ((reads p)::[(Int, String)]) of
+                        [(_,"")] -> return (FieldType "Int") 
+                        _ -> return (FieldType "String")
 
 
 

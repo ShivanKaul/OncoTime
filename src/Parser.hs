@@ -227,7 +227,7 @@ groupType::Parser GroupType
 groupType = lexeme $
     do
         gt <- some alphaNum
-        return $ GroupType gt
+        return $ GroupType (map toLower gt)
 
 groupItem::Parser GroupItem
 groupItem = try groupValDate

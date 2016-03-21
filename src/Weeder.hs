@@ -271,8 +271,8 @@ checkFilterTypes (Config conf) hmap ms =
             let fieldDefs = getFieldDefList x -- list of possible FieldDefs for a filter
             --from confmap
             case (M.lookup (filterName, True) conf) of--things to check against for that filter
-                Nothing -> case (M.lookup (filterName, True) conf) of
-                    Nothing -> Left $ GenError "not in map"     
+                Nothing -> case (M.lookup (filterName, False) conf) of
+                    Nothing -> Left $ GenError (filterName ++ " is not in map")     
                     Just val -> (typeCheckFieldMap val hmap) fieldDefs
 
                 Just val ->  (typeCheckFieldMap val hmap) fieldDefs
@@ -293,7 +293,7 @@ typeCheckFieldMap (FieldMap fm) hmap fdList = do
 compareFieldTypes::Field->FieldMap->(HashMap.HashMap Var GroupType)->GroupItem->Either LexError ()--GroupItem
 compareFieldTypes (FieldVal allValList) fm hm (GroupValString s)  = 
     if (s `elem` allValList) then Right ()--Right (GroupValString s) 
-    else Left (AllowedValError ("Error. " ++ s ++ " is not defined in the config file"))
+    else Left (AllowedValError ("Error. " ++ s ++ " is not defined in the config file list that also contains: " ++ (intercalate "," allValList)))
 compareFieldTypes (FieldType "String") fm hm (GroupValString _)  = Right ()
 compareFieldTypes (FieldType "Int") fm hm (GroupRange _) = Right ()
 compareFieldTypes (FieldType "Date") fm hm (GroupDate _ _ _) = Right ()
@@ -301,7 +301,7 @@ compareFieldTypes (FieldType "Date") fm hm (GroupDate _ _ _) = Right ()
 compareFieldTypes _ (FieldMap fm) hm  (GroupVar var) =
     case (HashMap.lookup var hm) of
         Nothing -> Left $ TypeError ("ERROR. var " ++ (varToStr var) ++ "not declared")
-        Just a -> case (M.member ((groupTypeToStr a)::FieldName) fm) of --if it is declared, we want to make sure it is used in the right case. i.e. with the right field
+        Just a -> case (M.member ((groupTypeToStr a)) fm) of --if it is declared, we want to make sure it is used in the right case. i.e. with the right field
                 False -> Left $ TypeError ("ERROR. variable " ++ (varToStr var) ++" is used with wrong field")
                 True  -> Right () 
 compareFieldTypes b fm hm a = Left $ TypeError ("Type Error between " ++ (show a) ++ " and " ++ (show b))
