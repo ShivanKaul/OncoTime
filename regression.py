@@ -7,8 +7,11 @@ success = '\033[92m'
 fail = '\033[91m'
 
 
-def run_test(file):
-    cmd = "./oncotime %s" % file
+def run_test(file, flag1="", flag2=""):
+    print ('Running test ' + file + ':')
+
+    cmd = "./oncotime %s %s %s" % (file, flag1, flag2)
+    print "Running command: " + cmd
     # print "> %s : " % file
     os.system(cmd)
 
@@ -44,6 +47,8 @@ else:
     elif (sys.argv[1] == "-v"):
         valid()
     else:
-        print ('Running test ' + sys.argv[1] + ':')
-        run_test(sys.argv[1])
+        if (len(sys.argv) == 3):
+            run_test(sys.argv[1], sys.argv[2])
+        elif (len(sys.argv) == 4):
+            run_test(sys.argv[1], sys.argv[2], sys.argv[3])
         sys.exit()

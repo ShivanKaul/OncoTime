@@ -77,6 +77,12 @@ prettyPrintFile prog file =
         writeFile (replaceExtension file ".pretty.onc") (pretty prog)
         print "VALID"
 
+prettyPrintTypes :: Program -> String -> IO()
+prettyPrintTypes prog file =
+    do
+        writeFile (replaceExtension file ".pptype.onc") ((pretty prog) ++ (printTypes prog))
+        print ("Printed types for " ++ file ++ " in " ++ (replaceExtension file ".pptype.onc"))
+
 parseString :: String -> Program
 parseString str =
     case parse (oncoParser <* eof) "" str of
@@ -116,8 +122,12 @@ tparseFileCheck file =
             Right r -> print r
 main =
     do
-        (args:_) <- getArgs
-        parsed <- parseFile args
-        putStrLn $ show parsed
-        weededProg <- weed args parsed
-        prettyPrintFile parsed args
+        -- oncotime filename flags
+        (filename:flags) <- getArgs
+        parsed <- parseFile filename
+        weededProg <- weed filename parsed
+        prettyPrintFile parsed filename
+        if "-pptype" `elem` flags then
+            prettyPrintTypes weededProg filename
+        else
+            return ()

@@ -16,13 +16,37 @@ class PrettyPrint a where
     prettyIndent _ _ = ""
 
 pretty :: (PrettyPrint a) => a -> String
-pretty a = prettyPrint a
+pretty program = prettyPrint program
+
+printTypesGroups :: [GroupDefs] -> String
+printTypesGroups groups =
+    do
+        let groupListString = map (\(Group (GroupType t) (Var v) _) ->
+                                ("// Group " ++ v ++ " : " ++ t)) groups
+        (intercalate "\n" groupListString)
+
+-- printTypesFilters :: [Filter] -> String
+-- printTypesFilters filters =
+--     do
+--         let filtersListString = map (\(Filter filtername (Var v) _) ->
+--                                 (v ++ " : " ++ t)) filtersListString
+--         (intercalate "\n" filtersListString)
+
+-- printTypesVars :: [Var] -> String
+-- printTypesVars vars =
+    -- do
+
+
+printTypes :: Program -> String
+printTypes (Program _ _ _ groups filt comps) =
+    do
+        "// PRINTING GROUPS\n" ++ (printTypesGroups groups)-- ++ (printTypesFilters filt)
 
 instance PrettyPrint PrintAction where
     prettyPrint (PrintVar var) = "print " ++ prettyPrint var
     prettyPrint (PrintTimeLine ptimeline) = "print timeline of " ++ prettyPrint ptimeline
     prettyPrint (PrintLength plength) = "print " ++ prettyPrint plength ++ ".length"
-    prettyPrint (PrintFilters pfilters var) = "print " ++ (intercalate ", " pfilters) ++ 
+    prettyPrint (PrintFilters pfilters var) = "print " ++ (intercalate ", " pfilters) ++
         " of " ++ prettyPrint var
     prettyPrint (PrintElement v1 v2) = "print " ++ prettyPrint v1 ++ "[" ++ prettyPrint v2 ++ "]"
 
@@ -32,10 +56,10 @@ instance PrettyPrint PrintAction where
 --         "count " ++ fname ++ " by " ++ prettyPrint fval
 
 instance PrettyPrint ForEachDef where
-    prettyPrint (ForEachFilter fname var) = "foreach " ++ fname ++ " " ++ prettyPrint var 
-    prettyPrint (ForEachTable var1 var2) = "foreach element " ++ prettyPrint var1 ++ " of " ++ prettyPrint var2 
-    prettyPrint (ForEachSequence var seq) = "foreach sequence " ++ prettyPrint var ++ " like " ++ prettyPrint seq 
-    prettyPrint (ForEachList var1 var2) = "foreach member " ++ prettyPrint var1 ++ 
+    prettyPrint (ForEachFilter fname var) = "foreach " ++ fname ++ " " ++ prettyPrint var
+    prettyPrint (ForEachTable var1 var2) = "foreach element " ++ prettyPrint var1 ++ " of " ++ prettyPrint var2
+    prettyPrint (ForEachSequence var seq) = "foreach sequence " ++ prettyPrint var ++ " like " ++ prettyPrint seq
+    prettyPrint (ForEachList var1 var2) = "foreach member " ++ prettyPrint var1 ++
         " in " ++ prettyPrint var2
 
 instance PrettyPrint Event where
@@ -54,12 +78,11 @@ instance PrettyPrint Sequence where
 
 
 instance PrettyPrint Computation where
-    prettyIndent  (indent) (Foreach foreachdef comps) = indent ++ prettyPrint foreachdef ++ 
+    prettyIndent  (indent) (Foreach foreachdef comps) = indent ++ prettyPrint foreachdef ++
         " " ++ "\n" ++ indent ++ "{\n" ++ (intercalate "\n" (map (prettyIndent (indent ++ "\t")) comps)) ++ "\n" ++ indent ++ "}"
     prettyIndent (indent) (Table var fname ffield) = indent ++"table " ++ prettyPrint var ++ " = " ++
         "count " ++ fname ++ " by " ++ prettyPrint ffield
-    prettyIndent (indent) (List var seq) = indent ++ "list " ++ prettyPrint var ++ " = " ++ "sequences like " 
-        ++ prettyPrint seq
+    prettyIndent (indent) (List var seq) = indent ++ "list " ++ prettyPrint var ++ " = " ++ "sequences like "
     prettyIndent (indent) (Print p) = indent ++ prettyPrint p
     prettyIndent (indent) (Barchart bchart) = indent ++ "barchart " ++ prettyPrint bchart
 
@@ -67,7 +90,7 @@ instance PrettyPrint GroupType where
     prettyPrint (GroupType g) = g
 
 instance PrettyPrint GroupDefs where
-    prettyPrint (Group gtype gvar gitems) = "group " ++ prettyPrint gtype ++ 
+    prettyPrint (Group gtype gvar gitems) = "group " ++ prettyPrint gtype ++
         " " ++ (prettyPrint gvar) ++ " " ++ " = " ++ "{ " ++
         (intercalate ", " (map prettyPrint gitems)) ++ " }"
 
@@ -90,7 +113,7 @@ instance PrettyPrint FieldName where
     prettyPrint (ffield) = ffield
 
 instance PrettyPrint FieldDef where
-    prettyPrint (FieldDef ffield fvals) = "\t" ++ prettyPrint ffield ++ " : " ++ 
+    prettyPrint (FieldDef ffield fvals) = "\t" ++ prettyPrint ffield ++ " : " ++
         (intercalate ", " (map prettyPrint fvals))
 
 instance PrettyPrint Filter where
@@ -110,7 +133,7 @@ instance PrettyPrint Arg where
     prettyPrint (Arg groupType var) = prettyPrint groupType ++ " " ++ prettyPrint var
 
 instance PrettyPrint Header where
-    prettyPrint (Header fname argslist) = "script " ++ fname ++ "(" ++ 
+    prettyPrint (Header fname argslist) = "script " ++ fname ++ "(" ++
         (intercalate ", " (map prettyPrint argslist)) ++ ")"
 
 instance PrettyPrint [Computation] where
@@ -127,7 +150,7 @@ instance PrettyPrint [GroupDefs] where
 
 
 instance PrettyPrint Program where
-    prettyPrint (Program header docs usefilelist groups filt comps) 
+    prettyPrint (Program header docs usefilelist groups filt comps)
      = (prettyPrint header) ++ (prettyPrint docs) ++ (prettyPrint usefilelist) ++ (prettyPrint groups)
      ++ (prettyPrint filt) ++ ("{\n" ++ (prettyIndent "\t" comps) ++ "}\n")
 
