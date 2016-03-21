@@ -63,7 +63,7 @@ data PrintAction
      = PrintVar Var
      | PrintTimeLine Var --slide 38
      | PrintLength Var
-     | PrintFilters [FilterName] Var
+     | PrintFilters [FieldName] Var
      | PrintElement Var Var --like array indexing, slide 39
      deriving (Show, Eq)
 
