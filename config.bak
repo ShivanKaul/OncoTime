@@ -1,5 +1,6 @@
-population:["Sex":([]),"PostalCode":(String),"Id":(String), "Birthyear":(Int),"gender":(String), "Diagnosis":(String)];
-doctors:["Oncologist":(String, [true,false]),"Id":(String,[])];
-Events:["Events":(String, [consult_referral_received,initial_consult_booked,initial_consult_completed,CT_sim_booked,ready_for_CT_sim,CT_sim_completed,ready_for_initial_contour,ready_for_MD_contour,ready_for_dose_calculation,prescription_approved_by_MD,ready_for_physics_QA,ready_for_treatment,machine_rooms_booked,patient_contacted]), "sex":(s,[]), "birthyear":(s,[])];
-period:["Months":(String, []), "Years":(String,[]), "Days":(String, [Sun,Mon,Tue,Wed,Thu,Fri,Sat]),"Hours":(String, []), "start":(String, []), "end":(String, []), "dates":(s,[])];
-patient:["id":(s,[]), "sex":(s,[]), "birthyear":(s,[])];
+population:["Sex":([M,F]),"id":(Int),"birthyear":(Int),"diagnosis":([prostate,   breast, stomach,lung]),"gender":(a),"postalcode":(String)];
+period:["years":([2012,2013,2014,2015,2016]),"days":([Mon,Tues,Wed,Thurs,Fri]),"months":([January,February,March,April,May,June,July,August,September,October,November,December])];
+doctors:["id":(Int)];
+events:["events":([consult_referral_received,initial_consult_booked,initial_consult_completed,ct_sim_booked,ready_for_ct_sim,ct_sim_completed,ready_for_initial_contour,ready_for_md_contour,ready_for_dose_calculation,prescription_approved_by_md,ready_for_physics_qa,ready_for_treatment,machine_rooms_booked,patient_contacted,end])];
+patient:["id":(Int),"sex":([M,F])];
+

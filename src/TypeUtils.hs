@@ -50,26 +50,28 @@ fieldMapMaker = lexeme $
         --tup <- parens $ typeTuple
         --return (M.singleton (map toLower name) tup)
 
-fieldParse::Parser Field
-fieldParse = --lexeme $
+
+fieldParse::Parser Field 
+fieldParse = lexeme $
     do
         sf <-  try fieldtype  <|> try fieldval <?> "not a val list or a valid type"               --sf <- choice [ (squares (sepBy identifier comma)), (curlies (sepBy identifier comma)), identifier]
 
 
         return sf
-validChar :: Parser Char
-validChar  = satisfy (\c -> (isAlphaNum c) || (c=='_'))
+-- validChar :: Parser Char
+-- validChar  = satisfy (\c -> (isAlphaNum c) || (c=='_'))
 fieldval::Parser Field
 fieldval = lexeme $
     do
-        p <-( squares  (sepBy (some validChar) comma) )
-        return $ FieldVal $ map (map toLower) p
+        p <-( squares  (sepBy (some (oneOf validChar)) comma) )
+        return $ FieldVal p
 
+validChar = ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z'] ++ ['!','-','_','.','+']
 
 fieldtype::Parser Field
 fieldtype = lexeme $
     do
-        p <- some validChar
+        p <- (some (oneOf validChar))
 
         case p of
             "String" -> return (FieldType "String")
@@ -86,9 +88,7 @@ configParser = lexeme $
         fieldName <- identifier
         colon
         --typeMapList <- squares $ sepBy fieldMapMaker comma
-
-        b <- optionMaybe (oneOf "{")
-
+        b <- optionMaybe (oneOf "{") 
         let c = case b of
                 Just a -> True
                 Nothing -> False

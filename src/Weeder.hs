@@ -74,9 +74,10 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
             Right r -> putStrLn "all field types check out"
 
 
-        putStrLn $ show loopable
-        
-        putStrLn $ weedComputationList loopable comps
+
+        case  weedComputationList conf comps of
+            Left e-> hPrint stderr e >>exitFailure
+            Right r -> putStrLn r
 
         -- SAMPLE USES OF SYMBOL TABLE
         -- testIfSymbolTableContains symbolTable1 (Var "x")
@@ -116,10 +117,6 @@ buildHeadSymbolTable groups (Header _ args) =
         let keyValuesGroups = map (\(Group (t) (v) _) -> (v, t)) (groups)
         let keyValuesHeader = map (\(Arg (t) (v)) -> (v, t)) (args)
         (HashMap.fromList (keyValuesGroups ++ keyValuesHeader))
-
---buildCompSymbolTable::[Computation]->HashMap.HashMap Var
-
-
 
 
 weedGroupFiles::[UseFile]->[String]->Either LexError [UseFile]
@@ -273,7 +270,6 @@ checkFieldsEx conf (x:xs) l =
         if (missingFields == []) then checkFieldsEx conf xs l
             else checkFieldsEx conf xs ((fn, missingFields) : l)
 
-
 --filter
 --give hmap from var to grouptype
 --give conf
@@ -304,7 +300,6 @@ typeCheckFieldMap (FieldMap fm) hmap fdList = do
             case (M.lookup fieldName fm) of
                 Nothing -> Left $ GenError "Not somethign"
                 Just val -> mapM_ (compareFieldTypes val (FieldMap fm) hmap) fvalList
-
 
 --take fieldDefs anda  fieldMap, return an error or a field deaf after calling Field
 compareFieldTypes::Field->FieldMap->(HashMap.HashMap Var GroupType)
@@ -344,22 +339,28 @@ events = ["consult_referral_received","initial_consult_booked","initial_consult_
             "ready_for_physics_qa","ready_for_treatment", "patient_arrives",
             "machine_rooms_booked","patient_contacted","patient_scheduled","patient_arrived","treatment_began","end"]
 
-weedComputationList :: Config->[Computation]->String
-weedComputationList config comps =
-    let
-        compSymbolTable = [emptyScope]
-        x=(weedFold config compSymbolTable comps)
-        s = "OHAI"++show x
-    in trace s x
-weedFold :: Config->CompSymTable -> [Computation] -> String
-weedFold conf symtable computations = printFold (foldl' (weedEach conf) 
-                                                    symtable computations)
 
-weedEach::Config->CompSymTable->Computation->CompSymTable
+weedComputationList :: Config->[Computation]->Either LexError String
+weedComputationList config comps = 
+        let compSymbolTable = [emptyScope]
+        in case (weedFold config compSymbolTable comps) of
+            Right r -> Right  r--(trace ("OH" ++ (show r)) r )
+            Left e -> Left e 
+
+weedFold :: Config->CompSymTable -> [Computation] -> Either LexError String
+weedFold conf symtable computations = 
+        case mapM (weedEach conf symtable) computations of
+            Right r -> Right $ printFold ((concat r) )
+            Left l -> Left l
+        --res <-  printFold (foldl' (weedEach conf) symtable computations)
+        --return res
+            --Left e -> Left e
+            --Right r -> Right r
+
+weedEach::Config->CompSymTable->Computation->Either LexError CompSymTable
 weedEach conf sym comp =  case (weedAndTypeCheckComp conf sym comp) of
-
-    Left x ->  trace ("Error! "++ (show x) ++ " occured but not handled") sym
-    Right x -> x
+    Left x ->  Left x --trace ("Error! "++ (show x) ++ " occured but not handled") sym
+    Right x -> Right x
 
 printFold :: CompSymTable -> String
 printFold symtable =
@@ -414,7 +415,7 @@ weedAndTypeCheckComp conf symtable  (Table variable constructor  field) =
     where check sym = if ((subFieldExists conf constructor field))
             then Right $ addToSymTable sym  variable TTable --(TFilter constructor)
             else Left . FieldNameError $ "Field "++field++
-             " does not belong to " ++ constructor
+                " does not belong to " ++ constructor
 weedAndTypeCheckComp conf symtable (List variable seqlist) =
     evaluateInTopScope symtable check
     where check sym = 
@@ -481,16 +482,18 @@ weedPrintAction _ symtable (PrintTimeLine filterVar) =
             Just wrong -> Left . ComputationTypeMismatch $
                     "Cannot print TimeLine of "++ (show filterVar)++
                     ". It is a " ++ (show wrong) ++ " Not a patient"
+
 weedForEach :: Config->CompSymTable -> [Computation] ->ForEachDef 
     -> Either LexError CompSymTable
 weedForEach conf symtable newcomp (ForEachFilter filterName var )  =
     if (fieldExists conf filterName)
     then    if (isValidInNested conf symtable filterName)
             then let
-                    newsym = (addToSymTable (symtable++[emptyScope])
-                     var (TFilter filterName))
-                    str = (weedFold conf newsym newcomp)
-                in Right $ seq str symtable
+                    newsym = ( addToSymTable (symtable++[emptyScope])
+                                    var (TFilter filterName) )
+                in case (weedFold conf newsym newcomp) of
+                            Right r -> Right symtable 
+                            Left e -> Left e 
             else Left (  
                 ComputationWrongScope "Foreach is not valid in this scope")
     else Left $  FieldNameError $ "\""++
@@ -503,11 +506,12 @@ weedForEach config symtable newcomp (ForEachTable indexVar tableVar)  =
             Just TTable -> let
                             newsym = (addToSymTable 
                                 (symtable++[emptyScope]) indexVar TIndex)
-                            str = (weedFold config newsym newcomp)
-                        in  Right $ seq str symtable
-            Just t-> Left . ComputationTypeMismatch $
+                        in case (weedFold config newsym newcomp) of
+                            Right r -> Right symtable 
+                            Left e -> Left e 
+            Just t-> Left ( ComputationTypeMismatch $
                     "Cannot go through loop for "++ (show tableVar)
-                    ++". It is a " ++ (show t) ++ "Not a Table"
+                    ++". It is a " ++ (show t) ++ "Not a Table")
                 )
 weedForEach config symtable newcomp (ForEachSequence memberVar unusedSequence)= 
     Left $ ComputationWrongScope "Unimplemented"
@@ -519,12 +523,12 @@ weedForEach config symtable newcomp (ForEachList memberVar listVar)=
                 Just TList -> let
                                 newsym =(addToSymTable (symtable++[emptyScope])
                                  memberVar TSequence)
-                                str = (weedFold config newsym newcomp)
-                            in Right $ seq str symtable
-                Just t-> Left . ComputationTypeMismatch $
+                        in case (weedFold config newsym newcomp) of
+                            Right r -> Right symtable 
+                            Left e -> Left e 
+                Just t-> Left ( ComputationTypeMismatch $
                         "CAnnot Go through loop for "++ (show listVar)++
-                        ". It is a " ++ (show t) ++ "Not a List"
-
+                        ". It is a " ++ (show t) ++ "Not a List")
 
 weedSequence :: SeqField -> Either String Bool
 weedSequence (Bar evlist) = checkEvents evlist
