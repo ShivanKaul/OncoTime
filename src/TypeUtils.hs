@@ -57,18 +57,19 @@ fieldParse = --lexeme $
 
 
         return sf
-
+validChar :: Parser Char
+validChar  = satisfy (\c -> (isAlphaNum c) || (c=='_'))
 fieldval::Parser Field
 fieldval = lexeme $
     do
-        p <-( squares  (sepBy (some alphaNum) comma) )
-        return $ FieldVal p
+        p <-( squares  (sepBy (some validChar) comma) )
+        return $ FieldVal $ map (map toLower) p
 
 
 fieldtype::Parser Field
 fieldtype = lexeme $
     do
-        p <- some alphaNum
+        p <- some validChar
 
         case p of
             "String" -> return (FieldType "String")

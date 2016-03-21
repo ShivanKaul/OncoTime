@@ -45,6 +45,10 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         let grpFileList = weedGroupFiles useList grpFileNames
         let useFilesToParse = map (\x -> "programs/valid/" ++ x ++ ".grp") (flattenUseFile useList)
 
+        let (Config confmap) = conf
+            loopable = Config $ M.filterWithKey (\(name,valid) t -> valid) confmap
+            filterable = Config $ M.filterWithKey (\(name,valid) t -> not valid) confmap
+
         --putStrLn ("Group files are " ++ (show useFilesToParse))
         case grpFileList of
             Left e -> hPutStrLn stderr (file ++ ": ") >> print e >> exitFailure
@@ -55,10 +59,9 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         newGroups <- sequence (map (getGroupDefs) (grpAllFilesContents))
 
         --check erroneous subfields i.e. whether all fields exist
-
-        case (checkFilters filters conf) of
+        case (checkFilters filters filterable) of
             Left e -> print e >>  hPutStrLn stderr "FILTERS:" >>
-                print filters >> putStrLn "CONF:" >> print conf >> exitFailure
+                print filters >> putStrLn "CONF:" >> print filterable >> exitFailure
             Right r -> putStrLn "All Fields valid"
 
 
@@ -66,7 +69,7 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         let symbolTableH = buildHeadSymbolTable allGroups hdr
 
 
-        case  mapM_ (checkFilterTypes (conf) symbolTableH) [filters] of
+        case  mapM_ (checkFilterTypes (filterable) symbolTableH) [filters] of
             Left e -> hPrint stderr e >> exitFailure
             Right r -> putStrLn "all field types check out"
 
@@ -80,8 +83,9 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
         --table syntax checking
 
         --verify filters
-        putStrLn $ show conf
-        putStrLn $ weedComputationList conf comps
+        putStrLn $ show loopable
+        
+        putStrLn $ weedComputationList loopable comps
 
         -- SAMPLE USES OF SYMBOL TABLE
         -- testIfSymbolTableContains symbolTable1 (Var "x")
