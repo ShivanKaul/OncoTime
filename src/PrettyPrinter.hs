@@ -103,7 +103,7 @@ instance PrettyPrint (RangeType Annotation) where
 
 instance PrettyPrint (GroupItem Annotation) where
     prettyPrint (GroupValString gval a) = gval
-    prettyPrint (GroupDate y m d) = (prettyPrint y) ++"-"++ (prettyPrint m) ++"-"++ (prettyPrint d)
+    prettyPrint (GroupDate y m d a) = (prettyPrint y) ++"-"++ (prettyPrint m) ++"-"++ (prettyPrint d)
     prettyPrint (GroupVar gvar) = "<" ++ prettyPrint gvar ++ ">"
     prettyPrint (GroupRange grange) = prettyPrint grange
 

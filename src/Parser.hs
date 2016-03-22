@@ -262,7 +262,7 @@ groupValDate = lexeme (
         m <- some digit;
         date_sep;
         d <- some digit;
-        return $ GroupDate (read y) (read m) (read d)} <?> "Date")
+        return $ GroupDate (read y) (read m) (read d) (Annotation "") } <?> "Date")
 
 groupRange::Parser (GroupItem Annotation)
 groupRange = try ( (liftM GroupRange betw ) ) <|> try (liftM GroupRange before ) <|> try (liftM GroupRange after)  <|> try (liftM GroupRange single  ) <?> "Number or Range"

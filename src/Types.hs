@@ -42,7 +42,7 @@ data GroupDefs a = Group GroupType (Var a) [(GroupItem a)] -- different params?
     deriving (Show, Eq)
 
 data GroupType = GroupType String deriving (Show, Eq)
-data GroupItem a = GroupValString String a | GroupVar (Var a) | GroupRange (RangeType a) | GroupDate IntValue IntValue IntValue deriving (Show, Eq)
+data GroupItem a = GroupValString String a | GroupVar (Var a) | GroupRange (RangeType a) | GroupDate IntValue IntValue IntValue a deriving (Show, Eq)
 
 --better field for GroupVal than string?
 

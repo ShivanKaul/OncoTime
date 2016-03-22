@@ -278,48 +278,54 @@ checkFilterTypes (Config conf) hmap ms =
 --How can I accumulate stuff?
         
        -- forM_ ms  (\x -> do
-        foldM (\(x:xs) -> do
+        foldM (\acc x-> do
             --from fields
             let filterName = (getFilterName x)
             let fieldDefs = getFieldDefList x -- list of possible FieldDefs for a filter
             --from confmap
             case (M.lookup (filterName, True) conf) of--things to check against for that filter
+                Just val ->  case ((typeCheckFieldMap val hmap) fieldDefs) of
+                    Left e -> Left e
+                    Right r ->  Right $ (Filter filterName r):acc
                 Nothing -> case (M.lookup (filterName, False) conf) of
                     Nothing -> Left $ GenError (filterName ++ " is not in map")
-                    Just val -> (typeCheckFieldMap val hmap) fieldDefs
-                Just val ->  (typeCheckFieldMap val hmap) fieldDefs) [] ms 
-
+                    Just val -> case ((typeCheckFieldMap val hmap) fieldDefs) of
+                        Left e -> Left e
+                        Right r -> Right $ (Filter filterName r ):acc
+                ) [] ms 
 
 --return a list of things that don't type check
 
 --NEED TO RETURN ANNOTATED FIELD MAP MAYBE?
 typeCheckFieldMap::(FieldMap Annotation)->(HashMap.HashMap (Var Annotation) GroupType)->[(FieldDef Annotation)]->Either LexError [(FieldDef Annotation)] -- () --[FieldDef] 
 typeCheckFieldMap (FieldMap fm) hmap fdList = do
-   forM_ fdList $ \x ->
-        do
+   foldM (\acc x-> do 
             let fieldName = getFieldName x
             let fvalList  = getFieldValList x
             case (M.lookup fieldName fm) of
                 Nothing -> Left $ GenError "Not somethign"
-                Just val -> mapM_ (compareFieldTypes val (FieldMap fm) hmap) fvalList
+                Just val -> case (mapM (compareFieldTypes val (FieldMap fm) hmap) fvalList) of
+                    Left e -> Left e
+                    Right r -> Right $ (FieldDef fieldName r):acc
+    ) [] fdList
 
 --take fieldDefs anda  fieldMap, return an error or a field deaf after calling Field
-compareFieldTypes::(Field Annotation)->(FieldMap Annotation)->(HashMap.HashMap (Var Annotation) GroupType)->(GroupItem Annotation)->Either LexError ()--GroupItem
-compareFieldTypes (FieldValue allValList _ ) fm hm (GroupValString s _)  = 
-    if (s `elem` allValList) then Right ()--Right (GroupValString s) 
+compareFieldTypes::(Field Annotation)->(FieldMap Annotation)->(HashMap.HashMap (Var Annotation) GroupType)->(GroupItem Annotation)->Either LexError (GroupItem Annotation)
+compareFieldTypes (FieldValue allValList an ) fm hm (GroupValString s a)  = 
+    if (s `elem` allValList) then Right (GroupValString s an) --Right (GroupValString s) 
     else Left (AllowedValError ("Error. " ++ s ++ " is not defined in the config file list that also contains: " ++ (intercalate "," allValList)))
-compareFieldTypes (FieldType "String" _) fm hm (GroupValString s _)  = Right ()
-compareFieldTypes (FieldType "Int" _) fm hm (GroupRange _) = Right ()
-compareFieldTypes (FieldType "Date" _) fm hm (GroupDate _ _ _) = Right ()
+compareFieldTypes (FieldType "String" an) fm hm (GroupValString s a)  = Right (GroupValString s (an))
+compareFieldTypes (FieldType "Int" an) fm hm (GroupRange a ) = Right (GroupRange a)
+compareFieldTypes (FieldType "Date" an) fm hm (GroupDate a b c _) = Right (GroupDate a b c (an))
 --I need a new type that allows me to pull out the type of var
-compareFieldTypes _ (FieldMap fm) hm  (GroupVar var) =
+compareFieldTypes _ (FieldMap fm) hm  (GroupVar var@(Var v an) ) =
     case (HashMap.lookup var hm) of
         Nothing -> Left $ TypeError ("ERROR. var " ++ (varToStr var) ++ "not declared")
         Just a -> case (M.member ((groupTypeToStr a)) fm) of 
         --if it is declared, we want to make sure it is used in the right case. i.e. with the right field
                 False -> Left $ TypeError ("ERROR. variable " ++ 
                     (varToStr var) ++" is used with wrong field")
-                True  -> Right ()
+                True  -> Right (GroupVar var)
 compareFieldTypes b fm hm a = Left $ TypeError ("Type Error between " ++ 
     (show a) ++ " and " ++ (show b))
 
@@ -402,7 +408,7 @@ getFromScope:: Scope ->(Var Annotation)-> Maybe ComputationType
 getFromScope  hashmap v = (HashMap.lookup v hashmap)
 
 getFromSymbolTable :: CompSymTable -> (Var Annotation) -> Maybe ComputationType
-getFromSymbolTable  sym v = 
+getFromSymbolTable  sym v =
     foldr fun Nothing sym  
     where fun  scope prev = case (prev) of
                             Nothing -> getFromScope scope v
