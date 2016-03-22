@@ -93,7 +93,6 @@ data SeqField a
     | Bar [(Event a)]
     deriving(Show,Eq)
 
-
 data ForEachDef a
      = ForEachFilter FilterName (Var a)
      | ForEachTable (Var a) (Var a)
@@ -101,8 +100,14 @@ data ForEachDef a
      | ForEachList (Var a) (Var a)
      deriving (Show, Eq)
 
-data LexError = FieldNameError String | FilterNameError String | AllowedTypeError String | UndefinedVariable String | AllowedValError String | FieldNotFoundError String | GenError String | MissingFilesError String | MissingConfigFile String | RedecError String | MissingConfigField String | TypeError String | IncorrectEvent String | ComputationTypeMismatch String | ComputationWrongScope String deriving (Show, Eq)
-
+data LexError   = FieldNameError String | FilterNameError String | AllowedTypeError String
+                | UndefinedVariable String | AllowedValError String
+                | FieldNotFoundError String | GenError String
+                | MissingFilesError String | MissingConfigFile String
+                | RedecError String | MissingConfigField String
+                | TypeError String | IncorrectEvent String
+                | RecursiveGroups String
+                | ComputationTypeMismatch String | ComputationWrongScope String deriving (Show, Eq)
 
 --we should also define a list of aliases perhaps that we pass
 data Config =  Config (M.Map (FilterName, Bool) FieldMap) deriving(Eq, Show)

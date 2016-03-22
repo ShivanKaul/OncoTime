@@ -65,12 +65,18 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
             Right r -> putStrLn "All Fields valid"
 
         let allGroups = (concat (newGroups)) ++ groupDefs
-        -- check for redeclarations for group #98
+
+        -- check for redeclarations for group
         case (checkForGroupRedecl allGroups) of
             Left e -> hPrint stderr e >> exitFailure
             Right r -> print "No redeclarations for group files"
 
-        -- take care of recursive groups #97
+        -- take care of recursive groups
+        case (checkForRecursiveGroups allGroups) of
+            [] -> print "No recursively defined groups"
+            vars -> hPrint stderr (RecursiveGroups ("Following group vars " ++
+                "recursively defined: " ++ varsToStr (vars))) >> exitFailure
+
         -- check if variable being used in group is actually defined in symbol table #83
         -- check types of groups and if they exist #99
         let symbolTableH = buildHeadSymbolTable allGroups hdr
@@ -129,8 +135,22 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
         putStrLn "Weeded successfully"
         return (Program hdr docs [] (allGroups) filters (comps))
 
-<<<<<<< HEAD
-=======
+
+checkForRecursiveGroups :: [GroupDefs] -> [Var]
+checkForRecursiveGroups groups =
+    do
+        foldl (\recGrps curGrp -> case curGrp of
+                Left var -> (var : recGrps)
+                Right var -> (recGrps)
+                ) [] (map checkForRecursiveEachGroup groups)
+
+checkForRecursiveEachGroup :: GroupDefs -> Either Var Var
+checkForRecursiveEachGroup (Group t var items) =
+    do
+        case (GroupVar var) `elem` items of
+            True -> Left $ var
+            False -> Right $ var
+
 checkForGroupRedecl :: [GroupDefs] -> Either LexError [GroupDefs]
 checkForGroupRedecl groups =
     do
@@ -151,7 +171,6 @@ dupesExist vars =
             if (x `elem` seenVars) then (x : seenVars, (Var x) : repeated) else
                 (x : seenVars, repeated)) ([], []) vars
 
->>>>>>> 0244006... Handle redeclarations for groups
 replaceVarsFilter :: HashMap.HashMap Var (GroupType, [GroupItem]) -> Filter -> Filter
 replaceVarsFilter symbolTableH (Filter fname fdefs) =
     do
@@ -429,6 +448,9 @@ compareFieldTypes b fm hm a = Left $ TypeError ("Type Error between " ++
 
 varToStr::(Var Annotation)->String
 varToStr (Var v _) = v
+
+varsToStr :: [Var] -> String
+varsToStr vars = intercalate ", " (map (varToStr) vars)
 
 groupTypeToStr::GroupType->String
 groupTypeToStr (GroupType s) = s
