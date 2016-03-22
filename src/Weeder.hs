@@ -19,11 +19,9 @@ import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
 import Text.ParserCombinators.Parsec.Char
 import qualified Text.ParserCombinators.Parsec.Token as Token
-
-import TypeUtils
 import Debug.Trace
-
 --Our modules
+import TypeUtils
 import Types
 import Parser
 import PrettyPrinter
@@ -81,26 +79,31 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
         -- check types of groups and if they exist #99
         let symbolTableH = buildHeadSymbolTable allGroups hdr
 
-        case  mapM_ (checkFilterTypes conf symbolTableH) [filters] of
-            Left e -> hPrint stderr e >> exitFailure
-            Right r -> putStrLn "all field types check out"
-        --case  mapM_ (checkFilterTypes (filterable) symbolTableH) [filters] of
+        case  mapM (checkFilterTypes conf symbolTableH) [filters] of
+                Left e -> hPrint stderr e >> exitFailure
+                Right annotatedFilters -> do
+                    print filters
 
-        -------- TEST ---------
+                    print "Printing old filters"
 
-        print "Printing old filters"
+                    print filters
 
-        print filters
+                    print "Printing new filters"
 
-        print "Printing new filters"
+                    --let newFilters = (populateDefaultValuesFilters filters (Config confmap))
 
-        let newFilters = (populateDefaultValuesFilters filters (Config confmap))
+                    let newFilters = (populateDefaultValuesFilters (concat annotatedFilters) (Config confmap))
+                    print newFilters
 
-        print newFilters
 
-        -- Replace vars with symbol table h
-        print "Printing with vars replaced"
-        print (map (replaceVarsFilter symbolTableH) newFilters)
+                    
+                    putStrLn "all field types check out"
+            --case  mapM_ (checkFilterTypes (filterable) symbolTableH) [filters] of
+
+                    -------- TEST ---------
+                    -- Replace vars with symbol table h
+                    print "Printing with vars replaced"
+                    print (map (replaceVarsFilter symbolTableH) newFilters)
 
         -------- UNTEST -------
 
@@ -254,12 +257,12 @@ readConfig file =
         return $ Config totalMap
 
 -- use config to populate default values for a filter
-populateDefaultValuesFilters :: [Filter Annotation] -> Config -> [Filter Annotation]
+populateDefaultValuesFilters :: [Filter Annotation] -> (Config Annotation)-> [Filter Annotation]
 populateDefaultValuesFilters filters config =
     do
         map (findDefaultValuesFilt config) (filters)
 
-findDefaultValuesFilt :: Config -> Filter Annotation -> Filter Annotation
+findDefaultValuesFilt :: (Config Annotation)-> Filter Annotation -> Filter Annotation
 findDefaultValuesFilt (Config conf) (Filter fname defs) =
     do
         -- get all fields for a filter from config
@@ -275,7 +278,7 @@ findDefaultValuesFilt (Config conf) (Filter fname defs) =
                 fieldsFromFieldMap
         Filter fname (newDefs)
 
-fieldMapToFieldDefs :: FieldMap -> [FieldDef Annotation]
+fieldMapToFieldDefs :: (FieldMap Annotation) -> [FieldDef Annotation]
 fieldMapToFieldDefs (FieldMap fmap) =
     do
         let flist = M.toList fmap
@@ -394,7 +397,7 @@ checkFieldsEx conf (x:xs) l =
 --give conf
 --GOAL: check that the types of the filter
 --phase 1: check to see that all
-checkFilterTypes::(Config Annotation)->(HashMap.HashMap (Var Annotation) GroupType)->[(Filter Annotation)]->Either LexError [(Filter Annotation)] -- ()--[(Filter Annotation)]
+checkFilterTypes::(Config Annotation)->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))->[(Filter Annotation)]->Either LexError [(Filter Annotation)] -- ()--[(Filter Annotation)]
 checkFilterTypes (Config conf) hmap ms =
     do
 --How can I accumulate stuff?
@@ -419,7 +422,7 @@ checkFilterTypes (Config conf) hmap ms =
 --return a list of things that don't type check
 
 --NEED TO RETURN ANNOTATED FIELD MAP MAYBE?
-typeCheckFieldMap::(FieldMap Annotation)->(HashMap.HashMap (Var Annotation) GroupType)->[(FieldDef Annotation)]->Either LexError [(FieldDef Annotation)] -- () --[FieldDef] 
+typeCheckFieldMap::(FieldMap Annotation)->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))->[(FieldDef Annotation)]->Either LexError [(FieldDef Annotation)] -- () --[FieldDef] 
 typeCheckFieldMap (FieldMap fm) hmap fdList = do
    foldM (\acc x-> do 
             let fieldName = getFieldName x
@@ -432,7 +435,7 @@ typeCheckFieldMap (FieldMap fm) hmap fdList = do
     ) [] fdList
 
 --take fieldDefs anda  fieldMap, return an error or a field deaf after calling Field
-compareFieldTypes::(Field Annotation)->(FieldMap Annotation)->(HashMap.HashMap (Var Annotation) GroupType)->(GroupItem Annotation)->Either LexError (GroupItem Annotation)
+compareFieldTypes::(Field Annotation)->(FieldMap Annotation)->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))->(GroupItem Annotation)->Either LexError (GroupItem Annotation)
 compareFieldTypes (FieldValue allValList an ) fm hm (GroupValString s a)  = 
     if (s `elem` allValList) then Right (GroupValString s an) --Right (GroupValString s) 
     else Left (AllowedValError ("Error. " ++ s ++ " is not defined in the config file list that also contains: " ++ (intercalate "," allValList)))
