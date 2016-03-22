@@ -125,9 +125,22 @@ main =
         -- oncotime filename flags
         (filename:flags) <- getArgs
         parsed <- parseFile filename
-        weededProg <- weed filename parsed
+        let symTabFun = if "-dumpsymtab" `elem` flags 
+            then
+                (\a ->do {
+                    let {symFile = replaceExtension filename ".symtab"};
+
+                    putStrLn $ "dumping symtable to " ++ symFile;
+                    writeFile symFile a 
+                })
+            else
+                (\a->return ())
+
+
+        weededProg <- weed filename symTabFun parsed 
         prettyPrintFile parsed filename
         if "-pptype" `elem` flags then
             prettyPrintTypes weededProg filename
         else
             return ()
+
