@@ -64,7 +64,7 @@ fieldval::Parser Field
 fieldval = lexeme $
     do
         p <-( squares  (sepBy (some (oneOf validChar)) comma) )
-        return $ FieldVal p
+        return $ FieldVal $ map (map toLower) p
 
 validChar = ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z'] ++ ['!','-','_','.','+']
 
