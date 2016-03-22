@@ -443,23 +443,54 @@ weedAndTypeCheckComp conf symtable (Barchart variable) =
                             ++". It is a " ++ (show t) ++ "Not a Table"
 
 weedAndTypeCheckComp conf symtable (Print printAction ) = 
-    weedPrintAction symtable printAction
+    weedPrintAction conf symtable printAction
 weedAndTypeCheckComp conf symtable (Foreach def comps ) = 
     weedForEach conf symtable comps def
-weedAndTypeCheckComp conf symtable (Print printAction ) = weedPrintAction  symtable printAction
-weedAndTypeCheckComp conf symtable (Foreach def comps ) = weedForEach conf symtable comps def
 
-weedPrintAction :: CompSymTable -> (PrintAction Annotation)-> Either LexError (CompSymTable, String)
-weedPrintAction symtable (PrintVar var) = case getFromSymbolTable symtable var of
+weedPrintAction :: Config-> CompSymTable -> (PrintAction Annotation)-> Either LexError (CompSymTable, String)
+weedPrintAction _ symtable  (PrintVar var) = case getFromSymbolTable symtable var of
             Nothing -> Left . UndefinedVariable $ show  var 
             Just t -> Right (symtable, "")
-weedPrintAction symtable (PrintLength variable) = case getFromSymbolTable symtable variable of
+weedPrintAction _ symtable (PrintLength variable) = case getFromSymbolTable symtable variable of
             Nothing -> Left . UndefinedVariable $ show  variable 
             Just t -> if t == TTable 
                 then Right (symtable, "")
                 else Left . ComputationTypeMismatch $ 
                     "Cannot have length of "++ (show variable)++". It is a " ++ (show t) ++ "Not a Table"
-weedPrintAction symtable printAction = Left $ ComputationWrongScope "Unimplemented"
+weedPrintAction _ symtable (PrintElement tableVar indexVar) = 
+    case ((getFromSymbolTable symtable tableVar),
+        (getFromSymbolTable symtable indexVar)) of
+            (Nothing,_) -> Left . UndefinedVariable $ show  tableVar
+            (_,Nothing) -> Left . UndefinedVariable $ show  indexVar
+            (Just TTable, Just TIndex) ->  Right (symtable,"")
+            (Just TTable, Just i)-> Left . ComputationTypeMismatch $
+                        "Cannot access "++ (show indexVar)++" of table "
+                        ++(show tableVar)
+                        ++". It is a " ++ (show i) ++ "Not an Index"
+            (Just t,Just i) -> Left . ComputationTypeMismatch $
+                    "Cannot index "++ (show tableVar)++". It is a " 
+                    ++ (show t) ++ "Not a Table"
+weedPrintAction config symtable (PrintFilters fields filterVar) = 
+    case (getFromSymbolTable symtable filterVar) of
+            (Nothing) -> Left . UndefinedVariable $ show  filterVar
+            (Just (TFilter constructor)) -> 
+                if all (\s -> subFieldExists config constructor s) fields 
+                then Right (symtable,"")
+                else Left . FieldNameError $ "One of the fields "++
+                            (show fields)++
+                           " does not belong to " ++ constructor
+            Just wrong -> Left . ComputationTypeMismatch $
+                    "Cannot filter over "++ (show filterVar)++
+                    ". It is a " ++ (show wrong) ++ " Not a Filter"
+
+weedPrintAction _ symtable (PrintTimeLine filterVar) = 
+    case (getFromSymbolTable symtable filterVar) of
+            (Nothing) -> Left . UndefinedVariable $ show  filterVar
+            (Just (TFilter "patient")) -> Right (symtable,"")
+            (Just (TFilter "patients")) -> Right (symtable,"")
+            Just wrong -> Left . ComputationTypeMismatch $
+                    "Cannot print TimeLine of "++ (show filterVar)++
+                    ". It is a " ++ (show wrong) ++ " Not a patient"
 
 weedForEach :: Config->CompSymTable -> [(Computation Annotation)] ->(ForEachDef Annotation) 
     -> Either LexError (CompSymTable,String)
@@ -542,15 +573,18 @@ foldWeedList prev curr =
 isValidInNested ::Config-> CompSymTable -> FilterName -> Bool
 isValidInNested conf symtable filterName =
     let
-        (counts, filtersUsed) = unzip (findAllFilters symtable)
-    in ((null filtersUsed) || ( not (elem filterName filtersUsed)) && ((head counts)==1) )
+        filtersUsed = (findAllFilters symtable)
+        noFilters = null filtersUsed
+        topScope = isNowInTopScope symtable
+        prevUsed = (elem filterName filtersUsed)
+    in trace ((show filtersUsed) ++(show noFilters)++ (show $ topScope)) ((noFilters && topScope)|| ( (not noFilters)&&(not prevUsed)))
 
 
-findAllFilters :: CompSymTable -> [(Int,FilterName)]
-findAllFilters symtable = foldl' (\ p  (c,s)-> let f =find1Filter s
+findAllFilters :: CompSymTable -> [FilterName]
+findAllFilters symtable = foldl' (\ p  (s)-> let f =find1Filter s
                                         in if (not $ null f)
-                                            then p++[(c,f)]
-                                            else p) [] (zip [1..] symtable)
+                                            then p++[(f)]
+                                            else p) [] (symtable)
 find1Filter :: Scope -> FilterName
 find1Filter curr = HashMap.foldr  (\ t p -> if (null p)
                                     then case t of
