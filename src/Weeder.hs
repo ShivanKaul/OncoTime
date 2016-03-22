@@ -588,7 +588,7 @@ isValidInNested conf symtable filterName =
         noFilters = null filtersUsed
         topScope = isNowInTopScope symtable
         prevUsed = (elem filterName filtersUsed)
-    in (show $ topScope)) ((noFilters && topScope)|| ( (not noFilters)&&(not prevUsed)))
+    in ((noFilters && topScope)|| ( (not noFilters)&&(not prevUsed)))
 
 
 findAllFilters :: CompSymTable -> [FilterName]
