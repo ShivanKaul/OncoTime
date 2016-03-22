@@ -201,7 +201,6 @@ manyGroups :: Parser [(GroupDefs Annotation)]
 manyGroups =
     do
         grps <- many groups
-
         return grps
 
 groups::Parser (GroupDefs Annotation)
