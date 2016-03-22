@@ -50,7 +50,7 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
         --putStrLn ("Group files are " ++ (show useFilesToParse))
         case grpFileList of
             Left e -> hPutStrLn stderr (file ++ ": ") >> print e >> exitFailure
-            Right r -> putStrLn $ file ++ ": All Group files exist"
+            Right weededGrpFiles -> putStrLn $ file ++ ": All Group files exist"
 
         --parsing each group file
         let grpAllFilesContents = map (readFile) (useFilesToParse)
@@ -60,7 +60,7 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
         case (checkFilters filters filterable) of
             Left e -> print e >>  hPutStrLn stderr "FILTERS:" >>
                 print filters >> putStrLn "CONF:" >> print filterable >> exitFailure
-            Right r -> putStrLn "All Fields valid"
+            Right checkedFilters -> putStrLn "All Fields valid"
 
         let allGroups = (concat (newGroups)) ++ groupDefs
 
@@ -580,10 +580,6 @@ weedAndTypeCheckComp conf symtable (Barchart variable) =
                             "Cannot draw Barchart of "++ (show variable)
                             ++". It is a " ++ (show t) ++ "Not a Table"
 
-weedAndTypeCheckComp conf symtable (Print printAction ) =
-    weedPrintAction symtable printAction
-weedAndTypeCheckComp conf symtable (Foreach def comps ) =
-    weedForEach conf symtable comps def
 weedAndTypeCheckComp conf symtable (Print printAction ) = weedPrintAction  symtable printAction
 weedAndTypeCheckComp conf symtable (Foreach def comps ) = weedForEach conf symtable comps def
 
