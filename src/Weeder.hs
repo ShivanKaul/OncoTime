@@ -61,13 +61,8 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
             Left e -> print e >>  hPutStrLn stderr "FILTERS:" >> print filters >> putStrLn "CONF:" >> print conf >>  exitFailure
             Right r -> putStrLn "All Fields valid"
 
-
         let allGroups = (concat (newGroups)) ++ groupDefs
         let symbolTableH = buildHeadSymbolTable allGroups hdr
-      
-        
-
-
         
         case  mapM_ (checkFilterTypes (conf) symbolTableH) [filters] of
             Left e -> hPrint stderr e >> exitFailure
