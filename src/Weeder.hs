@@ -346,20 +346,34 @@ weedComputationList config comps =
             Left e -> Left e 
 
 weedFold :: Config->CompSymTable -> [(Computation Annotation)] -> Either LexError String
-weedFold conf symtable computations = 
-    do
-        case mapM (weedEach conf symtable) computations of
-            Right r -> Right $ printFold ((concat r) )
-            Left l -> Left l
-        --res <-  printFold (foldl' (weedEach conf) symtable computations)
+weedFold conf symtable computations =  
+    let errorOrSym = (foldl' (weedEach conf) (Right(symtable,"")) computations)
+    in case errorOrSym of
+            Right (newSymtable,internalSymRep) -> 
+                Right $ (internalSymRep++(stringOfLastScope newSymtable))
+            (Left e) -> Left e 
+     --res <-  printFold (foldl' (weedEach conf) symtable computations)
         --return res
             --Left e -> Left e
             --Right r -> Right r
 
-weedEach::Config->CompSymTable->(Computation Annotation)->Either LexError CompSymTable
-weedEach conf sym comp =  case (weedAndTypeCheckComp conf sym comp) of
-    Left x ->  Left x --trace ("Error! "++ (show x) ++ " occured but not handled") sym
-    Right x -> Right x
+
+stringOfLastScope :: CompSymTable -> String
+stringOfLastScope symtable =
+    let
+        len = show $ length symtable
+        curr= last symtable
+    in HashMap.foldrWithKey  (\(Var s _) t p -> p ++ s ++ "\t" ++ 
+        (tail $ show t) ++"\t" ++len++ "\n" )  "" curr
+
+
+weedEach::Config->(Either LexError (CompSymTable,String))->(Computation Annotation)->(Either LexError (CompSymTable,String))
+weedEach conf errorOrSym comp =  case errorOrSym of
+    Right (sym,ret) ->
+        case (weedAndTypeCheckComp conf sym comp) of
+            Left x ->  Left x --trace ("Error! "++ (show x) ++ " occured but not handled") sym
+            Right (newsym,newret) -> Right (newsym,ret++newret)
+    _ -> errorOrSym
 
 printFold :: CompSymTable -> String
 printFold symtable = 
@@ -405,7 +419,7 @@ isInLoopableScope = error
 emptyScope :: HashMap.HashMap (Var Annotation) ComputationType
 emptyScope = HashMap.fromList []
 
-weedAndTypeCheckComp :: Config->CompSymTable -> (Computation Annotation)-> Either LexError (CompSymTable, String)
+weedAndTypeCheckComp :: Config->(CompSymTable) -> (Computation Annotation)-> Either LexError (CompSymTable, String)
 weedAndTypeCheckComp conf symtable  (Table variable constructor  field) =
     evaluateInTopScope symtable check
     where check sym = if ((subFieldExists conf constructor field))
@@ -429,60 +443,26 @@ weedAndTypeCheckComp conf symtable (Barchart variable) =
                             "Cannot draw Barchart of "++ (show variable)
                             ++". It is a " ++ (show t) ++ "Not a Table"
 
-weedAndTypeCheckComp conf symtable (Print printAction) = 
-    weedPrintAction conf symtable printAction
-weedAndTypeCheckComp conf symtable (Foreach def comps) = 
+weedAndTypeCheckComp conf symtable (Print printAction ) = 
+    weedPrintAction symtable printAction
+weedAndTypeCheckComp conf symtable (Foreach def comps ) = 
     weedForEach conf symtable comps def
+weedAndTypeCheckComp conf symtable (Print printAction ) = weedPrintAction  symtable printAction
+weedAndTypeCheckComp conf symtable (Foreach def comps ) = weedForEach conf symtable comps def
 
-weedPrintAction :: Config-> CompSymTable -> PrintAction 
-    -> Either LexError (CompSymTable,String)
-weedPrintAction _ symtable (PrintVar var) = 
-    case getFromSymbolTable symtable var of
-            Nothing -> Left . UndefinedVariable $ show  var
-            Just t -> Right (symtable,"")
-weedPrintAction _ symtable (PrintLength variable) = 
-    case getFromSymbolTable symtable variable of
-            Nothing -> Left . UndefinedVariable $ show  variable
-            Just TTable -> Right (symtable,"")
-            Just t -> Left . ComputationTypeMismatch $
-                    "Cannot have length of "++ (show variable)++
-                    ". It is a " ++ (show t) ++ "Not a Table"
-weedPrintAction _ symtable (PrintElement tableVar indexVar) = 
-    case ((getFromSymbolTable symtable tableVar),
-        (getFromSymbolTable symtable indexVar)) of
-            (Nothing,_) -> Left . UndefinedVariable $ show  tableVar
-            (_,Nothing) -> Left . UndefinedVariable $ show  indexVar
-            (Just TTable, Just TIndex) ->  Right (symtable,"")
-            (Just TTable, Just i)-> Left . ComputationTypeMismatch $
-                        "Cannot access "++ (show indexVar)++" of table "
-                        ++(show tableVar)
-                        ++". It is a " ++ (show i) ++ "Not an Index"
-            (Just t,Just i) -> Left . ComputationTypeMismatch $
-                    "Cannot index "++ (show tableVar)++". It is a " 
-                    ++ (show t) ++ "Not a Table"
-weedPrintAction config symtable (PrintFilters fields filterVar) = 
-    case (getFromSymbolTable symtable filterVar) of
-            (Nothing) -> Left . UndefinedVariable $ show  filterVar
-            (Just (TFilter constructor)) -> 
-                if all (\s -> subFieldExists config constructor s) fields 
-                then Right (symtable,"")
-                else Left . FieldNameError $ "One of the fields "++
-                            (show fields)++
-                           " does not belong to " ++ constructor
-            Just wrong -> Left . ComputationTypeMismatch $
-                    "Cannot filter over "++ (show filterVar)++
-                    ". It is a " ++ (show wrong) ++ " Not a Filter"
+weedPrintAction :: CompSymTable -> (PrintAction Annotation)-> Either LexError (CompSymTable, String)
+weedPrintAction symtable (PrintVar var) = case getFromSymbolTable symtable var of
+            Nothing -> Left . UndefinedVariable $ show  var 
+            Just t -> Right (symtable, "")
+weedPrintAction symtable (PrintLength variable) = case getFromSymbolTable symtable variable of
+            Nothing -> Left . UndefinedVariable $ show  variable 
+            Just t -> if t == TTable 
+                then Right (symtable, "")
+                else Left . ComputationTypeMismatch $ 
+                    "Cannot have length of "++ (show variable)++". It is a " ++ (show t) ++ "Not a Table"
+weedPrintAction symtable printAction = Left $ ComputationWrongScope "Unimplemented"
 
-weedPrintAction _ symtable (PrintTimeLine filterVar) = 
-    case (getFromSymbolTable symtable filterVar) of
-            (Nothing) -> Left . UndefinedVariable $ show  filterVar
-            (Just (TFilter "patient")) -> Right (symtable,"")
-            (Just (TFilter "patients")) -> Right (symtable,"")
-            Just wrong -> Left . ComputationTypeMismatch $
-                    "Cannot print TimeLine of "++ (show filterVar)++
-                    ". It is a " ++ (show wrong) ++ " Not a patient"
-
-weedForEach :: Config->CompSymTable -> [Computation] ->ForEachDef 
+weedForEach :: Config->CompSymTable -> [(Computation Annotation)] ->(ForEachDef Annotation) 
     -> Either LexError (CompSymTable,String)
 weedForEach conf symtable newcomp (ForEachFilter filterName var )  =
     if (fieldExists conf filterName)
@@ -500,73 +480,34 @@ weedForEach conf symtable newcomp (ForEachFilter filterName var )  =
 
 weedForEach config symtable newcomp (ForEachTable indexVar tableVar)  = 
     evaluateInTopScope symtable (\sym->
-        case getFromSymbolTable sym variable of
-            Nothing -> Left . UndefinedVariable $ show  variable 
-            Just t -> if t == TTable 
-                then Right symtable
-                else Left $ ComputationTypeMismatch $ 
-                    "Cannot draw Barchart of "++ (show variable)++". It is a " ++ (show t) ++ "Not a Table"
-                ) 
-
-weedAndTypeCheckComp conf symtable (Print printAction) = weedPrintAction  symtable printAction
-weedAndTypeCheckComp conf symtable (Foreach def comps) = weedForEach conf symtable comps def
-
-weedPrintAction :: CompSymTable -> (PrintAction Annotation)-> Either LexError CompSymTable
-weedPrintAction symtable (PrintVar var) = case getFromSymbolTable symtable var of
-            Nothing -> Left . UndefinedVariable $ show  var 
-            Just t -> Right symtable
-weedPrintAction symtable (PrintLength variable) = case getFromSymbolTable symtable variable of
-            Nothing -> Left . UndefinedVariable $ show  variable 
-            Just t -> if t == TTable 
-                then Right symtable
-                else Left . ComputationTypeMismatch $ 
-                    "Cannot have length of "++ (show variable)++". It is a " ++ (show t) ++ "Not a Table"
-                
-weedPrintAction symtable printAction = Left $ ComputationWrongScope "Unimplemented"
-
-weedForEach::Config->CompSymTable -> [(Computation Annotation)] ->(ForEachDef Annotation)-> Either LexError CompSymTable
-weedForEach config symtable newcomp (ForEachFilter filterName var )  = 
-    if (fieldExists config filterName) 
-    then    if (isValidInNestedLoopables config symtable filterName)
-            then 
-                do
-                    let newsym =(addToSymTable (symtable++[emptyScope]) var (TFilter filterName))
-                    case (weedFold config newsym newcomp) of
-                            Right r -> Right symtable 
-                            Left e -> Left e 
-            else Left $  ComputationWrongScope "Foreach is not valid in this scope"
-    else Left $  FieldNameError $ "\""++filterName++"\" is not a valid loopable Filter"
-
-weedForEach config symtable newcomp (ForEachTable indexVar tableVar)  = evaluateInTopScope symtable (\sym->
         case getFromSymbolTable sym tableVar of
-            Nothing -> Left . UndefinedVariable $ show  tableVar 
-            Just t -> if t == TTable 
-                then 
-                    do 
-                        let newsym =(addToSymTable (symtable++[emptyScope]) indexVar TIndex)
-                        case (weedFold config newsym newcomp) of
-                            Right r -> Right symtable 
+            Nothing -> Left . UndefinedVariable $ show  tableVar
+            Just TTable -> let
+                            newsym = (addToSymTable 
+                                (symtable++[emptyScope]) indexVar TIndex)
+                        in case (weedFold config newsym newcomp) of
+                            Right (intSymRep) -> Right (symtable,intSymRep) 
+                            Left e -> Left e  
+            Just t-> Left ( ComputationTypeMismatch $
+                    "Cannot go through loop for "++ (show tableVar)
+                    ++". It is a " ++ (show t) ++ "Not a Table")
+                )
+weedForEach config symtable newcomp (ForEachSequence memberVar unused) = 
+    Left $ ComputationWrongScope "Unimplemented"
+weedForEach config symtable newcomp (ForEachList memberVar listVar)= 
+    evaluateInTopScope symtable check
+    where check sym=
+            case getFromSymbolTable sym listVar of
+                Nothing -> Left . UndefinedVariable $ show  listVar
+                Just TList -> let
+                                newsym =(addToSymTable (symtable++[emptyScope])
+                                 memberVar TSequence)
+                        in case (weedFold config newsym newcomp) of
+                            Right (intSymRep) -> Right (symtable,intSymRep) 
                             Left e -> Left e 
-                else Left . ComputationTypeMismatch $ 
-                    "CAnnot Go through loop for "++ (show tableVar)++". It is a " ++ (show t) ++ "Not a Table"
-                ) 
-
-
-weedForEach config symtable newcomp (ForEachSequence memberVar unusedSequence)  = Left $ ComputationWrongScope "Unimplemented"
-weedForEach config symtable newcomp (ForEachList memberVar listVar)  = evaluateInTopScope symtable (\sym->
-        case getFromSymbolTable sym listVar of
-            Nothing -> Left . UndefinedVariable $ show  listVar 
-            Just t -> if t == TList 
-                then 
-                    do
-                        let newsym =(addToSymTable (symtable++[emptyScope]) memberVar TSequence)
-                    
-                        case (weedFold config newsym newcomp) of
-                            Right r -> Right symtable 
-                            Left e -> Left e 
-                else Left . ComputationTypeMismatch $ 
-                    "CAnnot Go through loop for "++ (show listVar)++". It is a " ++ (show t) ++ "Not a List"
-                ) 
+                Just t-> Left ( ComputationTypeMismatch $
+                        "CAnnot Go through loop for "++ (show listVar)++
+                        ". It is a " ++ (show t) ++ "Not a List")
 
 
 weedSequence :: (SeqField Annotation)-> Either String Bool

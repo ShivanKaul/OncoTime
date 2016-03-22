@@ -65,15 +65,15 @@ fieldval::Parser Field
 fieldval = lexeme $
     do
         --p <-( squares  (sepBy (some (choice[alphaNum, (oneOf "-_+.")] ) ) comma) )
-        p <-( squares  (sepBy (some (oneOf validChar)) comma) )
-        return $ FieldVal $ map (map toLower) p
+        p <-( squares  (sepBy (some (validChar)) comma) )
+        return $ FieldValue $ map (map toLower) p
 
 --validChar = ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z'] ++ ['!','-','_','.','+']
 
 fieldtype::Parser Field
 fieldtype = lexeme $
     do
-        p <- (some (oneOf validChar))
+        p <- (some (validChar))
 
         case p of
             "String" -> return (FieldType "String")

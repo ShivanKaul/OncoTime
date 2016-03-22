@@ -18,10 +18,10 @@ class PrettyPrint a where
 pretty :: (PrettyPrint a) => a -> String
 pretty program = prettyPrint program
 
-printTypesGroups :: [GroupDefs] -> String
+printTypesGroups :: [(GroupDefs Annotation)] -> String
 printTypesGroups groups =
     do
-        let groupListString = map (\(Group (GroupType t) (Var v) _) ->
+        let groupListString = map (\(Group (GroupType t) (Var v _ ) _) ->
                                 ("// Group " ++ v ++ " : " ++ t)) groups
         (intercalate "\n" groupListString)
 
@@ -37,7 +37,7 @@ printTypesGroups groups =
     -- do
 
 
-printTypes :: Program -> String
+printTypes :: (Program Annotation) -> String
 printTypes (Program _ _ _ groups filt comps) =
     do
         "// PRINTING GROUPS\n" ++ (printTypesGroups groups)-- ++ (printTypesFilters filt)

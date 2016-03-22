@@ -11,7 +11,7 @@ def run_test(file, flag1="", flag2=""):
     print ('Running test ' + file + ':')
 
     cmd = "./oncotime %s %s %s" % (file, flag1, flag2)
-    print "Running command: " + cmd
+    print ("Running command: " + cmd)
     # print "> %s : " % file
     os.system(cmd)
 

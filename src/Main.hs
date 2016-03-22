@@ -77,7 +77,7 @@ prettyPrintFile prog file =
         writeFile (replaceExtension file ".pretty.onc") (pretty prog)
         print "VALID"
 
-prettyPrintTypes :: Program -> String -> IO()
+prettyPrintTypes :: (Program Annotation)-> String -> IO()
 prettyPrintTypes prog file =
     do
         writeFile (replaceExtension file ".pptype.onc") ((pretty prog) ++ (printTypes prog))
