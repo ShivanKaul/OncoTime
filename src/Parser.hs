@@ -300,11 +300,12 @@ single = lexeme $
 manyComp ::Parser [(Computation Annotation)]
 manyComp = lexeme(
     do  {
-        c <- between (symbol "{" <?> "Start of Computation Block \"{\"") 
+        c <- between (symbol "{" <?> "Start of Computation Block \"{\"")
         (symbol "}" <?> "End of computation block \"}\"") $
         (optional semi) >> (many computation);
         if (null c)
             then trace ("WARNING: Computation list is empty.") (optional semi)
+            -- then print ("WARNING: Computation list is empty.")
         else (optional semi);
         return c}<?> "Computation Block \"{}\"")
 
@@ -393,7 +394,7 @@ seqNeg =
 seqComma :: Parser (SeqField Annotation)
 seqComma =
     do
-        
+
         e <- curlies $ sepBy1 (do {(optional semi) ; e<-event; (optional semi);return e}) comma
         return $ Comma e
         
@@ -479,7 +480,7 @@ prints:: Parser (PrintAction Annotation)
 prints = lexeme ( 
     do{
    x<-(try printvar <|> try printTimeLine <|> try printLength <|> try printFilters <|> try printElement);
-   
+
    return x;
    } <?> "Print Statement")
 
@@ -501,7 +502,7 @@ printLength =
         v<-var
         dot
         reserved "length"
-        semi 
+        semi
         return $ PrintLength v
 
 
@@ -512,7 +513,7 @@ printFilters =
         filterList <- sepBy1 filterName comma
         reserved "of"
         v <- var
-        semi  
+        semi
         return $ PrintFilters filterList v
 
 printElement::Parser (PrintAction Annotation)
@@ -521,7 +522,7 @@ printElement =
         reserved "print"
         v1 <-var
         v2 <- between (symbol "[" <?> "Table index \"[]\"") (symbol "]") var
-        semi  
+        semi
         return $ PrintElement v1 v2
 
 filterName::Parser (FilterName)
@@ -532,7 +533,7 @@ filterName = lexeme $
 
 filterVal::Parser (FieldVal Annotation)
 filterVal = lexeme( groupItem <?> "Field Options")
-        
+
 
 filters :: Parser (Filter Annotation)
 filters = lexeme(

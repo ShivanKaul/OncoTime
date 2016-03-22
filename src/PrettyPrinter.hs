@@ -16,13 +16,37 @@ class PrettyPrint a where
     prettyIndent _ _ = ""
 
 pretty :: (PrettyPrint a) => a -> String
-pretty a = prettyPrint a
+pretty program = prettyPrint program
+
+printTypesGroups :: [GroupDefs] -> String
+printTypesGroups groups =
+    do
+        let groupListString = map (\(Group (GroupType t) (Var v) _) ->
+                                ("// Group " ++ v ++ " : " ++ t)) groups
+        (intercalate "\n" groupListString)
+
+-- printTypesFilters :: [Filter] -> String
+-- printTypesFilters filters =
+--     do
+--         let filtersListString = map (\(Filter filtername (Var v) _) ->
+--                                 (v ++ " : " ++ t)) filtersListString
+--         (intercalate "\n" filtersListString)
+
+-- printTypesVars :: [Var] -> String
+-- printTypesVars vars =
+    -- do
+
+
+printTypes :: Program -> String
+printTypes (Program _ _ _ groups filt comps) =
+    do
+        "// PRINTING GROUPS\n" ++ (printTypesGroups groups)-- ++ (printTypesFilters filt)
 
 instance PrettyPrint (PrintAction Annotation) where
     prettyPrint (PrintVar var) = "print " ++ prettyPrint var
     prettyPrint (PrintTimeLine ptimeline) = "print timeline of " ++ prettyPrint ptimeline
     prettyPrint (PrintLength plength) = "print " ++ prettyPrint plength ++ ".length"
-    prettyPrint (PrintFilters pfilters var) = "print " ++ (intercalate ", " pfilters) ++ 
+    prettyPrint (PrintFilters pfilters var) = "print " ++ (intercalate ", " pfilters) ++
         " of " ++ prettyPrint var
     prettyPrint (PrintElement v1 v2) = "print " ++ prettyPrint v1 ++ "[" ++ prettyPrint v2 ++ "]"
 
@@ -54,12 +78,10 @@ instance PrettyPrint ([(SeqField Annotation)] ) where
 
 
 instance PrettyPrint (Computation Annotation) where
-    prettyIndent  (indent) (Foreach foreachdef comps) = indent ++ prettyPrint foreachdef ++ 
-        " " ++ "\n" ++ indent ++ "{\n" ++ (intercalate "\n" (map (prettyIndent (indent ++ "\t")) comps)) ++ "\n" ++ indent ++ "}"
+    prettyIndent  (indent) (Foreach foreachdef comps) = indent ++ prettyPrint foreachdef ++ " " ++ "\n" ++ indent ++ "{\n" ++ (intercalate "\n" (map (prettyIndent (indent ++ "\t")) comps)) ++ "\n" ++ indent ++ "}"
     prettyIndent (indent) (Table var fname ffield) = indent ++"table " ++ prettyPrint var ++ " = " ++
         "count " ++ fname ++ " by " ++ prettyPrint ffield
-    prettyIndent (indent) (List var seq) = indent ++ "list " ++ prettyPrint var ++ " = " ++ "sequences like " 
-        ++ prettyPrint seq
+    prettyIndent (indent) (List var seq) = indent ++ "list " ++ prettyPrint var ++ " = " ++ "sequences like "
     prettyIndent (indent) (Print p) = indent ++ prettyPrint p
     prettyIndent (indent) (Barchart bchart) = indent ++ "barchart " ++ prettyPrint bchart
 
@@ -67,8 +89,7 @@ instance PrettyPrint GroupType where
     prettyPrint (GroupType g) = g
 
 instance PrettyPrint (GroupDefs Annotation) where
-    prettyPrint (Group gtype gvar gitems) = "group " ++ prettyPrint gtype ++ 
-        " " ++ (prettyPrint gvar) ++ " " ++ " = " ++ "{ " ++
+    prettyPrint (Group gtype gvar gitems) = "group " ++ prettyPrint gtype ++ " " ++ (prettyPrint gvar) ++ " " ++ " = " ++ "{ " ++
         (intercalate ", " (map prettyPrint gitems)) ++ " }"
 
 instance PrettyPrint IntValue where
@@ -90,8 +111,7 @@ instance PrettyPrint FieldName where
     prettyPrint (ffield) = ffield
 
 instance PrettyPrint (FieldDef Annotation) where
-    prettyPrint (FieldDef ffield fvals) = "\t" ++ prettyPrint ffield ++ " : " ++ 
-        (intercalate ", " (map prettyPrint fvals))
+    prettyPrint (FieldDef ffield fvals) = "\t" ++ prettyPrint ffield ++ " : " ++ (intercalate ", " (map prettyPrint fvals))
 
 instance PrettyPrint (Filter Annotation) where
     prettyPrint (Filter fname fdefs) = fname ++ " is" ++ "\n" ++
@@ -110,8 +130,7 @@ instance PrettyPrint (Arg Annotation) where
     prettyPrint (Arg groupType var) = prettyPrint groupType ++ " " ++ prettyPrint var
 
 instance PrettyPrint (Header Annotation) where
-    prettyPrint (Header fname argslist) = "script " ++ fname ++ "(" ++ 
-        (intercalate ", " (map prettyPrint argslist)) ++ ")"
+    prettyPrint (Header fname argslist) = "script " ++ fname ++ "(" ++ (intercalate ", " (map prettyPrint argslist)) ++ ")"
 
 instance PrettyPrint [(Computation Annotation)] where
     prettyIndent indent comps = ((intercalate "\n" (map (prettyIndent indent) comps)) ++ "\n")
@@ -127,8 +146,7 @@ instance PrettyPrint [(GroupDefs Annotation)] where
 
 
 instance PrettyPrint (Program Annotation) where
-    prettyPrint (Program header docs usefilelist groups filt comps) 
-     = (prettyPrint header) ++ (prettyPrint docs) ++ (prettyPrint usefilelist) ++ (prettyPrint groups)
+    prettyPrint (Program header docs usefilelist groups filt comps) = (prettyPrint header) ++ (prettyPrint docs) ++ (prettyPrint usefilelist) ++ (prettyPrint groups)
      ++ (prettyPrint filt) ++ ("{\n" ++ (prettyIndent "\t" comps) ++ "}\n")
 
 instance PrettyPrint (TestProgram Annotation) where

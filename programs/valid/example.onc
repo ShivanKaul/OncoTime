@@ -1,10 +1,19 @@
-script noFilter(a a, b b)
+script example(a a)
 /** test */
 use a.grp, b.grp
 use t.grp
 
 group Id x = {1, 2, <x>, 1200 to 123123}
 group Id x = {1, 2, <x>, 1200 to 123123}	
+
+// We use simple filters so as not to generate too much. 
+population is
+	Sex: M
+	//Birthyear: 1951, 1952, 1953, 1954, 1955
+	Birthyear: 1
+
+doctors are
+	Id: 10001		// TODO: We want this to be a proper Doctors ID, to properly test.
 
 {
 	foreach Patient p 
@@ -16,10 +25,11 @@ group Id x = {1, 2, <x>, 1200 to 123123}
 		print p
 		foreach Doctor D
 		{
+		print oncologist of D
 		}
 		foreach Doctor D
 		{
-			foreach Doctor D
+			foreach Diagnosis D
 			{
 			}
 		}

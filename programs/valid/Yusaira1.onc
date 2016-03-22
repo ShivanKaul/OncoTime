@@ -6,7 +6,7 @@ use file1.grp, file2.grp
 group BirthYear x = {1971,1972}
 group BirthYear z = {1971,1972, <k>}
 
-Patient are
+population are
 	Sex : M, F
 	BirthYear : <k>
 

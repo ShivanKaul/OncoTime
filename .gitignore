@@ -1,4 +1,5 @@
 *.pretty.onc
+*.pptype.onc
 README
 oncotime
 *.lhs
