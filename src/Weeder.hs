@@ -341,8 +341,8 @@ events = ["consult_referral_received","initial_consult_booked","initial_consult_
             "ct_sim_booked","ready_for_ct_sim","ct_sim_completed",
             "ready_for_initial_contour","ready_for_md_contour",
             "ready_for_dose_calculation","prescription_approved_by_md",
-            "ready_for_physics_qa","ready_for_treatment",
-            "machine_rooms_booked","patient_contacted","end"]
+            "ready_for_physics_qa","ready_for_treatment", "patient_arrives",
+            "machine_rooms_booked","patient_contacted","patient_scheduled","patient_arrived","treatment_began","end"]
 
 weedComputationList :: Config->[Computation]->String
 weedComputationList config comps =
@@ -473,9 +473,14 @@ weedPrintAction config symtable (PrintFilters fields filterVar) =
                     "Cannot filter over "++ (show filterVar)++
                     ". It is a " ++ (show wrong) ++ " Not a Filter"
 
-weedPrintAction _ symtable (PrintTimeLine _) = 
-    Left $ ComputationWrongScope "Not enough detail on how to implement"
-
+weedPrintAction _ symtable (PrintTimeLine filterVar) = 
+    case (getFromSymbolTable symtable filterVar) of
+            (Nothing) -> Left . UndefinedVariable $ show  filterVar
+            (Just (TFilter "patient")) -> Right symtable
+            (Just (TFilter "patients")) -> Right symtable
+            Just wrong -> Left . ComputationTypeMismatch $
+                    "Cannot print TimeLine of "++ (show filterVar)++
+                    ". It is a " ++ (show wrong) ++ " Not a patient"
 weedForEach :: Config->CompSymTable -> [Computation] ->ForEachDef 
     -> Either LexError CompSymTable
 weedForEach conf symtable newcomp (ForEachFilter filterName var )  =

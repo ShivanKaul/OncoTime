@@ -245,7 +245,7 @@ groupValString::Parser GroupItem
 groupValString = lexeme $
     do
         gv <- some wordChar
-        return $ GroupValString gv
+        return $ GroupValString $ map toLower gv
 
 groupValDate::Parser GroupItem
 groupValDate = lexeme (

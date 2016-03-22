@@ -16,14 +16,11 @@ group Id x = {1, 2, <x>, 1200 to 123123}
 		print p
 		foreach Doctor D
 		{
-			print hi
 		}
 		foreach Doctor D
 		{
-			print hi
 			foreach Doctor D
 			{
-				print hello
 			}
 		}
 		

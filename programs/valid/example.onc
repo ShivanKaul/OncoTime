@@ -25,14 +25,12 @@ doctors are
 		print p
 		foreach Doctor D
 		{
-			print hi
+		print oncologist of D
 		}
 		foreach Doctor D
 		{
-			print hi
-			foreach Doctor D
+			foreach Diagnosis D
 			{
-				print hello
 			}
 		}
 		
