@@ -28,7 +28,7 @@ import PrettyPrinter
 import Formatter
 import Weeder
 
-parseFile :: String -> IO (Program)
+parseFile :: String -> IO (Program Annotation)
 parseFile filename =
     do
         program <- readFile filename
@@ -71,13 +71,13 @@ fileNameCheck file prog  =
                 else return ()
 
 
-prettyPrintFile :: Program -> String -> IO()
+prettyPrintFile :: (Program Annotation) -> String -> IO()
 prettyPrintFile prog file =
     do
         writeFile (replaceExtension file ".pretty.onc") (pretty prog)
         print "VALID"
 
-parseString :: String -> Program
+parseString :: String -> (Program Annotation)
 parseString str =
     case parse (oncoParser <* eof) "" str of
         Left e-> error $ show e
@@ -95,11 +95,11 @@ tparseFile file =
                     hPutStrLn stderr ("ERROR: " ++ (show e))
             Right r -> print r
 
-tparseString :: String -> TestProgram
+tparseString :: String -> (TestProgram Annotation)
 tparseString str =
     case parse (testParser <* eof) "" str of
         Left e-> error$ show e
-        Right r -> r
+        Right r ->  r
 
 tparseFileCheck :: String ->IO ()
 tparseFileCheck file =

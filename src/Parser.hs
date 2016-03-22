@@ -25,15 +25,15 @@ import Types
 import Lexer
 
 --use this Parser to test
-testParser :: Parser TestProgram
+testParser :: Parser (TestProgram Annotation)
 testParser =
     do
         whiteSpace
         --try testHeader <|>testUse <|> testGroups <|> try testComputation <|>  try testDocs
         --testHeader
-        testUse
+        --testUse
         -- testDocs
-        --testGroups
+        testGroups
         --testFilters
         -- testComputation
 --
@@ -43,7 +43,7 @@ testParser =
 --
 
 --testProgram::Parser TestProgram -}
-testParserCheck ::Config-> Parser TestProgram
+testParserCheck ::Config-> Parser (TestProgram Annotation)
 testParserCheck c = 
     do
         whiteSpace
@@ -55,50 +55,50 @@ testParserCheck c =
         testFiltersCheck c
         -- testComputation
 
-testFiltersCheck::Config->Parser TestProgram
+testFiltersCheck::Config->Parser (TestProgram Annotation)
 testFiltersCheck c=
     do
         --filters <- many (filtersCheck c)
         filters <- many filters
         return $ TestFiltersList filters
 
-testHeader::Parser TestProgram
+testHeader::Parser (TestProgram Annotation)
 testHeader =
     do
         hdr <- header
         return $ TestHeader hdr
 
-testDocs::Parser TestProgram
+testDocs::Parser (TestProgram ())
 testDocs =
     do
         docs <- documentation
         return $TestDocs docs
 
-testUse::Parser TestProgram
+testUse::Parser (TestProgram ())
 testUse =
     do
         use <- many useList
         return $ TestUseFileList use
 
-testGroups::Parser TestProgram
+testGroups::Parser (TestProgram Annotation)
 testGroups =
     do
         grp <- many groups
-        return $ TestGroupList grp
+        return $ TestGroupList grp 
 
-testFilters::Parser TestProgram
+testFilters::Parser (TestProgram Annotation) 
 testFilters =
     do
         filt <- many filters
         return $ TestFiltersList filt
 
-testComputation::Parser TestProgram
+testComputation::Parser (TestProgram Annotation)
 testComputation =
     do
         comp <- many computation
         return $ TestComputation comp
 
-oncoParser:: Parser Program
+oncoParser:: Parser (Program Annotation)
 oncoParser =
     do
         whiteSpace
@@ -111,7 +111,7 @@ oncoParser =
         return $ Program hdr doc use grp filt comp
 
 --IO to checkfilename
-header:: Parser Header
+header:: Parser (Header Annotation) 
 header =
     do
         reserved "script"
@@ -136,7 +136,7 @@ arg =
         return $ Arg t v
 -}
 
-arg :: Parser Arg
+arg :: Parser (Arg Annotation)
 arg =
     do
         t <- groupType
@@ -145,11 +145,11 @@ arg =
 
 
 --just gets the next string
-var:: Parser Var
+var:: Parser (Var Annotation)
 var = lexeme $
     do
         var <- identifier--some alphaNum
-        return $ Var var
+        return $ Var var (Annotation "")
 
 filename::Parser FileName
 filename = lexeme $
@@ -197,13 +197,14 @@ wordChar = (satisfy (\c -> (c=='_') || (isAlphaNum c) ))
 fChar :: Parser Char
 fChar = (satisfy (\c -> (c=='.' ) || (isAlphaNum c)))
 
-manyGroups :: Parser [GroupDefs]
+manyGroups :: Parser [(GroupDefs Annotation)]
 manyGroups =
     do
         grps <- many groups
+
         return grps
 
-groups::Parser GroupDefs
+groups::Parser (GroupDefs Annotation)
 groups = lexeme $
     do
         reserved "group"
@@ -212,10 +213,17 @@ groups = lexeme $
         reserved "="
         grpItem <- curlies $ sepBy formattedGroup comma
         semi
-        return $ Group grpType v grpItem
+        return $ Group grpType (Var (getVar v) (Annotation (getGroupType grpType))) grpItem--(Annotation (getGroupType groupType))) grpItem 
 
 
-formattedGroup::Parser GroupItem
+getGroupType::GroupType ->String
+getGroupType (GroupType a) =a
+
+getVar::Var a->String
+getVar (Var v _) = v
+
+
+formattedGroup::Parser (GroupItem Annotation)
 formattedGroup =
     do
       (optional semi)
@@ -223,31 +231,31 @@ formattedGroup =
       (optional semi)
       return z
 
-groupType::Parser GroupType
+groupType::Parser (GroupType)
 groupType = lexeme $
     do
         gt <- some alphaNum
         return $ GroupType (map toLower gt)
 
-groupItem::Parser GroupItem
+groupItem::Parser (GroupItem Annotation)
 groupItem = try groupValDate
         <|> try groupRange
         <|> try groupValString
         <|> try groupVar
 
-groupVar :: Parser GroupItem
+groupVar :: Parser (GroupItem Annotation)
 groupVar =
     do
         gv <- angles $ var
-        return $ GroupVar gv
+        return $ GroupVar (Var (getVar gv) (Annotation ""))
 
-groupValString::Parser GroupItem
+groupValString::Parser (GroupItem Annotation)
 groupValString = lexeme $
     do
         gv <- some wordChar
-        return $ GroupValString gv
+        return $ GroupValString gv (Annotation "") -- ???
 
-groupValDate::Parser GroupItem
+groupValDate::Parser (GroupItem Annotation)
 groupValDate = lexeme (
     do {
         y <- some digit;
@@ -257,40 +265,40 @@ groupValDate = lexeme (
         d <- some digit;
         return $ GroupDate (read y) (read m) (read d)} <?> "Date")
 
-groupRange::Parser GroupItem
-groupRange = try (liftM GroupRange betw) <|> try (liftM GroupRange before) <|> try (liftM GroupRange after)  <|> try (liftM GroupRange single) <?> "Number or Range"
+groupRange::Parser (GroupItem Annotation)
+groupRange = try ( (liftM GroupRange betw ) ) <|> try (liftM GroupRange before ) <|> try (liftM GroupRange after)  <|> try (liftM GroupRange single  ) <?> "Number or Range"
 
-before::Parser RangeType
+before::Parser (RangeType Annotation)
 before =
     do
         reserved "before"
         pre <- some digit
-        return $ Before $ read pre
+        return $ Before (read pre) (Annotation "Int")
 
-after::Parser RangeType
+after::Parser (RangeType Annotation)
 after =
     do
         reserved "after"
         post <- some digit
-        return $ After $ read post
+        return $ After  (read post) (Annotation "Int")
 
-betw::Parser RangeType
+betw::Parser (RangeType Annotation)
 betw = lexeme $
     do
         pre <- lexeme $ some digit
         reserved "to"
         post <- lexeme $ some digit     
-        return $ Between (read pre) (read post)
+        return $ Between (read pre) (read post) (Annotation "Int")
 
 
-single::Parser RangeType
+single::Parser (RangeType Annotation)
 single = lexeme $
     do
         gd <- some digit
-        return $ SingleInt $ read gd
+        return $ SingleInt (read gd) (Annotation "Int")
 
 
-manyComp ::Parser [Computation]
+manyComp ::Parser [(Computation Annotation)]
 manyComp = lexeme(
     do  {
         c <- between (symbol "{" <?> "Start of Computation Block \"{\"") 
@@ -301,14 +309,14 @@ manyComp = lexeme(
         else (optional semi);
         return c}<?> "Computation Block \"{}\"")
 
-singleComp :: Parser [Computation]
+singleComp :: Parser [(Computation Annotation)] 
 singleComp = lexeme( 
     do { 
     c <- computation;
     return [c] } <?> "Single Line Computation"
     )
 
-computation::Parser Computation
+computation::Parser (Computation Annotation)
 computation =
     try (liftM2 Foreach foreach  manyComp {-(try-} {- <|> singleComp)-})
     <|> try (table)
@@ -316,7 +324,7 @@ computation =
     <|> try (liftM Print prints)
     <|> try (liftM Barchart barchart)
 
-table::Parser Computation
+table::Parser (Computation Annotation)
 table = lexeme (
     do {
         reserved "table";
@@ -327,9 +335,9 @@ table = lexeme (
         reserved "by";
         ffield <- identifier;
         semi;
-        return $ Table v fn ((map toLower ffield))}<?>"Table Statement")
+        return $ Table v fn (map toLower ffield) }<?>"Table Statement") 
 
-list::Parser Computation
+list::Parser (Computation Annotation)
 list = lexeme (
     do {
         reserved "list";
@@ -341,10 +349,10 @@ list = lexeme (
         semi;
         return $ List v e} <?> "List Statement")
 
-seqList::Parser [SeqField]
+seqList::Parser [(SeqField Annotation)] 
 seqList= lexeme ( (squares $  formattedSequence )<?> "Sequence")  
 
-formattedSequence::Parser [SeqField]
+formattedSequence::Parser [(SeqField Annotation)]
 formattedSequence =
     do
         (optional semi)
@@ -352,7 +360,7 @@ formattedSequence =
         (optional semi)
         return x
 
-seqField::Parser SeqField
+seqField::Parser (SeqField Annotation)
 seqField =
     do
         (optional semi)
@@ -366,13 +374,13 @@ seqField =
 --     do{
 --         e <- event;
 --         return $ Single e}<?>"Single Event")
-seqStar :: Parser SeqField
+seqStar :: Parser (SeqField Annotation)
 seqStar =
     do
         e <- curlies $ sepBy1 (do {(optional semi) ; e<-event; (optional semi);return e}) comma
         star
         return $ Star e
-seqNeg::Parser SeqField
+seqNeg::Parser (SeqField Annotation)
 seqNeg =
     do
         e <- parens $ reserved "not" >> event --TODO: Write this better
@@ -383,25 +391,30 @@ seqNeg =
 --         reserved "not"
 --         event
 
-seqComma :: Parser SeqField
+seqComma :: Parser (SeqField Annotation)
 seqComma =
     do
         
         e <- curlies $ sepBy1 (do {(optional semi) ; e<-event; (optional semi);return e}) comma
         return $ Comma e
-seqBar :: Parser SeqField
+        
+seqBar :: Parser (SeqField Annotation)
 seqBar =
     do
         e <- sepBy1 (do {(optional semi) ; e<-event; (optional semi);return e}) bar
         return $ Bar e
 
-event::Parser Event
-event =  lexeme ((liftM Event eventName)<?>"Event")
+event::Parser (Event Annotation)
+event = lexeme $ 
+    do--lexeme ((return $ Event  eventName (Annotation ""))  <?>"Event")
 
-eventName :: Parser EventName
+        e <- eventName
+        return (Event e (Annotation ""))
+
+eventName :: Parser (EventName)
 eventName = identifier
 
-barchart::Parser Var
+barchart::Parser (Var Annotation)
 barchart =  lexeme (
     do{
         reserved "barchart";
@@ -409,14 +422,14 @@ barchart =  lexeme (
         semi;
         return $ v}<?> "Barchart")
 
-foreach::Parser ForEachDef
+foreach::Parser (ForEachDef Annotation)
 foreach =lexeme(
     do{  f<-try(forEachFilter) <|> try(forEachTable) <|> try(forEachSequence) <|> try(forEachList);
         optional semi;
         return f;
 } <?> "For Each Definition")
 
-forEachFilter::Parser ForEachDef
+forEachFilter::Parser (ForEachDef Annotation)
 forEachFilter =
     do
         reserved "foreach"
@@ -425,7 +438,7 @@ forEachFilter =
         return $ ForEachFilter f v
 
 
-forEachTable::Parser ForEachDef
+forEachTable::Parser (ForEachDef Annotation)
 forEachTable =
     do
         reserved "foreach"
@@ -435,7 +448,7 @@ forEachTable =
         v2 <- var
         return $ ForEachTable v1 v2
 
-forEachSequence::Parser ForEachDef
+forEachSequence::Parser (ForEachDef Annotation)
 forEachSequence =
     do
         reserved "foreach"
@@ -443,9 +456,9 @@ forEachSequence =
         v1 <- var
         reserved "like"
         e <- seqList
-        return $ ForEachSequence v1 e
+        return $ ForEachSequence v1 e 
 
-forEachList::Parser ForEachDef
+forEachList::Parser (ForEachDef Annotation)
 forEachList =
     do
         reserved "foreach"
@@ -455,7 +468,7 @@ forEachList =
         v2 <- var
         return $ ForEachList v1 v2
 
-printvar::Parser PrintAction
+printvar::Parser (PrintAction Annotation)
 printvar =
     do
         reserved "print"
@@ -463,7 +476,7 @@ printvar =
         semi
         return $ PrintVar v
 
-prints:: Parser PrintAction
+prints:: Parser (PrintAction Annotation) 
 prints = lexeme ( 
     do{
    x<-(try printvar <|> try printTimeLine <|> try printLength <|> try printFilters <|> try printElement);
@@ -472,7 +485,7 @@ prints = lexeme (
    } <?> "Print Statement")
 
 
-printTimeLine::Parser PrintAction
+printTimeLine::Parser (PrintAction Annotation) 
 printTimeLine =
     do
         reserved "print"
@@ -482,7 +495,7 @@ printTimeLine =
         semi
         return $ PrintTimeLine v
 
-printLength::Parser PrintAction
+printLength::Parser (PrintAction Annotation)
 printLength =
     do
         reserved "print"
@@ -493,7 +506,7 @@ printLength =
         return $ PrintLength v
 
 
-printFilters::Parser PrintAction
+printFilters::Parser (PrintAction Annotation)
 printFilters =
     do
         reserved "print"
@@ -503,7 +516,7 @@ printFilters =
         semi  
         return $ PrintFilters filterList v
 
-printElement::Parser PrintAction
+printElement::Parser (PrintAction Annotation)
 printElement =
     do
         reserved "print"
@@ -512,17 +525,17 @@ printElement =
         semi  
         return $ PrintElement v1 v2
 
-filterName::Parser FilterName
+filterName::Parser (FilterName)
 filterName = lexeme $
     do
         f <- identifier
         return (map toLower f)
 
-filterVal::Parser FieldVal
+filterVal::Parser (FieldVal Annotation)
 filterVal = lexeme( groupItem <?> "Field Options")
         
 
-filters :: Parser Filter
+filters :: Parser (Filter Annotation)
 filters = lexeme(
     do  {
         filtName <- lexeme (identifier <?> "Filter Section Name");
@@ -531,14 +544,14 @@ filters = lexeme(
         filterDs <- lexeme $ some $ try filterDefs;
         return $ Filter (map toLower filtName) filterDs} <?> "Filter Section")
 
-manyFilters :: Parser [Filter]
+manyFilters :: Parser [(Filter Annotation)]
 manyFilters = lexeme (
     do {
         many filters
         } <?> "Filters Block")
 
 
-filterDefs :: Parser FieldDef 
+filterDefs :: Parser (FieldDef Annotation)
 filterDefs = lexeme (
     do {
         ffield <- identifier;

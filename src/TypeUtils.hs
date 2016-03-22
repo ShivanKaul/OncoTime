@@ -64,7 +64,7 @@ fieldval = lexeme $
         --p <-( squares  (sepBy (some (choice[alphaNum, (oneOf "-_+.")] ) ) comma) )
         
         p <-( squares  (sepBy (some (oneOf validChar)) comma) )
-        return $ FieldVal p
+        return $ FieldValue p
 
 validChar = ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z'] ++ ['!','-','_','.','+']
 
