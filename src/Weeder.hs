@@ -333,7 +333,8 @@ events = ["consult_referral_received","initial_consult_booked","initial_consult_
             "ready_for_initial_contour","ready_for_md_contour",
             "ready_for_dose_calculation","prescription_approved_by_md",
             "ready_for_physics_qa","ready_for_treatment", "patient_arrives",
-            "machine_rooms_booked","patient_contacted","patient_scheduled","patient_arrived","treatment_began","end"]
+            "machine_rooms_booked","patient_contacted","patient_scheduled",
+            "patient_arrived","treatment_began","end"]
 
 
 weedComputationList :: Config->[(Computation Annotation)]->Either LexError String
@@ -352,10 +353,7 @@ weedFold conf symtable computations =
             Right (newSymtable,internalSymRep) -> 
                 Right $ (internalSymRep++(stringOfLastScope newSymtable))
             (Left e) -> Left e 
-     --res <-  printFold (foldl' (weedEach conf) symtable computations)
-        --return res
-            --Left e -> Left e
-            --Right r -> Right r
+
 
 
 stringOfLastScope :: CompSymTable -> String
@@ -429,16 +427,17 @@ weedAndTypeCheckComp conf symtable  (Table variable constructor  field) =
 weedAndTypeCheckComp conf symtable (List variable seqlist) =
     evaluateInTopScope symtable check
     where check sym = 
-            let errorOrSym = foldl' foldWeedList (Right $ addToSymTable sym  variable TList) seqlist
+            let errorOrSym = foldl' foldWeedList 
+                    (Right $ addToSymTable sym  variable TList) seqlist
             in case errorOrSym of 
-                Right sym -> Right (sym,"")
+                Right s -> Right (s,"")
                 Left l -> Left l
 weedAndTypeCheckComp conf symtable (Barchart variable) =
     evaluateInTopScope symtable check
     where check sym =
             case getFromSymbolTable sym variable of
                 Nothing -> Left . UndefinedVariable $ show  variable
-                Just TTable ->  Right (symtable,"")
+                Just TTable ->  Right (sym,"")
                 Just t -> Left . ComputationTypeMismatch $
                             "Cannot draw Barchart of "++ (show variable)
                             ++". It is a " ++ (show t) ++ "Not a Table"
@@ -484,26 +483,37 @@ weedForEach config symtable newcomp (ForEachTable indexVar tableVar)  =
             Nothing -> Left . UndefinedVariable $ show  tableVar
             Just TTable -> let
                             newsym = (addToSymTable 
-                                (symtable++[emptyScope]) indexVar TIndex)
+                                (sym++[emptyScope]) indexVar TIndex)
                         in case (weedFold config newsym newcomp) of
-                            Right (intSymRep) -> Right (symtable,intSymRep) 
+                            Right (intSymRep) -> Right (sym,intSymRep) 
                             Left e -> Left e  
             Just t-> Left ( ComputationTypeMismatch $
                     "Cannot go through loop for "++ (show tableVar)
                     ++". It is a " ++ (show t) ++ "Not a Table")
                 )
-weedForEach config symtable newcomp (ForEachSequence memberVar unused) = 
-    Left $ ComputationWrongScope "Unimplemented"
-weedForEach config symtable newcomp (ForEachList memberVar listVar)= 
+weedForEach config symtable newcomp (ForEachSequence memberVar undefSequence) =
+    evaluateInTopScope symtable check
+    where check sym=
+            let
+                newsym = (addToSymTable (sym++[emptyScope])
+                                memberVar TSequence)
+                errorOrSym = foldl' foldWeedList (Right newsym) undefSequence
+            in case errorOrSym of
+                Right s -> case (weedFold config s newcomp) of
+                    Right (intSymRep) -> Right (s,intSymRep) 
+                    Left e -> Left e 
+                Left l -> Left l
+
+weedForEach config symtable newcomp (ForEachList memberVar listVar) = 
     evaluateInTopScope symtable check
     where check sym=
             case getFromSymbolTable sym listVar of
                 Nothing -> Left . UndefinedVariable $ show  listVar
                 Just TList -> let
-                                newsym =(addToSymTable (symtable++[emptyScope])
-                                 memberVar TSequence)
+                                newsym =(addToSymTable (sym++[emptyScope])
+                                    memberVar TSequence)
                         in case (weedFold config newsym newcomp) of
-                            Right (intSymRep) -> Right (symtable,intSymRep) 
+                            Right (intSymRep) -> Right (sym,intSymRep) 
                             Left e -> Left e 
                 Just t-> Left ( ComputationTypeMismatch $
                         "CAnnot Go through loop for "++ (show listVar)++
@@ -534,7 +544,7 @@ isValidInNested ::Config-> CompSymTable -> FilterName -> Bool
 isValidInNested conf symtable filterName =
     let
         (counts, filtersUsed) = unzip (findAllFilters symtable)
-    in ((null filtersUsed) || ( not (elem filterName filtersUsed)))
+    in ((null filtersUsed) || ( not (elem filterName filtersUsed)) && ((head counts)==1) )
 
 
 findAllFilters :: CompSymTable -> [(Int,FilterName)]
