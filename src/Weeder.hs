@@ -583,7 +583,7 @@ weedAndTypeCheckComp conf symtable (Print printAction ) =
 weedAndTypeCheckComp conf symtable (Foreach def comps ) = 
     weedForEach conf symtable comps def
 
-weedPrintAction :: Config-> CompSymTable -> (PrintAction Annotation)
+weedPrintAction :: (Config Annotation)-> CompSymTable -> (PrintAction Annotation)
             -> Either LexError (CompSymTable, String,(Computation Annotation))
 weedPrintAction _ symtable  (PrintVar var@(Var name _)) = 
     case getFromSymbolTable symtable var of
@@ -651,7 +651,6 @@ weedForEach conf symtable newcomp (ForEachFilter filterName var )  =
                             Right (intSymRep) -> Right (symtable,intSymRep)
                             Left e -> Left e
             else Left (
-
                 ComputationWrongScope "Foreach is not valid in this scope")
     else Left $  FieldNameError $ ""++
             filterName++" is not a valid loopable Filter"
@@ -726,7 +725,7 @@ isValidInNested conf symtable filterName =
         noFilters = null filtersUsed
         topScope = isNowInTopScope symtable
         prevUsed = (elem filterName filtersUsed)
-    in (show $ topScope)) ((noFilters && topScope)|| ( (not noFilters)&&(not prevUsed)))
+    in ((noFilters && topScope)|| ( (not noFilters)&&(not prevUsed)))
 
 
 findAllFilters :: CompSymTable -> [FilterName]
