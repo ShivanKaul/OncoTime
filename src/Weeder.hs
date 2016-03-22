@@ -65,6 +65,14 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
             Right r -> putStrLn "All Fields valid"
 
         let allGroups = (concat (newGroups)) ++ groupDefs
+        -- check for redeclarations for group #98
+        case (checkForGroupRedecl allGroups) of
+            Left e -> hPrint stderr e >> exitFailure
+            Right r -> print "No redeclarations for group files"
+
+        -- take care of recursive groups #97
+        -- check if variable being used in group is actually defined in symbol table #83
+        -- check types of groups and if they exist #99
         let symbolTableH = buildHeadSymbolTable allGroups hdr
 
         case  mapM_ (checkFilterTypes (conf) symbolTableH) [filters] of
@@ -121,6 +129,29 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
         putStrLn "Weeded successfully"
         return (Program hdr docs [] (allGroups) filters (comps))
 
+<<<<<<< HEAD
+=======
+checkForGroupRedecl :: [GroupDefs] -> Either LexError [GroupDefs]
+checkForGroupRedecl groups =
+    do
+        -- traverse list and make sure no group has group var the same
+        -- get list of vars
+        let varList = map (\(Group t v _) -> v) groups
+        -- check for dups
+        case (dupesExist varList) of
+            (_, []) -> Right $ groups
+            (_, repeated) -> Left $ RedecError ("The following groups were redeclared: "
+                ++ (intercalate ", " (map (varToStr) repeated)))
+
+dupesExist :: [Var] -> ([String], [Var])
+dupesExist vars =
+    do
+        -- length (nubBy (\(Var x) (Var y) -> x == y) vars) == length (vars)
+        foldl (\(seenVars, repeated) (Var x) ->
+            if (x `elem` seenVars) then (x : seenVars, (Var x) : repeated) else
+                (x : seenVars, repeated)) ([], []) vars
+
+>>>>>>> 0244006... Handle redeclarations for groups
 replaceVarsFilter :: HashMap.HashMap Var (GroupType, [GroupItem]) -> Filter -> Filter
 replaceVarsFilter symbolTableH (Filter fname fdefs) =
     do
@@ -348,11 +379,7 @@ checkFieldsEx conf (x:xs) l =
 --give conf
 --GOAL: check that the types of the filter
 --phase 1: check to see that all
-<<<<<<< HEAD
-checkFilterTypes::Config->(HashMap.HashMap (Var Annotation) GroupType)->[(Filter Annotation)]->Either LexError ()--[(Filter Annotation)]
-=======
-checkFilterTypes::Config->(HashMap.HashMap Var (GroupType, [GroupItem]))->[Filter]->Either LexError ()--[Filter]
->>>>>>> a3e1465... PPTYPE - Handle filters
+checkFilterTypes::Config->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem]))->Either LexError ()--[(Filter Annotation)]
 checkFilterTypes (Config conf) hmap ms =
     do
         forM_ ms $ \x -> do
@@ -368,13 +395,9 @@ checkFilterTypes (Config conf) hmap ms =
                 Just val ->  (typeCheckFieldMap val hmap) fieldDefs
 
 --return a list of things that don't type check
-<<<<<<< HEAD
 
 --NEED TO RETURN ANNOTATED FIELD MAP MAYBE?
-typeCheckFieldMap::FieldMap->(HashMap.HashMap (Var Annotation) GroupType)->[(FieldDef Annotation)]->Either LexError () --[FieldDef]
-=======
-typeCheckFieldMap::FieldMap->(HashMap.HashMap Var (GroupType, [GroupItem]))->[FieldDef]->Either LexError () --[FieldDef]
->>>>>>> a3e1465... PPTYPE - Handle filters
+typeCheckFieldMap::FieldMap->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem]))->[(FieldDef Annotation)]->Either LexError () --[FieldDef]
 typeCheckFieldMap (FieldMap fm) hmap fdList = do
    forM_ fdList $ \x ->
         do
