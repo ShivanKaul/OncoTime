@@ -2,15 +2,17 @@ script Yusaira2(Events y)
 /** no star signs are allowed in the  */
 
 
-//group Event z = {ct_sim,<y>}
-
+group Eventfkjahfanf z = {patient_arrived,<y1>}
+group Events z1 = {patient_arrived,<z>}
+group Events z1 = {patient_arrived,<z>}
+group name a ={}
 
 //Patient are
 //	Id : 30,5000
 //	Sex : M, F
 
-//Events are
-//	Events: <z>
+Events are
+	Events: <z1>
 
 {	
 
@@ -21,5 +23,29 @@ script Yusaira2(Events y)
 	{
 		print p
 	}
+	foreach Diagnosis p
+	{
+		print p
+	}
+	foreach Doctor p
+	{
+		print p
+	}
+
+	table t = count Diagnosis by name
+
+
+    // We are foreaching over tables now.
+    foreach element i of t
+    {
+        print t[i]
+       // print i[t]
+    }
+    list s= sequences like []
+    foreach member i in s
+    {
+        print i
+       // print i[t]
+    }
 
 }

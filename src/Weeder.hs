@@ -30,8 +30,8 @@ import PrettyPrinter
 import Formatter
 
 --the function that does all weeding
-weed::String->(Program Annotation)->IO(Program Annotation)
-weed file prg@(Program hdr docs useList groupDefs filters comps) =
+weed::String->(String -> IO())->(Program Annotation)->IO(Program Annotation)
+weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
     do
         --get Config file
         conf <- readConfig file
@@ -76,7 +76,7 @@ weed file prg@(Program hdr docs useList groupDefs filters comps) =
 
         case  weedComputationList conf comps of
             Left e-> hPrint stderr e >>exitFailure
-            Right r -> putStrLn r
+            Right r -> symTabFun r
 
         -- SAMPLE USES OF SYMBOL TABLE
         -- testIfSymbolTableContains symbolTable1 (Var "x")
@@ -538,7 +538,6 @@ foldWeedList prev curr =
     case weedSequence curr of  
         Left evname -> Left $ IncorrectEvent evname
         _-> prev
-
 
 isValidInNested ::Config-> CompSymTable -> FilterName -> Bool
 isValidInNested conf symtable filterName =
