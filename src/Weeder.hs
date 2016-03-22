@@ -81,14 +81,12 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
         -- check types of groups and if they exist #99
         let symbolTableH = buildHeadSymbolTable allGroups hdr
 
-        case  mapM_ (checkFilterTypes (conf) symbolTableH) [filters] of
+        case  mapM_ (checkFilterTypes conf symbolTableH) [filters] of
             Left e -> hPrint stderr e >> exitFailure
             Right r -> putStrLn "all field types check out"
         --case  mapM_ (checkFilterTypes (filterable) symbolTableH) [filters] of
 
         -------- TEST ---------
-
-        print (symbolTableH)
 
         print "Printing old filters"
 
@@ -109,8 +107,6 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
         case (M.lookup ("patient", True) confmap) of
             Nothing -> hPrint stderr "key not found in confmap!"
             Just (FieldMap r) -> print "here's a confmap" >> print (show (M.toList r))
-
-        case  mapM_ (checkFilterTypes (filterable) symbolTableH) [filters] of
 
         case  weedComputationList conf comps of
             Left e-> hPrint stderr e >>exitFailure
@@ -136,7 +132,7 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
         return (Program hdr docs [] (allGroups) filters (comps))
 
 
-checkForRecursiveGroups :: [GroupDefs] -> [Var]
+checkForRecursiveGroups :: [GroupDefs Annotation] -> [Var Annotation]
 checkForRecursiveGroups groups =
     do
         foldl (\recGrps curGrp -> case curGrp of
@@ -144,14 +140,14 @@ checkForRecursiveGroups groups =
                 Right var -> (recGrps)
                 ) [] (map checkForRecursiveEachGroup groups)
 
-checkForRecursiveEachGroup :: GroupDefs -> Either Var Var
+checkForRecursiveEachGroup :: (Eq a) => GroupDefs a -> Either (Var a) (Var a)
 checkForRecursiveEachGroup (Group t var items) =
     do
         case (GroupVar var) `elem` items of
             True -> Left $ var
             False -> Right $ var
 
-checkForGroupRedecl :: [GroupDefs] -> Either LexError [GroupDefs]
+checkForGroupRedecl :: [GroupDefs Annotation] -> Either LexError [GroupDefs Annotation]
 checkForGroupRedecl groups =
     do
         -- traverse list and make sure no group has group var the same
@@ -163,20 +159,20 @@ checkForGroupRedecl groups =
             (_, repeated) -> Left $ RedecError ("The following groups were redeclared: "
                 ++ (intercalate ", " (map (varToStr) repeated)))
 
-dupesExist :: [Var] -> ([String], [Var])
+dupesExist :: [Var Annotation] -> ([String], [Var Annotation])
 dupesExist vars =
     do
         -- length (nubBy (\(Var x) (Var y) -> x == y) vars) == length (vars)
-        foldl (\(seenVars, repeated) (Var x) ->
-            if (x `elem` seenVars) then (x : seenVars, (Var x) : repeated) else
+        foldl (\(seenVars, repeated) (Var x a) ->
+            if (x `elem` seenVars) then (x : seenVars, (Var x a) : repeated) else
                 (x : seenVars, repeated)) ([], []) vars
 
-replaceVarsFilter :: HashMap.HashMap Var (GroupType, [GroupItem]) -> Filter -> Filter
+replaceVarsFilter :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> Filter Annotation -> Filter Annotation
 replaceVarsFilter symbolTableH (Filter fname fdefs) =
     do
         Filter fname (map (replaceVarsFieldDef symbolTableH) fdefs)
 
-replaceVarsFieldDef :: HashMap.HashMap Var (GroupType, [GroupItem]) -> FieldDef -> FieldDef
+replaceVarsFieldDef :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> FieldDef Annotation -> FieldDef Annotation
 replaceVarsFieldDef symbolTableH (FieldDef fname fvalues) =
     do
         let varList = filter (\v -> case v of
@@ -188,7 +184,7 @@ replaceVarsFieldDef symbolTableH (FieldDef fname fvalues) =
         let expandedList = concat (map (replaceVarsGroupItem symbolTableH) varList)
         FieldDef fname (nonVarList ++ expandedList)
 
-replaceVarsGroupItem :: HashMap.HashMap Var (GroupType, [GroupItem]) -> GroupItem -> [GroupItem]
+replaceVarsGroupItem :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> GroupItem Annotation -> [GroupItem Annotation]
 replaceVarsGroupItem symbolTableH (GroupVar v) =
     do
         case (HashMap.lookup v symbolTableH) of
@@ -199,7 +195,7 @@ instance (Hashable (Var Annotation)) where
   hashWithSalt s (Var v a) = s + (hash v)
 
 -- Utility test function to check if symbol table contains a key
-testIfHSymbolTableContains :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem]) -> (Var Annotation) -> IO()
+testIfHSymbolTableContains :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> (Var Annotation) -> IO()
 testIfHSymbolTableContains hashmap (Var v a) =
         case (HashMap.lookup (Var v a) hashmap) of
             Nothing -> hPrint stderr "nothing found!"
@@ -207,7 +203,7 @@ testIfHSymbolTableContains hashmap (Var v a) =
                 v ++ " in symboltable1")
 
 -- Build symbol table from groups
-buildHeadSymbolTable :: [(GroupDefs Annotation)] -> (Header Annotation) -> HashMap.HashMap (Var Annotation) (GroupType, [GroupItem])
+buildHeadSymbolTable :: [(GroupDefs Annotation)] -> (Header Annotation) -> HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation])
 buildHeadSymbolTable groups (Header _ args) =
     do
         let keyValuesGroups = map (\(Group (t) (v) items) -> (v, (t, items))) (groups)
@@ -258,12 +254,12 @@ readConfig file =
         return $ Config totalMap
 
 -- use config to populate default values for a filter
-populateDefaultValuesFilters :: [Filter] -> Config -> [Filter]
+populateDefaultValuesFilters :: [Filter Annotation] -> Config -> [Filter Annotation]
 populateDefaultValuesFilters filters config =
     do
         map (findDefaultValuesFilt config) (filters)
 
-findDefaultValuesFilt :: Config -> Filter -> Filter
+findDefaultValuesFilt :: Config -> Filter Annotation -> Filter Annotation
 findDefaultValuesFilt (Config conf) (Filter fname defs) =
     do
         -- get all fields for a filter from config
@@ -279,7 +275,7 @@ findDefaultValuesFilt (Config conf) (Filter fname defs) =
                 fieldsFromFieldMap
         Filter fname (newDefs)
 
-fieldMapToFieldDefs :: FieldMap -> [FieldDef]
+fieldMapToFieldDefs :: FieldMap -> [FieldDef Annotation]
 fieldMapToFieldDefs (FieldMap fmap) =
     do
         let flist = M.toList fmap
@@ -398,7 +394,7 @@ checkFieldsEx conf (x:xs) l =
 --give conf
 --GOAL: check that the types of the filter
 --phase 1: check to see that all
-checkFilterTypes::Config->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem]))->Either LexError ()--[(Filter Annotation)]
+checkFilterTypes::Config->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem a]))->[(Filter Annotation)]->Either LexError ()--[(Filter Annotation)]
 checkFilterTypes (Config conf) hmap ms =
     do
         forM_ ms $ \x -> do
@@ -416,7 +412,7 @@ checkFilterTypes (Config conf) hmap ms =
 --return a list of things that don't type check
 
 --NEED TO RETURN ANNOTATED FIELD MAP MAYBE?
-typeCheckFieldMap::FieldMap->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem]))->[(FieldDef Annotation)]->Either LexError () --[FieldDef]
+typeCheckFieldMap::FieldMap->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem a]))->[(FieldDef Annotation)]->Either LexError () --[FieldDef]
 typeCheckFieldMap (FieldMap fm) hmap fdList = do
    forM_ fdList $ \x ->
         do
@@ -427,7 +423,7 @@ typeCheckFieldMap (FieldMap fm) hmap fdList = do
                 Just val -> mapM_ (compareFieldTypes val (FieldMap fm) hmap) fvalList
 
 --take fieldDefs anda  fieldMap, return an error or a field deaf after calling Field
-compareFieldTypes::Field->(FieldMap)->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem]))->(GroupItem Annotation)->Either LexError ()--GroupItem
+compareFieldTypes::Field->(FieldMap)->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem a]))->(GroupItem Annotation)->Either LexError ()--GroupItem
 compareFieldTypes (FieldValue allValList) fm hm (GroupValString s _)  =
     if (s `elem` allValList) then Right ()--Right (GroupValString s)
     else Left (AllowedValError ("Error. " ++ s ++ " is not defined in the config file list that also contains: " ++ (intercalate "," allValList)))
@@ -437,7 +433,7 @@ compareFieldTypes (FieldType "Date") fm hm (GroupDate _ _ _) = Right ()
 --I need a new type that allows me to pull out the type of var
 compareFieldTypes _ (FieldMap fm) hm  (GroupVar var) =
     case (HashMap.lookup var hm) of
-        Nothing -> Left $ TypeError ("ERROR. var " ++ (varToStr var) ++ "not declared")
+        Nothing -> Left $ TypeError ("ERROR. var " ++ (varToStr var) ++ " not declared")
         Just (a, _) -> case (M.member ((groupTypeToStr a)) fm) of
         --if it is declared, we want to make sure it is used in the right case. i.e. with the right field
                 False -> Left $ TypeError ("ERROR. variable " ++
@@ -449,7 +445,7 @@ compareFieldTypes b fm hm a = Left $ TypeError ("Type Error between " ++
 varToStr::(Var Annotation)->String
 varToStr (Var v _) = v
 
-varsToStr :: [Var] -> String
+varsToStr :: [Var Annotation] -> String
 varsToStr vars = intercalate ", " (map (varToStr) vars)
 
 groupTypeToStr::GroupType->String
