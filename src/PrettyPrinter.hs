@@ -158,3 +158,7 @@ instance PrettyPrint (TestProgram Annotation) where
     prettyPrint (TestComputation comps) = prettyPrint comps
     prettyPrint (TestFiltersList filters) = prettyPrint filters
     -- prettyPrint (TestHeader header) = prettyPrint header
+instance PrettyPrint (ComputationType) where
+    -- prettyPrint (TestProgram2 header docs [usefiles] [groups] [filt] [comps]) = (prettyPrint header) ++ (prettyPrint docs) ++ (prettyPrint usefiles)
+    prettyPrint (TFilter s) = "Single "++ s
+    prettyPrint (t) = tail $ show t
