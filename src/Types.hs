@@ -105,11 +105,11 @@ data LexError = FieldNameError String | FilterNameError String | AllowedTypeErro
 
 
 --we should also define a list of aliases perhaps that we pass
-data Config =  Config (M.Map (FilterName, Bool) FieldMap) deriving(Eq, Show)
+data Config a =  Config (M.Map (FilterName, Bool) (FieldMap a)) deriving(Eq, Show)
 
-data FieldMap = FieldMap (M.Map FieldName (Field)) deriving(Eq, Show)
+data FieldMap a = FieldMap (M.Map FieldName (Field a)) deriving(Eq, Show)
 
-data Field = FieldType String | FieldValue [AllowedVal]  deriving(Eq, Show)
+data Field a = FieldVar String a | FieldType String a | FieldValue [AllowedVal] a deriving(Eq, Show)
 
 --type Field = (AllowedType, [AllowedVal])
 

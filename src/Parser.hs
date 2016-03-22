@@ -43,7 +43,7 @@ testParser =
 --
 
 --testProgram::Parser TestProgram -}
-testParserCheck ::Config-> Parser (TestProgram Annotation)
+testParserCheck ::(Config Annotation)-> Parser (TestProgram Annotation)
 testParserCheck c = 
     do
         whiteSpace
@@ -55,7 +55,7 @@ testParserCheck c =
         testFiltersCheck c
         -- testComputation
 
-testFiltersCheck::Config->Parser (TestProgram Annotation)
+testFiltersCheck::(Config Annotation)->Parser (TestProgram Annotation)
 testFiltersCheck c=
     do
         --filters <- many (filtersCheck c)

@@ -149,7 +149,7 @@ getGroupDefs grpFileData =
             Left e -> hPutStrLn stderr ("ERROR: " ++ show e) >> return []
             Right r -> return r
 
-readConfig::String->IO(Config)
+readConfig::String->IO((Config Annotation))
 readConfig file =
     do
         program <- readFile file
@@ -178,7 +178,7 @@ testGroupFiles useFiles grpFiles =
             --Better error messages for other cases. Maybe see what files are missing exactly. 
             --Doesn't need to be true false exactly
             True -> Right $ useFiles
-checkFilters::[(Filter Annotation)]->Config->Either LexError [(Filter Annotation)]
+checkFilters::[(Filter Annotation)]->(Config Annotation)->Either LexError [(Filter Annotation)]
 checkFilters filList conf = case (checkFilRedec filList ) of
     Right r ->
         case (checkFieldsEx conf r [] ) of
@@ -213,7 +213,7 @@ getRedeclarations (x:xs) checkedList =
 
 
 --checks fields
-checkFiltConf::[(Filter Annotation)]->Config->Either LexError [(Filter Annotation)]
+checkFiltConf::[(Filter Annotation)]->(Config Annotation)->Either LexError [(Filter Annotation)]
 checkFiltConf x conf =
     case (checkFields conf x []) of
         [] -> Right x
@@ -221,7 +221,7 @@ checkFiltConf x conf =
             "The following fields are not specified in the config file" 
             ++ (intercalate ", " (map (getFilterName) l)) )
 
-checkFields::Config->[(Filter Annotation)]->[(Filter Annotation)]->[(Filter Annotation)]
+checkFields::(Config Annotation)->[(Filter Annotation)]->[(Filter Annotation)]->[(Filter Annotation)]
 checkFields conf [] [] = []
 checkFields conf [] notIncList = notIncList
 checkFields conf (x:xs) notIncList =
@@ -238,11 +238,11 @@ getFieldName (FieldDef ff _ ) = ff
 getFieldValList::(FieldDef Annotation)->[(FieldVal Annotation)]
 getFieldValList (FieldDef _ fv ) = fv
 
-fieldExists::Config->FieldName->Bool
+fieldExists::(Config Annotation)->FieldName->Bool
 fieldExists (Config confmap) fname = (M.member (fname, True) confmap) 
                                         || (M.member (fname, False) confmap)
 
-subFieldExists::Config->FilterName->FieldName->Bool
+subFieldExists::(Config Annotation)->FilterName->FieldName->Bool
 subFieldExists (Config confmap) fname sfname =
     case (M.lookup (fname, True) confmap) of
         Nothing -> case (M.lookup (fname, False) confmap) of
@@ -252,12 +252,12 @@ subFieldExists (Config confmap) fname sfname =
 
 --given a list of filters, makes sure each thing int he map belongs
 --COULD ALSO DO TYPE CHEKING HERE, GIVEN THE SYMBOL TABLE
-checkFieldsEx::Config->[(Filter Annotation)]->[(FilterName, [FilterName])]->[(FilterName, [FilterName])]
+checkFieldsEx::(Config Annotation)->[(Filter Annotation)]->[(FilterName, [FilterName])]->[(FilterName, [FilterName])]
 checkFieldsEx conf [] [] = []
 checkFieldsEx conf [] l = l
 checkFieldsEx conf (x:xs) l =
     do
-        let fn = (getFilterName x) --first arg to subfield exists, the name of the field we are checking
+        let fn = (getFilterName x) --first arg to field exists, the name of the field we are checking
         --let confMap =  configToMap conf
 
         --list of filter definitions for that particular field. i.e., if the field is Doctor, this specifes all the lists of [ID: vals_here, etc]
@@ -272,10 +272,13 @@ checkFieldsEx conf (x:xs) l =
 --give conf
 --GOAL: check that the types of the filter
 --phase 1: check to see that all
-checkFilterTypes::Config->(HashMap.HashMap (Var Annotation) GroupType)->[(Filter Annotation)]->Either LexError ()--[(Filter Annotation)]
+checkFilterTypes::(Config Annotation)->(HashMap.HashMap (Var Annotation) GroupType)->[(Filter Annotation)]->Either LexError [(Filter Annotation)] -- ()--[(Filter Annotation)]
 checkFilterTypes (Config conf) hmap ms =
     do
-        forM_ ms $ \x -> do
+--How can I accumulate stuff?
+        
+       -- forM_ ms  (\x -> do
+        foldM (\(x:xs) -> do
             --from fields
             let filterName = (getFilterName x)
             let fieldDefs = getFieldDefList x -- list of possible FieldDefs for a filter
@@ -284,13 +287,13 @@ checkFilterTypes (Config conf) hmap ms =
                 Nothing -> case (M.lookup (filterName, False) conf) of
                     Nothing -> Left $ GenError (filterName ++ " is not in map")
                     Just val -> (typeCheckFieldMap val hmap) fieldDefs
+                Just val ->  (typeCheckFieldMap val hmap) fieldDefs) [] ms 
 
-                Just val ->  (typeCheckFieldMap val hmap) fieldDefs
 
 --return a list of things that don't type check
 
 --NEED TO RETURN ANNOTATED FIELD MAP MAYBE?
-typeCheckFieldMap::FieldMap->(HashMap.HashMap (Var Annotation) GroupType)->[(FieldDef Annotation)]->Either LexError () --[FieldDef] 
+typeCheckFieldMap::(FieldMap Annotation)->(HashMap.HashMap (Var Annotation) GroupType)->[(FieldDef Annotation)]->Either LexError [(FieldDef Annotation)] -- () --[FieldDef] 
 typeCheckFieldMap (FieldMap fm) hmap fdList = do
    forM_ fdList $ \x ->
         do
@@ -301,13 +304,13 @@ typeCheckFieldMap (FieldMap fm) hmap fdList = do
                 Just val -> mapM_ (compareFieldTypes val (FieldMap fm) hmap) fvalList
 
 --take fieldDefs anda  fieldMap, return an error or a field deaf after calling Field
-compareFieldTypes::Field->(FieldMap)->(HashMap.HashMap (Var Annotation) GroupType)->(GroupItem Annotation)->Either LexError ()--GroupItem
-compareFieldTypes (FieldValue allValList) fm hm (GroupValString s _)  = 
+compareFieldTypes::(Field Annotation)->(FieldMap Annotation)->(HashMap.HashMap (Var Annotation) GroupType)->(GroupItem Annotation)->Either LexError ()--GroupItem
+compareFieldTypes (FieldValue allValList _ ) fm hm (GroupValString s _)  = 
     if (s `elem` allValList) then Right ()--Right (GroupValString s) 
     else Left (AllowedValError ("Error. " ++ s ++ " is not defined in the config file list that also contains: " ++ (intercalate "," allValList)))
-compareFieldTypes (FieldType "String") fm hm (GroupValString s _)  = Right ()
-compareFieldTypes (FieldType "Int") fm hm (GroupRange _) = Right ()
-compareFieldTypes (FieldType "Date") fm hm (GroupDate _ _ _) = Right ()
+compareFieldTypes (FieldType "String" _) fm hm (GroupValString s _)  = Right ()
+compareFieldTypes (FieldType "Int" _) fm hm (GroupRange _) = Right ()
+compareFieldTypes (FieldType "Date" _) fm hm (GroupDate _ _ _) = Right ()
 --I need a new type that allows me to pull out the type of var
 compareFieldTypes _ (FieldMap fm) hm  (GroupVar var) =
     case (HashMap.lookup var hm) of
@@ -336,7 +339,7 @@ events = ["consult_referral_received","initial_consult_booked","initial_consult_
             "machine_rooms_booked","patient_contacted","patient_scheduled","patient_arrived","treatment_began","end"]
 
 
-weedComputationList :: Config->[(Computation Annotation)]->Either LexError String
+weedComputationList :: (Config Annotation)->[(Computation Annotation)]->Either LexError String
 weedComputationList config comps = 
     do
     
@@ -345,7 +348,7 @@ weedComputationList config comps =
             Right r -> Right  r--(trace ("OH" ++ (show r)) r )
             Left e -> Left e 
 
-weedFold :: Config->CompSymTable -> [(Computation Annotation)] -> Either LexError String
+weedFold :: (Config Annotation)->CompSymTable -> [(Computation Annotation)] -> Either LexError String
 weedFold conf symtable computations =  
     let errorOrSym = (foldl' (weedEach conf) (Right(symtable,"")) computations)
     in case errorOrSym of
@@ -367,7 +370,7 @@ stringOfLastScope symtable =
         (tail $ show t) ++"\t" ++len++ "\n" )  "" curr
 
 
-weedEach::Config->(Either LexError (CompSymTable,String))->(Computation Annotation)->(Either LexError (CompSymTable,String))
+weedEach::(Config Annotation)->(Either LexError (CompSymTable,String))->(Computation Annotation)->(Either LexError (CompSymTable,String))
 weedEach conf errorOrSym comp =  case errorOrSym of
     Right (sym,ret) ->
         case (weedAndTypeCheckComp conf sym comp) of
@@ -419,7 +422,7 @@ isInLoopableScope = error
 emptyScope :: HashMap.HashMap (Var Annotation) ComputationType
 emptyScope = HashMap.fromList []
 
-weedAndTypeCheckComp :: Config->(CompSymTable) -> (Computation Annotation)-> Either LexError (CompSymTable, String)
+weedAndTypeCheckComp :: (Config Annotation) ->(CompSymTable) -> (Computation Annotation)-> Either LexError (CompSymTable, String)
 weedAndTypeCheckComp conf symtable  (Table variable constructor  field) =
     evaluateInTopScope symtable check
     where check sym = if ((subFieldExists conf constructor field))
@@ -462,7 +465,7 @@ weedPrintAction symtable (PrintLength variable) = case getFromSymbolTable symtab
                     "Cannot have length of "++ (show variable)++". It is a " ++ (show t) ++ "Not a Table"
 weedPrintAction symtable printAction = Left $ ComputationWrongScope "Unimplemented"
 
-weedForEach :: Config->CompSymTable -> [(Computation Annotation)] ->(ForEachDef Annotation) 
+weedForEach :: (Config Annotation)->CompSymTable -> [(Computation Annotation)] ->(ForEachDef Annotation) 
     -> Either LexError (CompSymTable,String)
 weedForEach conf symtable newcomp (ForEachFilter filterName var )  =
     if (fieldExists conf filterName)
@@ -530,7 +533,7 @@ foldWeedList prev curr =
         _-> prev
 
 
-isValidInNested ::Config-> CompSymTable -> FilterName -> Bool
+isValidInNested ::(Config Annotation)-> CompSymTable -> FilterName -> Bool
 isValidInNested conf symtable filterName =
     let
         (counts, filtersUsed) = unzip (findAllFilters symtable)

@@ -21,7 +21,7 @@ import Types
 import Lexer
 
 
-makeConfig:: String -> Config
+makeConfig:: String -> (Config Annotation)
 makeConfig str =
     case parse (configParser <* eof) "" str of
         Left e-> error $ show e
@@ -40,7 +40,7 @@ typeMapMaker =
 
 
 --fieldMapMaker::Parser (Map FieldName (AllowedType, [AllowedVal]))
-fieldMapMaker::Parser (Map FieldName Field)
+fieldMapMaker::Parser (Map FieldName (Field Annotation))
 fieldMapMaker = lexeme $
     do
         name <- stringLit
@@ -51,7 +51,7 @@ fieldMapMaker = lexeme $
         --return (M.singleton (map toLower name) tup)
 
 
-fieldParse::Parser Field 
+fieldParse::Parser (Field  Annotation)
 fieldParse = lexeme $
     do
         sf <-  try fieldtype  <|> try fieldval <?> "not a val list or a valid type"               --sf <- choice [ (squares (sepBy identifier comma)), (curlies (sepBy identifier comma)), identifier]
@@ -61,29 +61,30 @@ fieldParse = lexeme $
 validChar :: Parser Char
 validChar  = satisfy (\c -> (isAlphaNum c) || (c=='_'))
 
-fieldval::Parser Field
+fieldval::Parser (Field Annotation)
 fieldval = lexeme $
     do
         --p <-( squares  (sepBy (some (choice[alphaNum, (oneOf "-_+.")] ) ) comma) )
         p <-( squares  (sepBy (some (validChar)) comma) )
-        return $ FieldValue $ map (map toLower) p
+        return $ FieldValue  (map (map toLower) p) (Annotation "FieldValList") 
 
 --validChar = ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z'] ++ ['!','-','_','.','+']
 
-fieldtype::Parser Field
+fieldtype::Parser (Field Annotation)
 fieldtype = lexeme $
     do
         p <- (some (validChar))
 
         case p of
-            "String" -> return (FieldType "String")
-            "Int" -> return (FieldType "Int")
-            _ -> case ((reads p)::[(Int, String)]) of
-                        [(_,"")] -> return (FieldType "Int")
-                        _ -> return (FieldType "String")
+            "String" -> return (FieldType "String" (Annotation "String"))
+            "Int" -> return (FieldType "Int" (Annotation "Int"))
+            --_ -> case ((reads p)::[(Int, String)]) of
+              --          [(_,"")] -> return (FieldType "Int")
+                --        _ -> return (FieldType "String")
 
+            _ -> return (FieldType "INVALID TYPE" (Annotation "INVALID TYPE"))
 
-configParser::Parser Config
+configParser::Parser (Config Annotation)
 configParser = lexeme $
     do
         whiteSpace
@@ -110,7 +111,7 @@ configParser = lexeme $
         semi
         return $ Config (M.singleton ((map toLower fieldName), (c)) (FieldMap $  fieldMapList))
 
-configListToMap::[Config]->(Map (FieldName, Bool) FieldMap)
+configListToMap::[(Config Annotation)]->(Map (FieldName, Bool) (FieldMap Annotation))
 configListToMap ((Config (x)):[]) =
     case M.toList x of
         [] -> M.empty
@@ -119,7 +120,7 @@ configListToMap ((Config (x)):[]) =
 
 configListToMap ((Config x):xs) = M.union x $ configListToMap xs
 
-configToMap::Config->(Map (FieldName, Bool) FieldMap)
+configToMap::(Config Annotation)->(Map (FieldName, Bool) (FieldMap Annotation))
 configToMap (Config conf) = conf
 
 --data Config =  Config (Map FieldName (Map SubFieldName (SubField))) deriving(Eq, Show)
