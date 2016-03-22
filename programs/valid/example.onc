@@ -4,23 +4,27 @@ use a.grp, b.grp
 use t.grp
 
 group Id x = {1, 2, <x>, 1200 to 123123}
-group Id x = {1, 2, <x>, 1200 to 123123}	
+group Id x = {1, 2, 1200 to 123123}
 
-// We use simple filters so as not to generate too much. 
+// We use simple filters so as not to generate too much.
 population is
 	Sex: M
 	//Birthyear: 1951, 1952, 1953, 1954, 1955
-	Birthyear: 1
+	Birthyear: <x>
+
+patient is
+	sex: M
+	Birthyear: 1951, 1952, 1953, 1954, 1955
 
 doctors are
 	Id: 10001		// TODO: We want this to be a proper Doctors ID, to properly test.
 
 {
-	foreach Patient p 
+	foreach Patient p
 	{
 		print p
 	}
-	foreach Patient p 
+	foreach Patient p
 	{
 		print p
 		foreach Doctor D
@@ -33,7 +37,7 @@ doctors are
 			{
 			}
 		}
-		
+
 	}
 
 	table t = count Patients by Birthyear

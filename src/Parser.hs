@@ -44,7 +44,7 @@ testParser =
 
 --testProgram::Parser TestProgram -}
 testParserCheck ::Config-> Parser (TestProgram Annotation)
-testParserCheck c = 
+testParserCheck c =
     do
         whiteSpace
         --try testHeader <|>testUse <|> testGroups <|> try testComputation <|>  try testDocs
@@ -84,9 +84,9 @@ testGroups::Parser (TestProgram Annotation)
 testGroups =
     do
         grp <- many groups
-        return $ TestGroupList grp 
+        return $ TestGroupList grp
 
-testFilters::Parser (TestProgram Annotation) 
+testFilters::Parser (TestProgram Annotation)
 testFilters =
     do
         filt <- many filters
@@ -111,7 +111,7 @@ oncoParser =
         return $ Program hdr doc use grp filt comp
 
 --IO to checkfilename
-header:: Parser (Header Annotation) 
+header:: Parser (Header Annotation)
 header =
     do
         reserved "script"
@@ -167,7 +167,7 @@ docLiteral :: Parser String
 docLiteral   = lexeme (
     do{ str <- between (symbol "/*" <?> "Start of Documentation String (/*)")
         (symbol "*/" <?> "end of Documentation String (*/)")
-        --(many anyChar) 
+        --(many anyChar)
         (many docChar)
         ; return (foldr (maybe id (:)) "" str)
     }  <?> "Documentation String")
@@ -212,7 +212,7 @@ groups = lexeme $
         reserved "="
         grpItem <- curlies $ sepBy formattedGroup comma
         semi
-        return $ Group grpType (Var (getVar v) (Annotation (getGroupType grpType))) grpItem--(Annotation (getGroupType groupType))) grpItem 
+        return $ Group grpType (Var (getVar v) (Annotation (getGroupType grpType))) grpItem--(Annotation (getGroupType groupType))) grpItem
 
 
 getGroupType::GroupType ->String
@@ -252,7 +252,7 @@ groupValString::Parser (GroupItem Annotation)
 groupValString = lexeme $
     do
         gv <- some wordChar
-        return $ GroupValString gv (Annotation "") -- ???
+        return $ GroupValString (map toLower gv) (Annotation "") -- ???
 
 groupValDate::Parser (GroupItem Annotation)
 groupValDate = lexeme (
@@ -286,7 +286,7 @@ betw = lexeme $
     do
         pre <- lexeme $ some digit
         reserved "to"
-        post <- lexeme $ some digit     
+        post <- lexeme $ some digit
         return $ Between (read pre) (read post) (Annotation "Int")
 
 
@@ -309,9 +309,9 @@ manyComp = lexeme(
         else (optional semi);
         return c}<?> "Computation Block \"{}\"")
 
-singleComp :: Parser [(Computation Annotation)] 
-singleComp = lexeme( 
-    do { 
+singleComp :: Parser [(Computation Annotation)]
+singleComp = lexeme(
+    do {
     c <- computation;
     return [c] } <?> "Single Line Computation"
     )
@@ -335,7 +335,7 @@ table = lexeme (
         reserved "by";
         ffield <- identifier;
         semi;
-        return $ Table v fn (map toLower ffield) }<?>"Table Statement") 
+        return $ Table v fn (map toLower ffield) }<?>"Table Statement")
 
 list::Parser (Computation Annotation)
 list = lexeme (
@@ -349,8 +349,8 @@ list = lexeme (
         semi;
         return $ List v e} <?> "List Statement")
 
-seqList::Parser [(SeqField Annotation)] 
-seqList= lexeme ( (squares $  formattedSequence )<?> "Sequence")  
+seqList::Parser [(SeqField Annotation)]
+seqList= lexeme ( (squares $  formattedSequence )<?> "Sequence")
 
 formattedSequence::Parser [(SeqField Annotation)]
 formattedSequence =
@@ -397,7 +397,7 @@ seqComma =
 
         e <- curlies $ sepBy1 (do {(optional semi) ; e<-event; (optional semi);return e}) comma
         return $ Comma e
-        
+
 seqBar :: Parser (SeqField Annotation)
 seqBar =
     do
@@ -405,7 +405,7 @@ seqBar =
         return $ Bar e
 
 event::Parser (Event Annotation)
-event = lexeme $ 
+event = lexeme $
     do--lexeme ((return $ Event  eventName (Annotation ""))  <?>"Event")
 
         e <- eventName
@@ -456,7 +456,7 @@ forEachSequence =
         v1 <- var
         reserved "like"
         e <- seqList
-        return $ ForEachSequence v1 e 
+        return $ ForEachSequence v1 e
 
 forEachList::Parser (ForEachDef Annotation)
 forEachList =
@@ -476,8 +476,8 @@ printvar =
         semi
         return $ PrintVar v
 
-prints:: Parser (PrintAction Annotation) 
-prints = lexeme ( 
+prints:: Parser (PrintAction Annotation)
+prints = lexeme (
     do{
    x<-(try printvar <|> try printTimeLine <|> try printLength <|> try printFilters <|> try printElement);
 
@@ -485,7 +485,7 @@ prints = lexeme (
    } <?> "Print Statement")
 
 
-printTimeLine::Parser (PrintAction Annotation) 
+printTimeLine::Parser (PrintAction Annotation)
 printTimeLine =
     do
         reserved "print"
