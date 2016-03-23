@@ -1,6 +1,7 @@
 *.pretty.onc
 *.symtab
 *.pptype.onc
+*.symtab
 README
 oncotime
 *.lhs

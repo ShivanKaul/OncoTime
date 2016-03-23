@@ -4,7 +4,7 @@ script Yusaira2(Events y)
 
 group Eventfkjahfanf z = {patient_arrived,<y1>}
 group Events z1 = {patient_arrived,<z>}
-group Events z1 = {patient_arrived,<z>}
+--group Events z1 = {patient_arrived,<z>}
 group name a ={}
 
 //Patient are
