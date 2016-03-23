@@ -32,7 +32,7 @@ import Formatter
 weed::String->(String -> IO())->(Program Annotation)->SourcePos->IO(Program Annotation)
 weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) pos =
     do
-        putStrLn $ "File "++file++"\n"
+        putStrLn $ "File "++file
         let validTypes = [GroupType "Sex", GroupType "id", GroupType "birthyear",
                 GroupType "diagnosis", GroupType "gender",
                 GroupType "postalcode", GroupType "years",
