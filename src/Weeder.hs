@@ -73,7 +73,7 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
 
         let allGroups = (concat (newGroups)) ++ groupDefs
         --may need a function to annotate everything
-        print allGroups
+        --print allGroups
         
         -- check for redeclarations for group
         case (checkForGroupRedecl allGroups) of
@@ -95,21 +95,10 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
             False -> hPrint stderr "Group Type invalid!" >> exitFailure
         -- check if variable being used in group is actually defined in symbol table #83
         -- check types of groups and if they exist #99
-        let symbolTableH = buildHeadSymbolTable hdr
-       
-        --Header CHeck
-        case mapM (checkValidParams conf symbolTableH ) paramList  of
-            Left e -> hPrint stderr e >> exitFailure
-            Right r -> putStrLn "all params are of valid types" 
+        --let symbolTableH = buildHeadSymbolTable hdr
 
-        --Check Group Validity
-        case mapM (checkValidGroups conf symbolTableH ) allGroups  of
-            Left e -> hPrint stderr e >> exitFailure
-            Right r -> putStrLn "all groups contain valid values" 
-
-        -- let symbolTableHeaders = buildHeadSymbolTable hdr
         let symbolTableHeaders = buildHeadSymbolTable hdr
-
+        
         let symTabH = foldl (\ errorOrMap (Group gtype gvar gitems) ->
                 case errorOrMap of
                     Left err -> Left err
@@ -126,6 +115,17 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
                 Right x -> x
 
 
+        --Header CHeck
+        case mapM (checkValidParams conf symbolTableH ) paramList  of
+            Left e -> hPrint stderr e >> exitFailure
+            Right r -> putStrLn "all params are of valid types" 
+
+        --Check Group Validity
+        case mapM (checkValidGroups conf symbolTableH ) allGroups  of
+            Left e -> hPrint stderr e >> exitFailure
+            Right r -> putStrLn "all groups contain valid values" 
+
+        -- let symbolTableHeaders = buildHeadSymbolTable hdr
 -- HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation])
 -- replaceVarsGroup :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> GroupDefs Annotation -> GroupDefs Annotation
 
@@ -586,16 +586,34 @@ checkValidParams c@(Config conf) symTab (Arg gt@(GroupType gtype) var@(Var v an@
 --TYPE RULES COME DOWN TO IT
 compareFieldTypes::(Field Annotation)->(FieldMap Annotation)->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))->(GroupItem Annotation)->Either LexError (GroupItem Annotation)
 --field values
-compareFieldTypes (FieldValue allValList an@(Annotation a) ) fm hm gi =
+compareFieldTypes (FieldValue allValList an@(Annotation fa) ) fm hm gi =
     case gi of
         (GroupValString s sa) -> case (s `elem` allValList) of
                 True ->  Right (GroupValString s an) --Right (GroupValString s) 
                 False-> Left (AllowedValError ("Error. " ++ s ++ " is not defined in the config file list that also contains: " ++ (intercalate "," allValList)))
-        (GroupVar (Var v va)) -> case (an == va) of
-            True -> Right (GroupVar (Var v va))
-            False -> Left (AllowedValError ("Var Error while comparing field types" ++ " varaiable " ++ show v ++ ": " ++ show va ++ " versus " ++ show a ))
-        _ -> Left (AllowedValError ("Error " ++ show a  ++ show gi ++ show allValList))
+        --(GroupVar (Var v va)) -> case (an == va) of
+          --  True -> Right (GroupVar (Var v va))
+           -- False -> Left (AllowedValError ("Var Error while comparing field types" ++ " varaiable " ++ show v ++ ": " ++ show va ++ " versus " ++ show a ))
+        (GroupRange (Before i (Annotation a))) ->
+            if a == fa then Right $ (GroupRange (Before i (Annotation a)) )
+            else Left (TypeError ("ValList Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a) )
+        (GroupRange (After i (Annotation a)))->
+            if a == fa then Right $ (GroupRange (After i (Annotation a) ))
+            else Left (TypeError ("ValList Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
+        (GroupRange (Between i j (Annotation a))) ->
+            if a == fa then Right $ (GroupRange (Between i j (Annotation a) ))
+            else Left (TypeError ("ValList Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
+        (GroupRange (SingleInt i (Annotation a))) ->
+            if a == fa then Right $ (GroupRange (SingleInt i (Annotation a) ))
+            else Left (TypeError ("ValList Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
+        (GroupVar var@(Var v (Annotation a))) ->
+            if  (HashMap.member var hm) && (a == fa) then Right $ (GroupVar (Var v (Annotation a)))
+            else Left $ TypeError ("ERROR : " ++ show v ++ "of ann " ++ a ++ " is not in Symbol Table" ++ show hm)
+        _ -> Left (AllowedValError ("ValList Error " ++ show fa  ++ show gi ++ show allValList))
 --intshow s
+
+
+
 compareFieldTypes (FieldType "Int" (Annotation an)) fm hm gr = 
     case gr of
         (GroupRange (Before i (Annotation a))) ->
@@ -613,19 +631,19 @@ compareFieldTypes (FieldType "Int" (Annotation an)) fm hm gr =
         (GroupVar var@(Var v (Annotation a))) ->
             if  (HashMap.member var hm) && (a == an) then Right $ (GroupVar (Var v (Annotation an)))
             else Left $ TypeError ("ERROR : " ++ show v ++ "of ann " ++ a ++ " is not in Symbol Table" ++ show hm)
-        _ -> Left (AllowedValError ("Error Invalid Type" ++ show an  ++ show gr))
+        _ -> Left (AllowedValError ("***IntFieldType Error Invalid Type of Annotation " ++ show an  ++ "And ove grouprange " ++ show gr ++ "And has hashmap \n" ++ show hm))
         
 compareFieldTypes (FieldType "String" (Annotation an)) fm hm gv = 
     case gv of
         (GroupValString s (Annotation a)) ->
             if a == an then Right $ (GroupValString s (Annotation an))
-            else Left (TypeError ("Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
+            else Left (TypeError ("STring Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
 
 compareFieldTypes (FieldType "Date" (Annotation an)) fm hm gd =
     case gd of
         (GroupValString s (Annotation a)) ->
             if a == an then Right $ (GroupValString s (Annotation an))
-            else Left (TypeError ("Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
+            else Left (TypeError ("Date Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
 
 compareFieldTypes (FieldVar fv (Annotation an)) fm hm (GroupVar v@(Var gv (Annotation a))) =
     if  (HashMap.member v  hm) && (a == an) then Right $ (GroupVar (Var gv (Annotation an)))
