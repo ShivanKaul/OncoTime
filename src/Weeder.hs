@@ -90,8 +90,9 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) pos =
         -- check types of groups and if they exist #99
         let symbolTableH = buildHeadSymbolTable allGroups hdr
 
-        let groupsymstring = HashMap.foldrWithKey  (\(Var s _) ((GroupType t),_) p -> p++ "\t" ++ s ++ "\t" ++
-                                        (tail $ show t) ++"\tgroup\n" )  "" symbolTableH
+        let groupsymstring = HashMap.foldrWithKey  (\(Var s _) ((GroupType t),_) p -> 
+                p++ "\t" ++s ++ "\t" ++ t 
+                    ++"\t0(group)\n" )  "" symbolTableH
         --check erroneous subfields i.e. whether all fields exist
         case (checkFilters filters filterable) of
             Left e -> print e >>  hPutStrLn stderr "FILTERS:" >>
@@ -132,8 +133,10 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) pos =
                     case  compsResult of    
                         Left e-> hPrint stderr e >>exitFailure
                         Right (str,ann) -> symTabFun (str++
-                            "Dumping Removed Group Scope at "++
-                            (show $ sourceLine pos)++ "\n"++groupsymstring)
+                            "\nDumping Removed Group Scope at "++
+                            (show $ sourceLine pos)++ "\n"
+                            ++"\tName\tType\tNesting level\n"
+                            ++groupsymstring)
                     let annComps = case  compsResult of    
                             Left e-> []
                             Right (str,ann) -> ann
@@ -574,9 +577,9 @@ weedFold conf symtable computations pos=
     in case errorOrSym of
             Right (newSymtable,internalSymRep,newcops) ->
                 Right $ (internalSymRep++
-                    "Dumping Removed Scope at line: "++(show linenum )++ "\n"
-                    ++
-                    (stringOfLastScope newSymtable),newcops)
+                    "\nDumping Removed Scope at line: "++(show linenum )++ "\n"
+                    ++"\tName\tType\tNesting level\n"
+                    ++ (stringOfLastScope newSymtable),newcops)
             (Left e) -> Left e
 
 
