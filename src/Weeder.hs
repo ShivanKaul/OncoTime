@@ -19,6 +19,7 @@ import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
 import Text.ParserCombinators.Parsec.Char
 import qualified Text.ParserCombinators.Parsec.Token as Token
+import Text.Parsec.Pos
 import Debug.Trace
 --Our modules
 import TypeUtils
@@ -28,8 +29,8 @@ import PrettyPrinter
 import Formatter
 
 --the function that does all weeding
-weed::String->(String -> IO())->(Program Annotation)->IO(Program Annotation)
-weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
+weed::String->(String -> IO())->(Program Annotation)->SourcePos->IO(Program Annotation)
+weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) pos =
     do
         --get Config file
         conf <- readConfig file
@@ -89,7 +90,7 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
         -- check types of groups and if they exist #99
         let symbolTableH = buildHeadSymbolTable allGroups hdr
 
-        let groupsymstring = HashMap.foldrWithKey  (\(Var s _) ((GroupType t),_) p -> p ++ s ++ "\t" ++
+        let groupsymstring = HashMap.foldrWithKey  (\(Var s _) ((GroupType t),_) p -> p++ "\t" ++ s ++ "\t" ++
                                         (tail $ show t) ++"\tgroup\n" )  "" symbolTableH
         --check erroneous subfields i.e. whether all fields exist
         case (checkFilters filters filterable) of
@@ -127,10 +128,12 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
                         Nothing -> hPrint stderr "key not found in confmap!"
                         Just (FieldMap r) -> print "here's a confmap" >> print (show (M.toList r))
 
-                    let compsResult=   weedComputationList conf comps 
+                    let compsResult=   weedComputationList conf comps pos
                     case  compsResult of    
                         Left e-> hPrint stderr e >>exitFailure
-                        Right (str,ann) -> symTabFun (groupsymstring++str)
+                        Right (str,ann) -> symTabFun (str++
+                            "Dumping Removed Group Scope at "++
+                            (show $ sourceLine pos)++ "\n"++groupsymstring)
                     let annComps = case  compsResult of    
                             Left e-> []
                             Right (str,ann) -> ann
@@ -552,21 +555,28 @@ events = ["consult_referral_received","initial_consult_booked","initial_consult_
             "patient_arrived","treatment_began","end"]
 
 
-weedComputationList :: (Config Annotation)->[(Computation Annotation)]->Either LexError (String,[(Computation Annotation)])
-weedComputationList config comps =
+weedComputationList :: (Config Annotation)->[(Computation Annotation)]-> SourcePos->Either LexError (String,[(Computation Annotation)])
+weedComputationList config comps pos =
     do
 
         let compSymbolTable = [emptyScope]
-        case (weedFold config compSymbolTable comps) of
+        case (weedFold config compSymbolTable comps pos) of
             Right r -> Right  r--(trace ("OH" ++ (show r)) r )
             Left e -> Left e
 
-weedFold :: (Config Annotation)->CompSymTable -> [(Computation Annotation)] -> Either LexError (String,[(Computation Annotation)])
-weedFold conf symtable computations =
-    let errorOrSym = (foldl' (weedEach conf) (Right(symtable,"",[])) computations)
+weedFold :: (Config Annotation)->CompSymTable -> [(Computation Annotation)] ->SourcePos-> Either LexError (String,[(Computation Annotation)])
+weedFold conf symtable computations pos=
+    let 
+        errorOrSym = (foldl' (weedEach conf) (Right(symtable,"",[])) computations)
+        lineCol = sourceColumn pos
+        wrongLinenum = sourceLine pos
+        linenum = if lineCol ==1 then wrongLinenum-1 else wrongLinenum 
     in case errorOrSym of
             Right (newSymtable,internalSymRep,newcops) ->
-                Right $ (internalSymRep++(stringOfLastScope newSymtable),newcops)
+                Right $ (internalSymRep++
+                    "Dumping Removed Scope at line: "++(show linenum )++ "\n"
+                    ++
+                    (stringOfLastScope newSymtable),newcops)
             (Left e) -> Left e
 
 
@@ -576,7 +586,7 @@ stringOfLastScope symtable =
     let
         len = show $ length symtable
         curr= last symtable
-    in HashMap.foldrWithKey  (\(Var s _) t p -> p ++ s ++ "\t" ++
+    in HashMap.foldrWithKey  (\(Var s _) t p -> p++ "\t" ++ s ++ "\t" ++
         (tail $ show t) ++"\t" ++len++ "\n" )  "" curr
 
 
@@ -662,8 +672,8 @@ weedAndTypeCheckComp conf symtable (Barchart variable@(Var name _)) =
 
 weedAndTypeCheckComp conf symtable (Print printAction ) = 
     weedPrintAction conf symtable printAction
-weedAndTypeCheckComp conf symtable (Foreach def comps ) = 
-    weedForEach conf symtable comps def
+weedAndTypeCheckComp conf symtable (Foreach def comps pos) = 
+    weedForEach conf symtable comps pos def
 
 weedPrintAction :: (Config Annotation)-> CompSymTable -> (PrintAction Annotation)
             -> Either LexError (CompSymTable, String,(Computation Annotation))
@@ -698,7 +708,7 @@ weedPrintAction _ symtable (PrintElement tableVar@(Var tname _) indexVar@(Var in
                     "Cannot index "++ (prettyPrint tableVar)++". It is a " 
                     ++ (prettyPrint t) ++ "Not a Table"
 
-weedPrintAction config symtable (PrintFilters fields filterVar@(Var fname _) ) = 
+weedPrintAction config symtable  (PrintFilters fields filterVar@(Var fname _) ) = 
     case (getFromSymbolTable symtable filterVar) of
             (Nothing) -> Left . UndefinedVariable $ prettyPrint filterVar
             (Just (TFilter constructor)) -> 
@@ -723,39 +733,42 @@ weedPrintAction _ symtable (PrintTimeLine filterVar@(Var fname _)) =
                     "Cannot print TimeLine of "++ (prettyPrint filterVar)++
                     ". It is a " ++ (prettyPrint wrong) ++ " Not a patient"
 
-weedForEach :: (Config Annotation)->CompSymTable -> [(Computation Annotation)] ->(ForEachDef Annotation)
-    -> Either LexError (CompSymTable,String,(Computation Annotation))
-weedForEach conf symtable newcomp (ForEachFilter filterName var@(Var iname _) )  =
+weedForEach :: (Config Annotation)->CompSymTable -> [(Computation Annotation)] ->SourcePos-> (ForEachDef Annotation)
+    ->Either LexError (CompSymTable,String,(Computation Annotation))
+weedForEach conf symtable newcomp pos (ForEachFilter filterName var@(Var iname _) )  =
     if (fieldExists conf filterName)
     then    if (isValidInNested conf symtable filterName)
             then let
                     newsym = ( addToSymTable (symtable++[emptyScope])
                                     var (TFilter filterName) )
-                in case (weedFold conf newsym newcomp) of
+                in case (weedFold conf newsym newcomp pos) of
                             Right (intSymRep,annComps) -> Right (symtable,intSymRep, 
                                 (Foreach (ForEachFilter filterName (Var
-                                 iname (Annotation filterName)) ) annComps) )
+                                 iname (Annotation filterName))) annComps pos) )
                             Left e -> Left e
             else Left (
                 ComputationWrongScope "Foreach is not valid in this scope")
     else Left $  FieldNameError $ ""++
             filterName++" is not a valid loopable Filter"
 
-weedForEach config symtable newcomp (ForEachTable indexVar@(Var iname _) tableVar@(Var tname _) )  =
+weedForEach config symtable newcomp pos (ForEachTable indexVar@(Var iname _) tableVar@(Var tname _) )  =
     evaluateInTopScope symtable (\sym->
         case getFromSymbolTable sym tableVar of
             Nothing -> Left . UndefinedVariable $ prettyPrint  tableVar
             Just TTable -> let
                             newsym = (addToSymTable
                                 (sym++[emptyScope]) indexVar TIndex)
-                        in case (weedFold config newsym newcomp) of
-                            Right (intSymRep,annComps) -> Right (sym,intSymRep, (Foreach (ForEachTable (Var iname $Annotation"index") (Var tname $Annotation"Table")) annComps) )
+                        in case (weedFold config newsym newcomp pos) of
+                            Right (intSymRep,annComps) -> 
+                                Right (sym,intSymRep, (Foreach 
+                                    (ForEachTable (Var iname $Annotation"index") 
+                                        (Var tname $Annotation"Table")) annComps pos) )
                             Left e -> Left e
             Just t-> Left ( ComputationTypeMismatch $
                     "Cannot go through loop for "++ (prettyPrint tableVar)
                     ++". It is a " ++ (prettyPrint t) ++ "Not a Table")
                 )
-weedForEach config symtable newcomp (ForEachSequence memberVar@(Var mname _) undefSequence) =
+weedForEach config symtable newcomp pos (ForEachSequence memberVar@(Var mname _) undefSequence) =
     evaluateInTopScope symtable check
     where check sym=
             let
@@ -763,12 +776,14 @@ weedForEach config symtable newcomp (ForEachSequence memberVar@(Var mname _) und
                                 memberVar TSequence)
                 errorOrSym = foldl' foldWeedList (Right newsym) undefSequence
             in case errorOrSym of
-                Right s -> case (weedFold config s newcomp) of
-                    Right (intSymRep,annComps) -> Right (s,intSymRep, (Foreach  ( (ForEachSequence (Var mname (Annotation "sequence member")) undefSequence) ) annComps))
+                Right s -> case (weedFold config s newcomp pos) of
+                    Right (intSymRep,annComps) -> Right (s,intSymRep, (Foreach  
+                        ((ForEachSequence 
+                            (Var mname (Annotation "sequence member")) undefSequence) ) annComps pos))
                     Left e -> Left e
                 Left l -> Left l
 
-weedForEach config symtable newcomp (ForEachList memberVar@(Var mname _) listVar@(Var lname _)) =
+weedForEach config symtable newcomp pos (ForEachList memberVar@(Var mname _) listVar@(Var lname _) )  =
 
     evaluateInTopScope symtable check
     where check sym=
@@ -777,8 +792,10 @@ weedForEach config symtable newcomp (ForEachList memberVar@(Var mname _) listVar
                 Just TList -> let
                                 newsym =(addToSymTable (sym++[emptyScope])
                                     memberVar TSequence)
-                        in case (weedFold config newsym newcomp) of
-                            Right (intSymRep,annComps) -> Right (sym,intSymRep,Foreach (ForEachList (Var mname  (Annotation"sequence member")) (Var lname (Annotation"List"))) annComps)
+                        in case (weedFold config newsym newcomp pos) of
+                            Right (intSymRep,annComps) -> Right (sym,intSymRep,Foreach (
+                                ForEachList (Var mname  (Annotation"sequence member"))
+                                 (Var lname (Annotation"List"))) annComps pos)
                             Left e -> Left e
                 Just t-> Left ( ComputationTypeMismatch $
                         "CAnnot Go through loop for "++ (prettyPrint listVar)++

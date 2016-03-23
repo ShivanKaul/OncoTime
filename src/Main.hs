@@ -17,7 +17,7 @@ import Text.ParserCombinators.Parsec.Language
 import Text.ParserCombinators.Parsec.Char
 
 import qualified Text.ParserCombinators.Parsec.Token as Token
-
+import Text.Parsec.Pos
 import TypeUtils
 import Debug.Trace
 
@@ -28,7 +28,7 @@ import PrettyPrinter
 import Formatter
 import Weeder
 
-parseFile :: String -> IO (Program Annotation)
+parseFile :: String -> IO ((Program Annotation),SourcePos)
 parseFile filename =
     do
         program <- readFile filename
@@ -98,7 +98,7 @@ prettyPrintTypes (Program header docs usefilelist groups filt comps) file =
             -- ++ (printCompsPPTYPE comps))
         print ("Printed types for " ++ file ++ " in " ++ (replaceExtension file ".pptype.onc"))
 
-parseString :: String -> (Program Annotation)
+parseString :: String -> (Program Annotation,SourcePos)
 parseString str =
     case parse (oncoParser <* eof) "" str of
         Left e-> error $ show e
@@ -139,7 +139,7 @@ main =
     do
         -- oncotime filename flags
         (filename:flags) <- getArgs
-        parsed <- parseFile filename
+        (parsed,pos) <- parseFile filename
         let symTabFun = if "-dumpsymtab" `elem` flags
             then
                 (\a ->do {
@@ -152,7 +152,7 @@ main =
                 (\a->return ())
 
 
-        weededProg <- weed filename symTabFun parsed
+        weededProg <- weed filename symTabFun parsed pos
         prettyPrintFile parsed filename
         if "-pptype" `elem` flags then
             prettyPrintTypes weededProg filename
@@ -160,8 +160,8 @@ main =
             return ()
 
 mainDebug filename = do
-        parsed <- parseFile filename
+        (parsed,p) <- parseFile filename
 
-        weededProg <- weed filename (pure $ pure ()) parsed
+        weededProg <- weed filename (pure $ pure ()) parsed p
         prettyPrintFile parsed filename
         prettyPrintTypes weededProg filename

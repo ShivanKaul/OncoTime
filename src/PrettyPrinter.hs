@@ -52,6 +52,7 @@ instance PrettyPrint (PrintAction Annotation) where
     prettyPrint (PrintElement v1 v2) = "print " ++ prettyPrint v1 ++ "[" ++ prettyPrint v2 ++ "]" ++ " // "++prettyAnnotated v1++  " "++prettyAnnotated v2
 
 
+
 -- instance PrettyPrint TableAction where
 --     prettyPrint (TableCount var fname fval) = "table " ++ prettyPrint var ++ " = " ++
 --         "count " ++ fname ++ " by " ++ prettyPrint fval
@@ -79,7 +80,7 @@ instance PrettyPrint ([(SeqField Annotation)] ) where
 
 
 instance PrettyPrint (Computation Annotation) where
-    prettyIndent  (indent) (Foreach foreachdef comps) = indent ++ prettyPrint foreachdef ++ " " ++ "\n" ++ indent ++ "{\n" ++ (intercalate "\n" (map (prettyIndent (indent ++ "\t")) comps)) ++ "\n" ++ indent ++ "}"
+    prettyIndent  (indent) (Foreach foreachdef comps _) = indent ++ prettyPrint foreachdef ++ " " ++ "\n" ++ indent ++ "{\n" ++ (intercalate "\n" (map (prettyIndent (indent ++ "\t")) comps)) ++ "\n" ++ indent ++ "}"
     prettyIndent (indent) (Table var fname ffield) = indent ++"table " ++ prettyPrint var ++ " = " ++
         "count " ++ fname ++ " by " ++ prettyPrint ffield
     prettyIndent (indent) (List var seq) = indent ++ "list " ++ prettyPrint var ++ " = " ++ "sequences like "

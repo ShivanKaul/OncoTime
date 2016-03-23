@@ -20,5 +20,5 @@ population is
 	foreach member i in s
 	{
 		print i
-	}
-}
+	}print s
+}  	
