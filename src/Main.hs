@@ -92,8 +92,11 @@ removeWildcardsFieldDefs (Filter fname fieldefs) =
 prettyPrintTypes :: (Program Annotation)-> String -> IO()
 prettyPrintTypes (Program header docs usefilelist groups filt comps) file =
     do
-        writeFile (replaceExtension file ".pptype.onc") ((prettyPrint header) ++ (prettyPrint docs)
-            ++ (prettyPrint groups) ++ (printGroupsPPTYPE groups) ++ (prettyPrint (removeWildcardsFilters filt)) ++
+        writeFile (replaceExtension file ".pptype.onc") ((prettyPrint header) ++
+            (prettyPrint docs) ++
+            (printHeadsPPTYPE header) ++ (prettyPrint groups) ++
+            (printGroupsPPTYPE groups) ++
+            (prettyPrint (removeWildcardsFilters filt)) ++
             (printFiltersPPTYPE filt) ++ ("{\n" ++ (prettyIndent "\t" comps) ++ "}\n"))
             -- ++ (printCompsPPTYPE comps))
         putStrLn ("Printed types for " ++ file ++ " in " ++ (replaceExtension file ".pptype.onc"))

@@ -29,6 +29,13 @@ printTypesGroups groups =
                                 ("// Group " ++ v ++ " : " ++ t ++ "\n")) groups
         (intercalate "\n" groupListString)
 
+printTypesHeader :: (Header Annotation) -> String
+printTypesHeader (Header name args) =
+    do
+        let argsListString = map (\(Arg (GroupType t) (Var v _ )) ->
+                                ("// Header param " ++ v ++ " : " ++ t ++ "\n")) args
+        (intercalate "\n" argsListString)
+
 printTypesFilters :: [(Filter Annotation)] -> String
 printTypesFilters filters =
     do
@@ -39,6 +46,10 @@ printGroupsPPTYPE groups =
     do
         "// PRINTING GROUPS\n" ++ (printTypesGroups groups)
 
+printHeadsPPTYPE :: (Header Annotation) -> String
+printHeadsPPTYPE header =
+    do
+        "// PRINTING HEADER PARAMS\n" ++ (printTypesHeader header)
 printFiltersPPTYPE :: ([Filter Annotation]) -> String
 printFiltersPPTYPE filters =
     do
