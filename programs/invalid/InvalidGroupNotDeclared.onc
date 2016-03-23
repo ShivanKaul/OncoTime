@@ -4,7 +4,7 @@ script InvalidGroupNotDeclared()
  */
 
 // ---- Change data in this group file ----
-group Id myId = {10,20,30}
+group Id myIds = {10,20,30}
 
 // ---- We can add or change Filters here ---- 
 population is

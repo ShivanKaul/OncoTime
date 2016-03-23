@@ -81,10 +81,8 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
                 print filters >> putStrLn "CONF:" >> print filterable >> exitFailure
             Right checkedFilters -> putStrLn "All Fields valid"
 
-        print "test"
-
         case  mapM (checkFilterTypes conf symbolTableH) filters of
-                Left e -> hPrint stderr e >> print [filters] >> exitFailure
+                Left e -> hPrint stderr e >> print filters >> exitFailure
                 Right annotatedFilters -> do
                     print filters
 
@@ -413,21 +411,21 @@ checkFilterTypes (Config conf) hmap ms =
             let filterName = (getFilterName ms)
             let fieldDefs = getFieldDefList ms -- list of possible FieldDefs for a filter
             --from confmap
-            
+           
+           --does the filter exist in the config file?
             case (M.lookup (filterName, True) conf) of--things to check against for that filter
-                Just val ->  do
-                    trace ("calling f with x = ") (pure( )) 
-                    case ((typeCheckFieldMap val hmap fieldDefs)) of
+                Just fieldMap ->  do
+                    case ((typeCheckFieldMap fieldMap hmap fieldDefs)) of
                         Left e -> Left e
                         Right r ->  Right $ (Filter filterName r)
                     --trace ("calling f with x = ") (pure( )) 
 
                 Nothing -> do
                     case (M.lookup (filterName, False) conf) of
-                        Nothing -> Left $ GenError (filterName ++ " is not in map")
-                        Just val -> do
+                        Nothing -> Left $ GenError (filterName ++ " is not defined in Config file")
+                        Just fieldMapf -> do
 
-                            case ((typeCheckFieldMap val hmap fieldDefs)) of
+                            case ((typeCheckFieldMap fieldMapf hmap fieldDefs)) of
                                 Left e -> Left e
                                 Right r -> Right $ (Filter filterName r )
 
@@ -435,52 +433,81 @@ checkFilterTypes (Config conf) hmap ms =
 --NEED TO RETURN ANNOTATED FIELD MAP MAYBE?
 typeCheckFieldMap::(FieldMap Annotation) -> (HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))-> [FieldDef Annotation] ->Either LexError [(FieldDef Annotation)]
 typeCheckFieldMap (FieldMap fm) hmap fdList = do
-   
    foldM (\acc x-> do 
             let fieldName = getFieldName x
             let fvalList  = getFieldValList x
             case (M.lookup fieldName fm) of
                 Nothing -> do
-                    
-                    trace ("calling f with x =  ") (pure( )) 
-                    Left $ GenError "Not somethign"
-                Just val -> 
+                    Left $ TypeError "Is not in the fieldMap"
+                Just field -> 
                     do
-                        case (mapM (compareFieldTypes val (FieldMap fm) hmap) fvalList) of
+                        case (mapM (compareFieldTypes field (FieldMap fm) hmap) fvalList) of
                             Left e -> do
-                                
                                 Left e
                             Right r -> do 
-                                
                                 Right $ (FieldDef fieldName r):acc
     ) [] fdList
 
-
 --take fieldDefs anda  fieldMap, return an error or a field deaf after calling Field
+
+--check to see if it's in the table. 
+--if not. welp
+--if yes, let's annotate it.
+
+--TYPE RULES COME DOWN TO IT
 compareFieldTypes::(Field Annotation)->(FieldMap Annotation)->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))->(GroupItem Annotation)->Either LexError (GroupItem Annotation)
-compareFieldTypes (FieldValue allValList an ) fm hm (GroupValString s a)  = 
-    if (s `elem` allValList) 
-        then Right (GroupValString s an) --Right (GroupValString s) 
-    else Left (AllowedValError ("Error. " ++ s ++ " is not defined in the config file list that also contains: " ++ (intercalate "," allValList)))
---compareFieldTypes (FieldType "String" an) fm hm (GroupValString s a)  = Right (GroupValString s (an))
---compareFieldTypes (FieldType "Int" an) fm hm (GroupRange a ) = Right (GroupRange a)
-compareFieldTypes (FieldType "Date" an) fm hm (GroupDate a b c _) = Right (GroupDate a b c (an))
-compareFieldTypes (FieldType t (Annotation an)) fm hm (GroupVar v@(Var var (Annotation a))) = if an == a then Right (GroupVar v) else Left $ TypeError ("Error. Type mismatch. Field of type " ++ show t ++ "Var " ++ show var ++ " of type " ++ show a)
-compareFieldTypes (FieldVar a an) fm hm (GroupVar (Var v _)) = Right (GroupVar (Var v an))
+--field values
+compareFieldTypes (FieldValue allValList an ) fm hm gi =
+    case gi of
+        (GroupValString s a) -> case (s `elem` allValList) of
+                True ->  Right (GroupValString s an) --Right (GroupValString s) 
+                False-> Left (AllowedValError ("Error. " ++ s ++ " is not defined in the config file list that also contains: " ++ (intercalate "," allValList)))
+
+--ints
+compareFieldTypes (FieldType "Int" (Annotation an)) fm hm gr = 
+    case gr of
+        (GroupRange (Before i (Annotation a))) -> 
+            if a == an then Right $ (GroupRange (Before i (Annotation an)) )
+            else Left (TypeError ("Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a) )
+        (GroupRange (After i (Annotation a)))->
+            if a == an then Right $ (GroupRange (After i (Annotation an) ))
+            else Left (TypeError ("Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
+        (GroupRange (Between i j (Annotation a))) -> 
+            if a == an then Right $ (GroupRange (Between i j (Annotation an) ))
+            else Left (TypeError ("Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
+        (GroupRange (SingleInt i (Annotation a))) -> 
+            if a == an then Right $ (GroupRange (SingleInt i (Annotation an) ))
+            else Left (TypeError ("Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
+        (GroupVar var@(Var v (Annotation a))) -> 
+            if  (HashMap.member var hm) && (a == an) then Right $ (GroupVar (Var v (Annotation an)))
+            else Left $ TypeError ("ERROR : " ++ show v ++ "of ann " ++ a ++ " is not in Symbol Table" ++ show hm)
+        
+compareFieldTypes (FieldType "String" (Annotation an)) fm hm gv = 
+    case gv of
+        (GroupValString s (Annotation a)) ->
+            if a == an then Right $ (GroupValString s (Annotation an))
+            else Left (TypeError ("Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
+
+compareFieldTypes (FieldType "Date" (Annotation an)) fm hm gd = 
+    case gd of
+        (GroupValString s (Annotation a)) -> 
+            if a == an then Right $ (GroupValString s (Annotation an))
+            else Left (TypeError ("Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
+
+compareFieldTypes (FieldVar fv (Annotation an)) fm hm (GroupVar v@(Var gv (Annotation a))) = 
+    if  (HashMap.member v  hm) && (a == an) then Right $ (GroupVar (Var gv (Annotation an)))
+    else Left $ TypeError ("ERROR : " ++ show gv ++ " is not in Symbol Table")
 --I need a new type that allows me to pull out the type of var
+
 compareFieldTypes f (FieldMap fm) hm  (GroupVar var@(Var v an) ) =
     do
-        --Left $ TypeError ("ERROR. var " ++ (varToStr var) ++ " not declared " ++ "FIELD IS: " ++ show f ++ " VAR IS : " ++ show var ++ "\n" ++ show fm )
-        --trace ("calling f with x =  ") (pure( )) 
         case (HashMap.lookup var hm) of
             Nothing -> Left $ TypeError ("ERROR. var " ++ (varToStr var) ++ " not declared " ++ "FIELD IS: " ++ show f ++ " VAR IS : " ++ show var ++ "\n" ++ show hm ++ "\n")
             
             Just (a,_) -> case (M.member ((groupTypeToStr a)) fm) of
-            --if it is declared, we want to make sure it is used in the right case. i.e. with the right field
                 False -> Left $ TypeError ("ERROR. variable " ++
                         (varToStr var) ++" is used with wrong field")
                 True  -> Right (GroupVar (Var v an))
-
 compareFieldTypes b fm hm a = Left $ TypeError ("Type Error between " ++ 
     (show a) ++ " and " ++ (show b))
 

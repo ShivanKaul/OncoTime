@@ -3,14 +3,14 @@ script example(a a)
 use a.grp, b.grp
 use t.grp
 
-group Id x = {1, 2, <x>, 1200 to 123123}
+group Id x = {1, 2, 1200 to 123123}
 //group Id x = {1, 2, 1200 to 123123}
 
 // We use simple filters so as not to generate too much.
 population is
 	Sex: m 
 	Birthyear: 1951, 1952, 1953, 1954, 1955
-	//Birthyear: <x>
+	Birthyear: <x>
 
 patient is
 	sex: M
