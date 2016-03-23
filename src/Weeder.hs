@@ -33,10 +33,10 @@ weed::String->(String -> IO())->(Program Annotation)->SourcePos->IO(Program Anno
 weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDefs filters comps) pos =
     do
         putStrLn $ "File "++file
-        let validTypes = [GroupType "Sex", GroupType "id", GroupType "birthyear",
+        let validTypes = [GroupType "sex", GroupType "id", GroupType "birthyear",
                 GroupType "diagnosis", GroupType "gender",
                 GroupType "postalcode", GroupType "years",
-                GroupType "days", GroupType "months", GroupType "oncologist"]
+                GroupType "days", GroupType "months", GroupType "events", GroupType "oncologist"]
         -- get params from header
         let headerParams = case hdr of
                 (Header fname args) -> args
@@ -138,16 +138,6 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
         case  mapM (checkFilterTypes conf symbolTableH) filters of
                 Left e -> hPrint stderr e >> print filters >> exitFailure
                 Right annotatedFilters -> do
-
-{-
-                    print "Printing old filters"
-
-                    print filters
-
-                    print "Printing new filters"
-
-                    --let newFilters = (populateDefaultValuesFilters filters (Config confmap))
--}
 
                     let newFilters = (populateDefaultValuesFilters (annotatedFilters) (Config confmap))
  --                   print newFilters
