@@ -90,9 +90,34 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) pos =
         case (checkIfValidGroupTypes groupTypesList validTypes) of
             True -> putStrLn $ "Group types valid!"
             False -> hPrint stderr "Group Type invalid!" >> exitFailure
-        -- check if variable being used in group is actually defined in symbol table #83
-        -- check types of groups and if they exist #99
-        let symbolTableH = buildHeadSymbolTable allGroups hdr
+
+        -- let symbolTableHeaders = buildHeadSymbolTable hdr
+        let symbolTableHeaders = buildHeadSymbolTable hdr
+
+        let symTabH = foldl (\ errorOrMap (Group gtype gvar gitems) ->
+                case errorOrMap of
+                    Left err -> Left err
+                    Right hmap -> case (replaceVarsGroup hmap (Group gtype gvar gitems)) of
+                        Left err -> Left err
+                        Right x -> Right $ HashMap.insert (gvar)
+                            (gtype, x) (hmap)
+
+                )
+                (Right symbolTableHeaders) allGroups
+
+        let symbolTableH = case symTabH of
+                Left err -> error (show err)
+                Right x -> x
+
+
+-- HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation])
+-- replaceVarsGroup :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> GroupDefs Annotation -> GroupDefs Annotation
+
+
+        -- putStrLn (show symbolTableH)
+
+        -- expand variables in allgroups
+        let expandedGroups = (expandGroups symbolTableH allGroups)
 
         let groupsymstring = HashMap.foldrWithKey  (\(Var s _) ((GroupType t),_) p ->
                 p++ "\t" ++s ++ "\t" ++ t
@@ -124,9 +149,15 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) pos =
                     -- SAMPLE USES OF SYMBOL TABLE
                     -- testIfSymbolTableContains symbolTable1 (Var "x")
 
+
+
                     putStrLn "Weeded successfully!"
                     return (Program hdr docs [] (allGroups) filtersWithVarsReplaced (annComps))
 
+expandGroups :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> [GroupDefs Annotation] -> [GroupDefs Annotation]
+expandGroups config groups =
+    do
+        groups
 
 checkIfValidGroupTypes :: [GroupType] -> [GroupType] -> Bool
 checkIfValidGroupTypes groupTypes validTypes =
@@ -185,11 +216,32 @@ replaceVarsFieldDef symbolTableH (FieldDef fname fvalues) =
         let expandedList = concat (map (replaceVarsGroupItem symbolTableH) varList)
         FieldDef fname (nonVarList ++ expandedList)
 
+replaceVarsGroup :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> GroupDefs Annotation -> Either LexError [GroupItem Annotation]
+replaceVarsGroup symbolTableH (Group _ var items) =
+    do
+        let varList = filter (\v -> case v of
+                GroupVar x -> True
+                _ -> False) items
+        let nonVarList = filter (\v -> case v of
+                GroupVar x -> False
+                _ -> True) items
+        -- Check here for error!
+        expandedList <- fmap concat (sequence
+                (map (replaceVarsGroupItemGroup symbolTableH) varList))
+        Right (nonVarList ++ expandedList)
+
 replaceVarsGroupItem :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> GroupItem Annotation -> [GroupItem Annotation]
 replaceVarsGroupItem symbolTableH (GroupVar v) =
     do
         case (HashMap.lookup v symbolTableH) of
             Just (t, items) -> items
+
+replaceVarsGroupItemGroup :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> GroupItem Annotation -> Either LexError [GroupItem Annotation]
+replaceVarsGroupItemGroup symbolTableH (GroupVar v) =
+    do
+        case (HashMap.lookup v symbolTableH) of
+            Just (t, items) -> Right $ items
+            Nothing -> Left $ NotFoundInSymbolTable ((varToStr v) ++ " not declared previously.")
 
 -- Make (Var Annotation) hashable
 instance (Hashable (Var Annotation)) where
@@ -204,12 +256,11 @@ testIfHSymbolTableContains hashmap (Var v a) =
                 v ++ " in symboltable1")
 
 -- Build symbol table from groups
-buildHeadSymbolTable :: [(GroupDefs Annotation)] -> (Header Annotation) -> HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation])
-buildHeadSymbolTable groups (Header _ args) =
+buildHeadSymbolTable :: (Header Annotation) -> HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation])
+buildHeadSymbolTable (Header _ args) =
     do
-        let keyValuesGroups = map (\(Group (t) (v) items) -> (v, (t, items))) (groups)
         let keyValuesHeader = map (\(Arg (t) (v)) -> (v, (t, []))) (args)
-        (HashMap.fromList (keyValuesGroups ++ keyValuesHeader))
+        (HashMap.fromList (keyValuesHeader))
 
 weedGroupFiles::[UseFile]->[String]->Either LexError [UseFile]
 weedGroupFiles useList grpFiles =

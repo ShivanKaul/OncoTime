@@ -1,4 +1,5 @@
 *.pretty.onc
+*.symtab
 *.pptype.onc
 README
 oncotime
