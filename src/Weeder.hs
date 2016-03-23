@@ -89,6 +89,8 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
         -- check types of groups and if they exist #99
         let symbolTableH = buildHeadSymbolTable allGroups hdr
 
+        let groupsymstring = HashMap.foldrWithKey  (\(Var s _) ((GroupType t),_) p -> p ++ s ++ "\t" ++
+                                        (tail $ show t) ++"\tgroup\n" )  "" symbolTableH
         --check erroneous subfields i.e. whether all fields exist
         case (checkFilters filters filterable) of
             Left e -> print e >>  hPutStrLn stderr "FILTERS:" >>
@@ -128,7 +130,7 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
                     let compsResult=   weedComputationList conf comps 
                     case  compsResult of    
                         Left e-> hPrint stderr e >>exitFailure
-                        Right (str,ann) -> symTabFun str
+                        Right (str,ann) -> symTabFun (groupsymstring++str)
                     let annComps = case  compsResult of    
                             Left e-> []
                             Right (str,ann) -> ann
