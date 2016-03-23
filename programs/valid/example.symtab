@@ -1,6 +1,2 @@
-D	Filter "diagnosis"	4
-D	Filter "doctor"	3
 p	Filter "patient"	2
-p	Filter "patient"	3
-i	Index	2
 t	Table	1
