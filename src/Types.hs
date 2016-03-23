@@ -107,6 +107,7 @@ data LexError   = FieldNameError String | FilterNameError String | AllowedTypeEr
                 | MissingFilesError String | MissingConfigFile String
                 | RedecError String | MissingConfigField String
                 | TypeError String | IncorrectEvent String
+                | NotFoundInSymbolTable String
                 | RecursiveGroups String
                 | ComputationTypeMismatch String | ComputationWrongScope String deriving (Show, Eq)
 
