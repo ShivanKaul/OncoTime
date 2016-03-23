@@ -1,0 +1,7 @@
+p	Filter "patient"	2
+p	Filter "diagnosis"	2
+p	Filter "doctor"	2
+i	Index	2
+i	Sequence	2
+t	Table	1
+s	List	1

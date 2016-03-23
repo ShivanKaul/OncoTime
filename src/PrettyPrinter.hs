@@ -7,6 +7,8 @@ import Types
 import Lexer
 import Data.List
 import Parser
+import qualified Data.Text as T
+import Text.Parsec.String 
 
 
 class PrettyPrint a where
@@ -14,6 +16,8 @@ class PrettyPrint a where
     prettyPrint _ = ""
     prettyIndent :: String -> a -> String
     prettyIndent _ _ = ""
+    prettyAnnotated ::  a -> String
+    prettyAnnotated  _ = ""
 
 pretty :: (PrettyPrint a) => a -> String
 pretty program = prettyPrint program
@@ -22,33 +26,30 @@ printTypesGroups :: [(GroupDefs Annotation)] -> String
 printTypesGroups groups =
     do
         let groupListString = map (\(Group (GroupType t) (Var v _ ) _) ->
-                                ("// Group " ++ v ++ " : " ++ t)) groups
+                                ("// Group " ++ v ++ " : " ++ t ++ "\n")) groups
         (intercalate "\n" groupListString)
 
--- printTypesFilters :: [Filter] -> String
--- printTypesFilters filters =
---     do
---         let filtersListString = map (\(Filter filtername (Var v) _) ->
---                                 (v ++ " : " ++ t)) filtersListString
---         (intercalate "\n" filtersListString)
-
--- printTypesVars :: [Var] -> String
--- printTypesVars vars =
-    -- do
-
-
-printTypes :: (Program Annotation) -> String
-printTypes (Program _ _ _ groups filt comps) =
+printTypesFilters :: [(Filter Annotation)] -> String
+printTypesFilters filters =
     do
-        "// PRINTING GROUPS\n" ++ (printTypesGroups groups)-- ++ (printTypesFilters filt)
+        intercalate "\n//" (map (T.unpack) (T.split (=='\n') (T.pack ("//" ++ prettyPrint filters)))) ++ "\n"
+
+printGroupsPPTYPE :: ([GroupDefs Annotation]) -> String
+printGroupsPPTYPE groups =
+    do
+        "// PRINTING GROUPS\n" ++ (printTypesGroups groups)
+
+printFiltersPPTYPE :: ([Filter Annotation]) -> String
+printFiltersPPTYPE filters =
+    do
+        "// PRINTING FILTERS\n" ++ (printTypesFilters filters)
 
 instance PrettyPrint (PrintAction Annotation) where
-    prettyPrint (PrintVar var) = "print " ++ prettyPrint var
-    prettyPrint (PrintTimeLine ptimeline) = "print timeline of " ++ prettyPrint ptimeline
-    prettyPrint (PrintLength plength) = "print " ++ prettyPrint plength ++ ".length"
-    prettyPrint (PrintFilters pfilters var) = "print " ++ (intercalate ", " pfilters) ++
-        " of " ++ prettyPrint var
-    prettyPrint (PrintElement v1 v2) = "print " ++ prettyPrint v1 ++ "[" ++ prettyPrint v2 ++ "]"
+    prettyPrint (PrintVar var) = "print " ++ prettyPrint var ++"//"++prettyAnnotated var
+    prettyPrint (PrintTimeLine ptimeline) = "print timeline of " ++ prettyPrint ptimeline++ "//"++prettyAnnotated ptimeline
+    prettyPrint (PrintLength plength) = "print " ++ prettyPrint plength ++ ".length" ++ "//"++prettyAnnotated plength
+    prettyPrint (PrintFilters pfilters var) = "print " ++ (intercalate ", " pfilters) ++    " of " ++ prettyPrint var ++  "//"++prettyAnnotated var
+    prettyPrint (PrintElement v1 v2) = "print " ++ prettyPrint v1 ++ "[" ++ prettyPrint v2 ++ "]" ++ "//"++prettyAnnotated v1++  " "++prettyAnnotated v2
 
 
 -- instance PrettyPrint TableAction where
@@ -56,11 +57,11 @@ instance PrettyPrint (PrintAction Annotation) where
 --         "count " ++ fname ++ " by " ++ prettyPrint fval
 
 instance PrettyPrint (ForEachDef Annotation) where
-    prettyPrint (ForEachFilter fname var) = "foreach " ++ fname ++ " " ++ prettyPrint var 
-    prettyPrint (ForEachTable var1 var2) = "foreach element " ++ prettyPrint var1 ++ " of " ++ prettyPrint var2 
-    prettyPrint (ForEachSequence var seq) = "foreach sequence " ++ prettyPrint var ++ " like " ++ prettyPrint seq 
+    prettyPrint (ForEachFilter fname var) = "foreach " ++ fname ++ " " ++ prettyPrint var ++ "//"++prettyAnnotated var
+    prettyPrint (ForEachTable var1 var2) = "foreach element " ++ prettyPrint var1 ++ " of " ++ prettyPrint var2  ++ "//"++prettyAnnotated var1 ++" "++prettyAnnotated var
+    prettyPrint (ForEachSequence var sequ) = "foreach sequence " ++ prettyPrint var ++ " like " ++ prettyPrint sequ ++ "//"++prettyAnnotated var ++ " "++prettyAnnotated sequ
     prettyPrint (ForEachList var1 var2) = "foreach member " ++ prettyPrint var1 ++ 
-        " in " ++ prettyPrint var2
+        " in " ++ prettyPrint var2 ++ "//"++prettyAnnotated var1 ++ " "++prettyAnnotated var2
 
 instance PrettyPrint (Event Annotation) where
     prettyPrint (Event ename a) = ename
@@ -83,7 +84,8 @@ instance PrettyPrint (Computation Annotation) where
         "count " ++ fname ++ " by " ++ prettyPrint ffield
     prettyIndent (indent) (List var seq) = indent ++ "list " ++ prettyPrint var ++ " = " ++ "sequences like "
     prettyIndent (indent) (Print p) = indent ++ prettyPrint p
-    prettyIndent (indent) (Barchart bchart) = indent ++ "barchart " ++ prettyPrint bchart
+    prettyIndent (indent) (Barchart bchart) = indent ++ "barchart " ++ prettyPrint bchart ++"//"++prettyAnnotated barchart
+
 
 instance PrettyPrint GroupType where
     prettyPrint (GroupType g) = g
@@ -106,6 +108,7 @@ instance PrettyPrint (GroupItem Annotation) where
     prettyPrint (GroupDate y m d a) = (prettyPrint y) ++"-"++ (prettyPrint m) ++"-"++ (prettyPrint d)
     prettyPrint (GroupVar gvar) = "<" ++ prettyPrint gvar ++ ">"
     prettyPrint (GroupRange grange) = prettyPrint grange
+    prettyPrint (GroupWildcard) = "*"
 
 instance PrettyPrint FieldName where
     prettyPrint (ffield) = ffield
@@ -125,6 +128,10 @@ instance PrettyPrint (Docs) where
 
 instance PrettyPrint (Var Annotation) where
     prettyPrint (Var v a) = v
+    prettyAnnotated  (Var v (Annotation a))= "("++v++" = "++a ++")"
+
+instance PrettyPrint  ( Parser(Var Annotation)) where
+    prettyAnnotated  _ = ""
 
 instance PrettyPrint (Arg Annotation) where
     prettyPrint (Arg groupType var) = prettyPrint groupType ++ " " ++ prettyPrint var
@@ -158,3 +165,7 @@ instance PrettyPrint (TestProgram Annotation) where
     prettyPrint (TestComputation comps) = prettyPrint comps
     prettyPrint (TestFiltersList filters) = prettyPrint filters
     -- prettyPrint (TestHeader header) = prettyPrint header
+instance PrettyPrint (ComputationType) where
+    -- prettyPrint (TestProgram2 header docs [usefiles] [groups] [filt] [comps]) = (prettyPrint header) ++ (prettyPrint docs) ++ (prettyPrint usefiles)
+    prettyPrint (TFilter s) = "Single "++ s
+    prettyPrint (t) = tail $ show t

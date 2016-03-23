@@ -262,7 +262,7 @@ groupValDate name = lexeme (
         m <- some digit;
         date_sep;
         d <- some digit;
-        return $ GroupDate (read y) (read m) (read d) (Annotation name) } <?> "Date")
+        return $ GroupDate (read y) (read m) (read d) (Annotation (map toLower name)) } <?> "Date")
 
 
 
@@ -274,14 +274,14 @@ before name =
     do
         reserved "before"
         pre <- some digit
-        return $ GroupRange ((Before (read pre)) (Annotation name))
+        return $ GroupRange ((Before (read pre)) (Annotation (map toLower name)))
 
 after::String->Parser (GroupItem Annotation)
 after n =
     do
         reserved "after"
         post <- some digit
-        return  $ GroupRange ( (After  (read post)) (Annotation n))
+        return  $ GroupRange ( (After  (read post)) (Annotation (map toLower n)))
 
 betw::String->Parser (GroupItem Annotation)
 betw n = lexeme $
@@ -289,14 +289,14 @@ betw n = lexeme $
         pre <- lexeme $ some digit
         reserved "to"
         post <- lexeme $ some digit
-        return $ GroupRange ((Between (read pre) (read post)) (Annotation n))
+        return $ GroupRange ((Between (read pre) (read post)) (Annotation (map toLower n)))
 
 
 single::String->Parser (GroupItem Annotation)
 single n = lexeme $
     do
         gd <- some digit
-        return $ GroupRange ( (SingleInt (read gd)) (Annotation n))
+        return $ GroupRange ( (SingleInt (read gd)) (Annotation (map toLower n)))
 
 
 manyComp ::Parser [(Computation Annotation)]
