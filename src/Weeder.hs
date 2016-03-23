@@ -107,7 +107,6 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
             Left e -> hPrint stderr e >> exitFailure
             Right r -> putStrLn "all groups contain valid values" 
 
-        -- let symbolTableHeaders = buildHeadSymbolTable hdr
         let symbolTableHeaders = buildHeadSymbolTable hdr
 
         let symTabH = foldl (\ errorOrMap (Group gtype gvar gitems) ->
@@ -124,16 +123,6 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
         let symbolTableH = case symTabH of
                 Left err -> error (show err)
                 Right x -> x
-
-
--- HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation])
--- replaceVarsGroup :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> GroupDefs Annotation -> GroupDefs Annotation
-
-
-        -- putStrLn (show symbolTableH)
-
-        -- expand variables in allgroups
-        let expandedGroups = (expandGroups symbolTableH allGroups)
 
         let groupsymstring = HashMap.foldrWithKey  (\(Var s _) ((GroupType t),_) p ->
                 p++ "\t" ++s ++ "\t" ++ t
@@ -188,15 +177,9 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
                     -- SAMPLE USES OF SYMBOL TABLE
                     -- testIfSymbolTableContains symbolTable1 (Var "x")
 
-
-
                     putStrLn "Weeded successfully!"
                     return (Program hdr docs [] (allGroups) filtersWithVarsReplaced (annComps))
 
-expandGroups :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> [GroupDefs Annotation] -> [GroupDefs Annotation]
-expandGroups config groups =
-    do
-        groups
 
 checkIfValidGroupTypes :: [GroupType] -> [GroupType] -> Bool
 checkIfValidGroupTypes groupTypes validTypes =
