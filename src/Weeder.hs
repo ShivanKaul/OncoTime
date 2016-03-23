@@ -124,6 +124,8 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
                 Left err -> error (show err)
                 Right x -> x
 
+        let expandedGroups = expandGroups symbolTableH
+
         let groupsymstring = HashMap.foldrWithKey  (\(Var s _) ((GroupType t),_) p ->
                 p++ "\t" ++s ++ "\t" ++ t
                     ++"\t0(group)\n" )  "" symbolTableH
@@ -178,8 +180,12 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
                     -- testIfSymbolTableContains symbolTable1 (Var "x")
 
                     putStrLn "Weeded successfully!"
-                    return (Program hdr docs [] (allGroups) filtersWithVarsReplaced (annComps))
+                    return (Program hdr docs [] (expandedGroups) filtersWithVarsReplaced (annComps))
 
+expandGroups :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> [GroupDefs Annotation]
+expandGroups symbolTableH =
+    do
+        map (\(gname, (gtype, gdefs)) -> Group gtype gname gdefs) (HashMap.toList symbolTableH)
 
 checkIfValidGroupTypes :: [GroupType] -> [GroupType] -> Bool
 checkIfValidGroupTypes groupTypes validTypes =
@@ -294,7 +300,6 @@ weedGroupFiles useList grpFiles =
             then Right $ useList
             else
                 case (null $ filter (not . (`elem` grpFiles)) declaredUseFiles) of
-        --case (sort declaredUseFiles) == (sort grpFiles) of
                     False -> Left $ MissingFilesError (
                         "ERROR: Missing one of group files: "
                         ++ ( intercalate ","  declaredUseFiles) ++
@@ -304,16 +309,11 @@ weedGroupFiles useList grpFiles =
                     True -> Right $ useList
 
 
---what is the symbol table doing exactly?
---buildBodySymbolTable::[Computation]->M.Map (Var Annotation)  Type??
---Table
---List
-
 getGroupDefs::IO(String) -> IO([(GroupDefs Annotation)])
 getGroupDefs grpFileData =
     do
         readData <- grpFileData
-        case parse (manyGroups) "" (readData) of
+        case parse (manyGroups) "" (removeNewLines readData) of
             Left e -> hPutStrLn stderr ("ERROR: " ++ show e) >> return []
             Right r -> return r
 
@@ -324,8 +324,6 @@ readConfig file =
         readData <- readFile "config.conf"
         let l= lines readData
         let totalMap = configListToMap $ map makeConfig l
-        --hPrint stderr $ M.showTree $ totalMap
-        --print $ M.showTree $ totalMap
         return $ Config totalMap
 
 -- use config to populate default values for a filter
