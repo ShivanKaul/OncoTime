@@ -36,6 +36,11 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
         -- putStrLn $ show conf
         putStrLn $ "File "++file++"\n"
        --grpFile weeding
+        case dupesExist (map (\x -> (Var x (Annotation ""))) (flattenUseFile useList)) of
+            (_, []) -> print "Uselist is fine."
+            (_, repeated) -> hPrint stderr (RedecError ("The following group files were redeclared: "
+                ++ (intercalate ", " (map (varToStr) repeated)))) >> exitFailure
+        print (flattenUseFile useList)
         curContents <- (getDirectoryContents  $ dropFileName file)
         let dirContents = curContents -- ++ valContents ++ invContents
         let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
