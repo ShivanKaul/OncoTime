@@ -77,11 +77,23 @@ prettyPrintFile prog file =
         writeFile (replaceExtension file ".pretty.onc") (pretty prog)
         print "VALID"
 
+removeWildcardsFilters :: [Filter Annotation] -> [Filter Annotation]
+removeWildcardsFilters filters =
+    do
+        map (removeWildcardsFieldDefs) filters
+
+removeWildcardsFieldDefs :: Filter Annotation -> Filter Annotation
+removeWildcardsFieldDefs (Filter fname fieldefs) =
+    do
+        Filter fname (foldl (\acc (FieldDef fielddefname fieldvals) -> case fieldvals of
+            [GroupWildcard] -> acc
+            _ -> (acc ++ [(FieldDef fielddefname fieldvals)]) ) [] fieldefs)
+
 prettyPrintTypes :: (Program Annotation)-> String -> IO()
 prettyPrintTypes (Program header docs usefilelist groups filt comps) file =
     do
         writeFile (replaceExtension file ".pptype.onc") ((prettyPrint header) ++ (prettyPrint docs)
-            ++ (prettyPrint groups) ++ (printGroupsPPTYPE groups) ++ (prettyPrint filt) ++
+            ++ (prettyPrint groups) ++ (printGroupsPPTYPE groups) ++ (prettyPrint (removeWildcardsFilters filt)) ++
             (printFiltersPPTYPE filt) ++ ("{\n" ++ (prettyIndent "\t" comps) ++ "}\n"))
             -- ++ (printCompsPPTYPE comps))
         print ("Printed types for " ++ file ++ " in " ++ (replaceExtension file ".pptype.onc"))
@@ -150,6 +162,6 @@ main =
 mainDebug filename = do
         parsed <- parseFile filename
 
-        weededProg <- weed filename (pure $ pure ()) parsed 
+        weededProg <- weed filename (pure $ pure ()) parsed
         prettyPrintFile parsed filename
         prettyPrintTypes weededProg filename
