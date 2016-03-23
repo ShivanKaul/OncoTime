@@ -56,18 +56,14 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
         let grpAllFilesContents = map (readFile) (useFilesToParse)
         newGroups <- sequence (map (getGroupDefs) (grpAllFilesContents))
 
-        --check erroneous subfields i.e. whether all fields exist
-        case (checkFilters filters filterable) of
-            Left e -> print e >>  hPutStrLn stderr "FILTERS:" >>
-                print filters >> putStrLn "CONF:" >> print filterable >> exitFailure
-            Right checkedFilters -> putStrLn "All Fields valid"
-
         let allGroups = (concat (newGroups)) ++ groupDefs
-
+        --may need a function to annotate everything
+        print allGroups
+        putStrLn "\n"
         -- check for redeclarations for group
         case (checkForGroupRedecl allGroups) of
             Left e -> hPrint stderr e >> exitFailure
-            Right r -> print "No redeclarations for group files"
+            Right r -> print r >> print  "No redeclarations for group files"
 
         -- take care of recursive groups
         case (checkForRecursiveGroups allGroups) of
@@ -79,8 +75,16 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
         -- check types of groups and if they exist #99
         let symbolTableH = buildHeadSymbolTable allGroups hdr
 
-        case  mapM (checkFilterTypes conf symbolTableH) [filters] of
-                Left e -> hPrint stderr e >> exitFailure
+        --check erroneous subfields i.e. whether all fields exist
+        case (checkFilters filters filterable) of
+            Left e -> print e >>  hPutStrLn stderr "FILTERS:" >>
+                print filters >> putStrLn "CONF:" >> print filterable >> exitFailure
+            Right checkedFilters -> putStrLn "All Fields valid"
+
+        print "test"
+
+        case  mapM (checkFilterTypes conf symbolTableH) filters of
+                Left e -> hPrint stderr e >> print [filters] >> exitFailure
                 Right annotatedFilters -> do
                     print filters
 
@@ -92,7 +96,7 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
 
                     --let newFilters = (populateDefaultValuesFilters filters (Config confmap))
 
-                    let newFilters = (populateDefaultValuesFilters (concat annotatedFilters) (Config confmap))
+                    let newFilters = (populateDefaultValuesFilters (annotatedFilters) (Config confmap))
                     print newFilters
 
 
@@ -103,7 +107,8 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
                     -------- TEST ---------
                     -- Replace vars with symbol table h
                     print "Printing with vars replaced"
-                    print (map (replaceVarsFilter symbolTableH) newFilters)
+                    
+                    --print (map (replaceVarsFilter symbolTableH) newFilters)
 
         -------- UNTEST -------
 
@@ -195,7 +200,7 @@ replaceVarsGroupItem symbolTableH (GroupVar v) =
 
 -- Make (Var Annotation) hashable
 instance (Hashable (Var Annotation)) where
-  hashWithSalt s (Var v a) = s + (hash v)
+  hashWithSalt s t@(Var v a) = s + (hash t)
 
 -- Utility test function to check if symbol table contains a key
 testIfHSymbolTableContains :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> (Var Annotation) -> IO()
@@ -397,60 +402,88 @@ checkFieldsEx conf (x:xs) l =
 --give conf
 --GOAL: check that the types of the filter
 --phase 1: check to see that all
-checkFilterTypes::(Config Annotation)->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))->[(Filter Annotation)]->Either LexError [(Filter Annotation)] -- ()--[(Filter Annotation)]
+checkFilterTypes::(Config Annotation)->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))->(Filter Annotation)->Either LexError (Filter Annotation) -- ()--[(Filter Annotation)]
 checkFilterTypes (Config conf) hmap ms =
     do
 --How can I accumulate stuff?
-        
        -- forM_ ms  (\x -> do
-        foldM (\acc x-> do
             --from fields
-            let filterName = (getFilterName x)
-            let fieldDefs = getFieldDefList x -- list of possible FieldDefs for a filter
+            
+            let filterName = (getFilterName ms)
+            let fieldDefs = getFieldDefList ms -- list of possible FieldDefs for a filter
             --from confmap
+            
             case (M.lookup (filterName, True) conf) of--things to check against for that filter
-                Just val ->  case ((typeCheckFieldMap val hmap) fieldDefs) of
-                    Left e -> Left e
-                    Right r ->  Right $ (Filter filterName r):acc
-                Nothing -> case (M.lookup (filterName, False) conf) of
-                    Nothing -> Left $ GenError (filterName ++ " is not in map")
-                    Just val -> case ((typeCheckFieldMap val hmap) fieldDefs) of
+                Just val ->  do
+                    trace ("calling f with x = ") (pure( )) 
+                    case ((typeCheckFieldMap val hmap fieldDefs)) of
                         Left e -> Left e
-                        Right r -> Right $ (Filter filterName r ):acc
-                ) [] ms 
+                        Right r ->  Right $ (Filter filterName r)
+                    --trace ("calling f with x = ") (pure( )) 
+
+                Nothing -> do
+                    case (M.lookup (filterName, False) conf) of
+                        Nothing -> Left $ GenError (filterName ++ " is not in map")
+                        Just val -> do
+
+                            case ((typeCheckFieldMap val hmap fieldDefs)) of
+                                Left e -> Left e
+                                Right r -> Right $ (Filter filterName r )
 
 --return a list of things that don't type check
 
 --NEED TO RETURN ANNOTATED FIELD MAP MAYBE?
-typeCheckFieldMap::(FieldMap Annotation)->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))->[(FieldDef Annotation)]->Either LexError [(FieldDef Annotation)] -- () --[FieldDef] 
+typeCheckFieldMap::(FieldMap Annotation) -> (HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))-> [FieldDef Annotation] ->Either LexError [(FieldDef Annotation)]
 typeCheckFieldMap (FieldMap fm) hmap fdList = do
+   
    foldM (\acc x-> do 
+
             let fieldName = getFieldName x
             let fvalList  = getFieldValList x
             case (M.lookup fieldName fm) of
-                Nothing -> Left $ GenError "Not somethign"
-                Just val -> case (mapM (compareFieldTypes val (FieldMap fm) hmap) fvalList) of
-                    Left e -> Left e
-                    Right r -> Right $ (FieldDef fieldName r):acc
+                Nothing -> do
+                    
+                    trace ("calling f with x =  ") (pure( )) 
+                    Left $ GenError "Not somethign"
+                Just val -> 
+                    do
+                        case (mapM (compareFieldTypes val (FieldMap fm) hmap) fvalList) of
+                            Left e -> do
+                                
+                                Left e
+                            Right r -> do 
+                                
+                                Right $ (FieldDef fieldName r):acc
     ) [] fdList
+
 
 --take fieldDefs anda  fieldMap, return an error or a field deaf after calling Field
 compareFieldTypes::(Field Annotation)->(FieldMap Annotation)->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))->(GroupItem Annotation)->Either LexError (GroupItem Annotation)
 compareFieldTypes (FieldValue allValList an ) fm hm (GroupValString s a)  = 
-    if (s `elem` allValList) then Right (GroupValString s an) --Right (GroupValString s) 
+    if (s `elem` allValList) 
+        then Right (GroupValString s an) --Right (GroupValString s) 
     else Left (AllowedValError ("Error. " ++ s ++ " is not defined in the config file list that also contains: " ++ (intercalate "," allValList)))
-compareFieldTypes (FieldType "String" an) fm hm (GroupValString s a)  = Right (GroupValString s (an))
-compareFieldTypes (FieldType "Int" an) fm hm (GroupRange a ) = Right (GroupRange a)
+--compareFieldTypes (FieldType "String" an) fm hm (GroupValString s a)  = Right (GroupValString s (an))
+--compareFieldTypes (FieldType "Int" an) fm hm (GroupRange a ) = Right (GroupRange a)
 compareFieldTypes (FieldType "Date" an) fm hm (GroupDate a b c _) = Right (GroupDate a b c (an))
+compareFieldTypes (FieldType t (Annotation an)) fm hm (GroupVar v@(Var var (Annotation a))) = if an == a then Right (GroupVar v) else Left $ TypeError ("Error. Type mismatch. Field of type " ++ show t ++ "Var " ++ show var ++ " of type " ++ show a)
+compareFieldTypes (FieldVar a an) fm hm (GroupVar (Var v _)) = Right (GroupVar (Var v an))
 --I need a new type that allows me to pull out the type of var
-compareFieldTypes _ (FieldMap fm) hm  (GroupVar var@(Var v an) ) =
-    case (HashMap.lookup var hm) of
-        Nothing -> Left $ TypeError ("ERROR. var " ++ (varToStr var) ++ " not declared")
-        Just (a, _) -> case (M.member ((groupTypeToStr a)) fm) of
-        --if it is declared, we want to make sure it is used in the right case. i.e. with the right field
-                False -> Left $ TypeError ("ERROR. variable " ++
-                    (varToStr var) ++" is used with wrong field")
-                True  -> Right (GroupVar var)
+compareFieldTypes f (FieldMap fm) hm  (GroupVar var@(Var v an) ) =
+    do
+        Left $ TypeError ("ERROR. var " ++ (varToStr var) ++ " not declared " ++ "FIELD IS: " ++ show f ++ " VAR IS : " ++ show var ++ "\n" ++ show fm )
+        --trace ("calling f with x =  ") (pure( )) 
+        --case (HashMap.lookup var hm) of
+           -- Nothing -> Left $ TypeError ("ERROR. var " ++ (varToStr var) ++ " not declared " ++ "FIELD IS: " ++ show f ++ " VAR IS : " ++ show var ++ "\n" ++ show hm ++ "\n")
+            --Just (a) -> Left $ TypeError ("a" )-- ++ (groupTypeToStr a)) 
+        
+        --trace ("calling f with x =  ") (pure( )) 
+            {-case (M.member ((groupTypeToStr a)) fm) of
+            --if it is declared, we want to make sure it is used in the right case. i.e. with the right field
+                    False -> Left $ TypeError ("ERROR. variable " ++
+                        (varToStr var) ++" is used with wrong field")
+                    True  -> Right (GroupVar (Var v an))
+    -}
 compareFieldTypes b fm hm a = Left $ TypeError ("Type Error between " ++ 
     (show a) ++ " and " ++ (show b))
 

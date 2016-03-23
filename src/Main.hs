@@ -144,3 +144,9 @@ main =
         else
             return ()
 
+mainDebug filename = do
+        parsed <- parseFile filename
+
+        weededProg <- weed filename (pure $ pure ()) parsed 
+        prettyPrintFile parsed filename
+        prettyPrintTypes weededProg filename

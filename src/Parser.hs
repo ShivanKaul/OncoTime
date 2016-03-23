@@ -210,7 +210,7 @@ groups = lexeme $
         grpType <- groupType
         v <- var
         reserved "="
-        grpItem <- curlies $ sepBy formattedGroup comma
+        grpItem <- curlies $ sepBy (formattedGroup (getGroupType grpType)) comma
         semi
         return $ Group grpType (Var (getVar v) (Annotation (getGroupType grpType))) grpItem--(Annotation (getGroupType groupType))) grpItem
 
@@ -222,11 +222,11 @@ getVar::Var a->String
 getVar (Var v _) = v
 
 
-formattedGroup::Parser (GroupItem Annotation)
-formattedGroup =
+formattedGroup::(String)->Parser (GroupItem Annotation)
+formattedGroup name =
     do
       (optional semi)
-      z<-groupItem
+      z<-groupItem name
       (optional semi)
       return z
 
@@ -236,65 +236,67 @@ groupType = lexeme $
         gt <- some alphaNum
         return $ GroupType (map toLower gt)
 
-groupItem::Parser (GroupItem Annotation)
-groupItem = try groupValDate
-        <|> try groupRange
-        <|> try groupValString
-        <|> try groupVar
+groupItem::(String)->Parser (GroupItem Annotation)
+groupItem name = try  (groupValDate name )
+        <|> try (groupRange name)
+        <|> try (groupValString name)
+        <|> try  (groupVar name)
 
-groupVar :: Parser (GroupItem Annotation)
-groupVar =
+groupVar ::String-> Parser (GroupItem Annotation)
+groupVar name =
     do
         gv <- angles $ var
-        return $ GroupVar (Var (getVar gv) (Annotation ""))
+        return $ GroupVar (Var (getVar gv) (Annotation (map toLower name)))
 
-groupValString::Parser (GroupItem Annotation)
-groupValString = lexeme $
+groupValString::String->Parser (GroupItem Annotation)
+groupValString name = lexeme $
     do
         gv <- some wordChar
-        return $ GroupValString (map toLower gv) (Annotation "") -- ???
+        return $ GroupValString (map toLower gv) (Annotation (map toLower name)) -- ???
 
-groupValDate::Parser (GroupItem Annotation)
-groupValDate = lexeme (
+groupValDate::String->Parser (GroupItem Annotation)
+groupValDate name = lexeme (
     do {
         y <- some digit;
         date_sep;
         m <- some digit;
         date_sep;
         d <- some digit;
-        return $ GroupDate (read y) (read m) (read d) (Annotation "") } <?> "Date")
+        return $ GroupDate (read y) (read m) (read d) (Annotation name) } <?> "Date")
 
-groupRange::Parser (GroupItem Annotation)
-groupRange = try ( (liftM GroupRange betw ) ) <|> try (liftM GroupRange before ) <|> try (liftM GroupRange after)  <|> try (liftM GroupRange single  ) <?> "Number or Range"
 
-before::Parser (RangeType Annotation)
-before =
+
+groupRange::String->Parser (GroupItem Annotation)
+groupRange name = try ( betw name  ) <|> try (before name)<|> try (after name)  <|> try (single name) <?> "Number or Range"
+
+before::String->Parser (GroupItem Annotation)
+before name =
     do
         reserved "before"
         pre <- some digit
-        return $ Before (read pre) (Annotation "Int")
+        return $ GroupRange ((Before (read pre)) (Annotation name))
 
-after::Parser (RangeType Annotation)
-after =
+after::String->Parser (GroupItem Annotation)
+after n =
     do
         reserved "after"
         post <- some digit
-        return $ After  (read post) (Annotation "Int")
+        return  $ GroupRange ( (After  (read post)) (Annotation n))
 
-betw::Parser (RangeType Annotation)
-betw = lexeme $
+betw::String->Parser (GroupItem Annotation)
+betw n = lexeme $
     do
         pre <- lexeme $ some digit
         reserved "to"
         post <- lexeme $ some digit
-        return $ Between (read pre) (read post) (Annotation "Int")
+        return $ GroupRange ((Between (read pre) (read post)) (Annotation n))
 
 
-single::Parser (RangeType Annotation)
-single = lexeme $
+single::String->Parser (GroupItem Annotation)
+single n = lexeme $
     do
         gd <- some digit
-        return $ SingleInt (read gd) (Annotation "Int")
+        return $ GroupRange ( (SingleInt (read gd)) (Annotation n))
 
 
 manyComp ::Parser [(Computation Annotation)]
@@ -531,8 +533,8 @@ filterName = lexeme $
         f <- identifier
         return (map toLower f)
 
-filterVal::Parser (FieldVal Annotation)
-filterVal = lexeme( groupItem <?> "Field Options")
+filterVal::String->Parser (FieldVal Annotation)
+filterVal name = lexeme( groupItem name<?> "Field Options")
 
 
 filters :: Parser (Filter Annotation)
@@ -556,7 +558,7 @@ filterDefs = lexeme (
     do {
         ffield <- identifier;
         colon;
-        fval <- sepBy1 filterVal comma;
+        fval <- sepBy1 (filterVal ffield) comma;
         semi;
         return $ FieldDef ((map toLower ffield)) fval
         } <?> "Field Definition ")

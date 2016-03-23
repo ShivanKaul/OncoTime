@@ -45,44 +45,44 @@ fieldMapMaker = lexeme $
     do
         name <- stringLit
         colon
-        subf <- parents $ fieldParse
+        subf <- parents $ (fieldParse name)
         return (M.singleton (map toLower name) subf)
         --tup <- parens $ typeTuple
         --return (M.singleton (map toLower name) tup)
 
 
-fieldParse::Parser (Field  Annotation)
-fieldParse = lexeme $
+fieldParse::String->Parser (Field  Annotation)
+fieldParse name = lexeme $
     do
-        sf <-  try fieldtype  <|> try fieldval <?> "not a val list or a valid type"               --sf <- choice [ (squares (sepBy identifier comma)), (curlies (sepBy identifier comma)), identifier]
+        sf <-  try (fieldtype name) <|> try (fieldval name) <?> "not a val list or a valid type"               --sf <- choice [ (squares (sepBy identifier comma)), (curlies (sepBy identifier comma)), identifier]
 
 
         return sf
 validChar :: Parser Char
 validChar  = satisfy (\c -> (isAlphaNum c) || (c=='_'))
 
-fieldval::Parser (Field Annotation)
-fieldval = lexeme $
+fieldval::String->Parser (Field Annotation)
+fieldval name = lexeme $
     do
         --p <-( squares  (sepBy (some (choice[alphaNum, (oneOf "-_+.")] ) ) comma) )
         p <-( squares  (sepBy (some (validChar)) comma) )
-        return $ FieldValue  (map (map toLower) p) (Annotation "FieldValList") 
+        return $ FieldValue  (map (map toLower) p) (Annotation name) 
 
 --validChar = ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z'] ++ ['!','-','_','.','+']
 
-fieldtype::Parser (Field Annotation)
-fieldtype = lexeme $
+fieldtype::String->Parser (Field Annotation)
+fieldtype name = lexeme $
     do
         p <- (some (validChar))
 
         case p of
-            "String" -> return (FieldType "String" (Annotation "String"))
-            "Int" -> return (FieldType "Int" (Annotation "Int"))
+            "String" -> return (FieldType "String" (Annotation name))
+            "Int" -> return (FieldType "Int" (Annotation name))
             --_ -> case ((reads p)::[(Int, String)]) of
               --          [(_,"")] -> return (FieldType "Int")
                 --        _ -> return (FieldType "String")
 
-            _ -> return (FieldType "INVALID TYPE" (Annotation "INVALID TYPE"))
+            _ -> return (FieldType "UNKNOWN" (Annotation name))
 
 configParser::Parser (Config Annotation)
 configParser = lexeme $

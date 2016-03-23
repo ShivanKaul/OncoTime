@@ -8,7 +8,6 @@ use vikramPatientData.grp
 
 // ---- We can incorporate more groups if need be ----
 
-
 // ---- Filters ----
 population is
 	Id: <patientGroupOne>
