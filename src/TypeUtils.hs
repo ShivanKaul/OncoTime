@@ -66,7 +66,7 @@ fieldval name = lexeme $
     do
         --p <-( squares  (sepBy (some (choice[alphaNum, (oneOf "-_+.")] ) ) comma) )
         p <-( squares  (sepBy (some (validChar)) comma) )
-        return $ FieldValue  (map (map toLower) p) (Annotation name) 
+        return $ FieldValue  (map (map toLower) p) (Annotation (map toLower name)) 
 
 --validChar = ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z'] ++ ['!','-','_','.','+']
 
@@ -76,13 +76,13 @@ fieldtype name = lexeme $
         p <- (some (validChar))
 
         case p of
-            "String" -> return (FieldType "String" (Annotation name))
-            "Int" -> return (FieldType "Int" (Annotation name))
+            "String" -> return (FieldType "String" (Annotation (map toLower name)))
+            "Int" -> return (FieldType "Int" (Annotation (map toLower name)))
             --_ -> case ((reads p)::[(Int, String)]) of
               --          [(_,"")] -> return (FieldType "Int")
                 --        _ -> return (FieldType "String")
 
-            _ -> return (FieldType "UNKNOWN" (Annotation name))
+            _ -> return (FieldType "UNKNOWN" (Annotation (map toLower name)))
 
 configParser::Parser (Config Annotation)
 configParser = lexeme $

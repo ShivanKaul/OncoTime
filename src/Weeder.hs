@@ -58,6 +58,7 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
 
         let allGroups = (concat (newGroups)) ++ groupDefs
         --may need a function to annotate everything
+
         print allGroups
         putStrLn "\n"
         -- check for redeclarations for group
@@ -76,13 +77,17 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
         let groupTypesList = map (\(Group gtype _ _) -> gtype) allGroups
         print groupTypesList
         -- get list of all valid types
-        let validTypes = [GroupType "Sex", GroupType "id", GroupType "birthyear", GroupType "diagnosis", GroupType "gender", GroupType "postalcode", GroupType "years", GroupType "days", GroupType "months", GroupType "oncologist"]
+        let validTypes = [GroupType "sex", GroupType "id", GroupType "birthyear", GroupType "diagnosis", GroupType "gender", GroupType "postalcode", GroupType "years", GroupType "days", GroupType "months", GroupType "oncologist"]
         case (checkIfValidGroupTypes groupTypesList validTypes) of
             True -> print "Group types valid!"
             False -> hPrint stderr "Group Type invalid!" >> exitFailure
         -- check if variable being used in group is actually defined in symbol table #83
         -- check types of groups and if they exist #99
         let symbolTableH = buildHeadSymbolTable allGroups hdr
+        
+        case mapM (checkValidGroups conf symbolTableH ) allGroups  of
+            Left e -> print e >> exitFailure
+            Right r -> putStrLn "all groups contain valid values" 
 
         --check erroneous subfields i.e. whether all fields exist
         case (checkFilters filters filterable) of
@@ -179,6 +184,7 @@ checkForGroupRedecl groups =
             (_, []) -> Right $ groups
             (_, repeated) -> Left $ RedecError ("The following groups were redeclared: "
                 ++ (intercalate ", " (map (varToStr) repeated)))
+
 
 dupesExist :: [Var Annotation] -> ([String], [Var Annotation])
 dupesExist vars =
@@ -462,6 +468,35 @@ typeCheckFieldMap (FieldMap fm) hmap fdList = do
                                 Right $ (FieldDef fieldName r):acc
     ) [] fdList
 
+
+--given a a group, we need to determine if the subfield exists for any. if yeah, then we check to see if it is in it.
+--
+
+getAllFields::(Config Annotation)->((M.Map FieldName (Field Annotation)))
+getAllFields (Config conf) =  M.unions $ map (\(_,(FieldMap b )) -> b) (M.toList conf)
+    --M.unions (map (FieldMap . snd) (M.toList conf))
+
+checkValidGroups::(Config Annotation)->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))->(GroupDefs Annotation)->Either LexError (GroupDefs Annotation)
+checkValidGroups c@(Config conf) symTab (Group gt@(GroupType gtype) (Var v an) (gitem )) = 
+    do
+        
+        let listWithVal = getAllFields c
+        --let fieldList = getAllFields c
+        --multiple with the same name??
+        --let listWithVal = M.filterWithKey (\fn (Field a) -> fn == gtype && a == an) fieldList
+        case (M.lookup gtype listWithVal) of
+            Nothing -> Left $ TypeError (show gtype ++ " is not defined in config file")
+            Just g -> case (mapM (compareFieldTypes g (FieldMap listWithVal) symTab )  gitem) of --check the type is valid
+                Right r -> Right (Group gt (Var v an) gitem )
+                Left e -> Left e 
+        --check getAllFields
+
+
+--checkValidParams
+
+--get tye from
+--
+--
 --take fieldDefs anda  fieldMap, return an error or a field deaf after calling Field
 
 --check to see if it's in the table. 
@@ -471,13 +506,16 @@ typeCheckFieldMap (FieldMap fm) hmap fdList = do
 --TYPE RULES COME DOWN TO IT
 compareFieldTypes::(Field Annotation)->(FieldMap Annotation)->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))->(GroupItem Annotation)->Either LexError (GroupItem Annotation)
 --field values
-compareFieldTypes (FieldValue allValList an ) fm hm gi =
+compareFieldTypes (FieldValue allValList an@(Annotation a) ) fm hm gi =
     case gi of
-        (GroupValString s a) -> case (s `elem` allValList) of
+        (GroupValString s sa) -> case (s `elem` allValList) of
                 True ->  Right (GroupValString s an) --Right (GroupValString s) 
                 False-> Left (AllowedValError ("Error. " ++ s ++ " is not defined in the config file list that also contains: " ++ (intercalate "," allValList)))
-
---ints
+        (GroupVar (Var v va)) -> case (an == va) of
+            True -> Right (GroupVar (Var v va))
+            False -> Left (AllowedValError ("Var Error while comparing field types" ++ " varaiable " ++ show v ++ ": " ++ show va ++ " versus " ++ show a ))
+        _ -> Left (AllowedValError ("Error " ++ show a  ++ show gi ++ show allValList))
+--intshow s
 compareFieldTypes (FieldType "Int" (Annotation an)) fm hm gr = 
     case gr of
         (GroupRange (Before i (Annotation a))) -> 
@@ -495,6 +533,7 @@ compareFieldTypes (FieldType "Int" (Annotation an)) fm hm gr =
         (GroupVar var@(Var v (Annotation a))) -> 
             if  (HashMap.member var hm) && (a == an) then Right $ (GroupVar (Var v (Annotation an)))
             else Left $ TypeError ("ERROR : " ++ show v ++ "of ann " ++ a ++ " is not in Symbol Table" ++ show hm)
+        _ -> Left (AllowedValError ("Error Invalid Type" ++ show an  ++ show gr))
         
 compareFieldTypes (FieldType "String" (Annotation an)) fm hm gv = 
     case gv of

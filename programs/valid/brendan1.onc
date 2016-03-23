@@ -5,8 +5,11 @@ This program generates the barcharts of all patients between the ages of 20 and 
 
 use PatientData.grp
 
+group sex a = {M, F}
+
+
 population is
-    Sex: M
+    sex:<a>
     Diagnosis: prostate
     Birthyear: 1986 to 1996
 
