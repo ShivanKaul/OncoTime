@@ -97,40 +97,40 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
 
 
 
-        -- Replace vars with symbol table h
-        print "Printing with vars replaced"
+                    -- Replace vars with symbol table h
+                    print "Printing with vars replaced"
 
-        let filtersWithVarsReplaced = (map (replaceVarsFilter symbolTableH) newFilters)
-        print filtersWithVarsReplaced
+                    let filtersWithVarsReplaced = (map (replaceVarsFilter symbolTableH) newFilters)
+                    print filtersWithVarsReplaced
 
-        -------- UNTEST -------
+                    -------- UNTEST -------
 
-        case (M.lookup ("patient", True) confmap) of
-            Nothing -> hPrint stderr "key not found in confmap!"
-            Just (FieldMap r) -> print "here's a confmap" >> print (show (M.toList r))
+                    case (M.lookup ("patient", True) confmap) of
+                        Nothing -> hPrint stderr "key not found in confmap!"
+                        Just (FieldMap r) -> print "here's a confmap" >> print (show (M.toList r))
 
-        case  weedComputationList conf comps of
-            Left e-> hPrint stderr e >>exitFailure
-            Right r -> symTabFun r
+                    case  weedComputationList conf comps of
+                        Left e-> hPrint stderr e >>exitFailure
+                        Right r -> symTabFun r
 
-        -- SAMPLE USES OF SYMBOL TABLE
-        -- testIfSymbolTableContains symbolTable1 (Var "x")
+                    -- SAMPLE USES OF SYMBOL TABLE
+                    -- testIfSymbolTableContains symbolTable1 (Var "x")
 
-        -------------------------------------------------------------------------
-        ---------------- ************ typecheck computations ***********----------------
-        -------------------------------------------------------------------------
+                    -------------------------------------------------------------------------
+                    ---------------- ************ typecheck computations ***********----------------
+                    -------------------------------------------------------------------------
 
-       --build the compuation symbol table
+                   --build the compuation symbol table
 
-        --checkComps
-        --build
+                    --checkComps
+                    --build
 
 
 
-        -- print (show (prg))
+                    -- print (show (prg))
 
-        putStrLn "Weeded successfully"
-        return (Program hdr docs [] (allGroups) filtersWithVarsReplaced (comps))
+                    putStrLn "Weeded successfully"
+                    return (Program hdr docs [] (allGroups) filtersWithVarsReplaced (comps))
 
 
 checkForRecursiveGroups :: [GroupDefs Annotation] -> [Var Annotation]
