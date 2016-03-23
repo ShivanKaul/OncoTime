@@ -32,10 +32,21 @@ import Formatter
 weed::String->(String -> IO())->(Program Annotation)->SourcePos->IO(Program Annotation)
 weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) pos =
     do
+        putStrLn $ "File "++file++"\n"
+        let validTypes = [GroupType "Sex", GroupType "id", GroupType "birthyear",
+                GroupType "diagnosis", GroupType "gender",
+                GroupType "postalcode", GroupType "years",
+                GroupType "days", GroupType "months", GroupType "oncologist"]
+        -- get params from header
+        let headerParams = case hdr of
+                (Header fname args) -> args
+        -- get types of params
+        let paramTypesList = map (\(Arg gtype _) -> gtype) headerParams
+        case (checkIfValidGroupTypes paramTypesList validTypes) of
+            True -> putStrLn $ "Header params have valid types!"
+            False -> hPutStrLn stderr "Header params have invalid types!" >> exitFailure
         --get Config file
         conf <- readConfig file
-        -- putStrLn $ show conf
-        putStrLn $ "File "++file++"\n"
        --grpFile weeding
         case dupesExist (map (\x -> (Var x (Annotation ""))) (flattenUseFile useList)) of
             (_, []) -> putStrLn $ "Uselist is fine!"
@@ -52,7 +63,6 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) pos =
             loopable = Config $ M.filterWithKey (\(name,valid) t -> valid) confmap
             filterable = Config $ M.filterWithKey (\(name,valid) t -> not valid) confmap
 
-        --putStrLn ("Group files are " ++ (show useFilesToParse))
         case grpFileList of
             Left e -> hPutStrLn stderr (file ++ ": ") >> print e >> exitFailure
             Right weededGrpFiles -> putStrLn $ "All group files exist!"
@@ -77,7 +87,6 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) pos =
         -- get list of all types of groups
         let groupTypesList = map (\(Group gtype _ _) -> gtype) allGroups
         -- get list of all valid types
-        let validTypes = [GroupType "Sex", GroupType "id", GroupType "birthyear", GroupType "diagnosis", GroupType "gender", GroupType "postalcode", GroupType "years", GroupType "days", GroupType "months", GroupType "oncologist"]
         case (checkIfValidGroupTypes groupTypesList validTypes) of
             True -> putStrLn $ "Group types valid!"
             False -> hPrint stderr "Group Type invalid!" >> exitFailure

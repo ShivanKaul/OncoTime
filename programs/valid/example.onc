@@ -1,4 +1,4 @@
-script example(a a)
+script example(Id a)
 /** test */
 use a.grp, b.grp
 use t.grp
@@ -8,9 +8,9 @@ group Id x = {1, 2, 1200 to 123123}
 
 // We use simple filters so as not to generate too much.
 population is
-	Sex: m 
+	Sex: m
 	Birthyear: 1951, 1952, 1953, 1954, 1955
-	Birthyear: <x>
+	Id: <x>
 
 patient is
 	sex: M
@@ -23,11 +23,11 @@ doctors are
 
 
 	table t = count Patients by Birthyear
-	
-		foreach Patient p 
+
+		foreach Patient p
 	{
 		print p
 	}
-	
+
 	print t
 }
