@@ -75,7 +75,7 @@ prettyPrintFile :: (Program Annotation) -> String -> IO()
 prettyPrintFile prog file =
     do
         writeFile (replaceExtension file ".pretty.onc") (pretty prog)
-        print "VALID"
+        putStrLn "VALID"
 
 removeWildcardsFilters :: [Filter Annotation] -> [Filter Annotation]
 removeWildcardsFilters filters =
@@ -96,7 +96,7 @@ prettyPrintTypes (Program header docs usefilelist groups filt comps) file =
             ++ (prettyPrint groups) ++ (printGroupsPPTYPE groups) ++ (prettyPrint (removeWildcardsFilters filt)) ++
             (printFiltersPPTYPE filt) ++ ("{\n" ++ (prettyIndent "\t" comps) ++ "}\n"))
             -- ++ (printCompsPPTYPE comps))
-        print ("Printed types for " ++ file ++ " in " ++ (replaceExtension file ".pptype.onc"))
+        putStrLn ("Printed types for " ++ file ++ " in " ++ (replaceExtension file ".pptype.onc"))
 
 parseString :: String -> (Program Annotation,SourcePos)
 parseString str =
