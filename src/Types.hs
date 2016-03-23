@@ -61,7 +61,7 @@ type IntValue = Int
 type StringValue = String
 
 data Computation a
-    = Foreach (ForEachDef a) [(Computation a)] --for nested for loo, slide 38 is confusing
+    = Foreach (ForEachDef a) [(Computation a)] SourcePos--for nested for loo, slide 38 is confusing
     | Table (Var a) FilterName (FieldName)
     | List (Var a) [(SeqField a)]
     | Print (PrintAction a)

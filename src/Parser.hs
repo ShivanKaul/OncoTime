@@ -1,3 +1,4 @@
+
 module Parser where
 
 import Lexer
@@ -15,12 +16,14 @@ import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Expr
 import Text.ParserCombinators.Parsec.Language
 import Text.ParserCombinators.Parsec.Char
+import Text.ParserCombinators.Parsec.Prim
 import qualified Text.ParserCombinators.Parsec.Token as Token
 import Data.Char(isAlphaNum)
 import TypeUtils
 import Data.Char
 import Debug.Trace
 import Types
+import Text.Parsec.Pos
 -- import PrettyPrinter
 import Lexer
 
@@ -57,7 +60,7 @@ testParserCheck c =
 
 testFiltersCheck::(Config Annotation)->Parser (TestProgram Annotation)
 testFiltersCheck c=
-    do
+         do
         --filters <- many (filtersCheck c)
         filters <- many filters
         return $ TestFiltersList filters
@@ -98,7 +101,7 @@ testComputation =
         comp <- many computation
         return $ TestComputation comp
 
-oncoParser:: Parser (Program Annotation)
+oncoParser:: Parser ((Program Annotation), SourcePos)
 oncoParser =
     do
         whiteSpace
@@ -108,7 +111,8 @@ oncoParser =
         grp <- many groups
         filt <- manyFilters
         comp <- manyComp
-        return $ Program hdr doc use grp filt comp
+        p <- getPosition
+        return $ (Program hdr doc use grp filt comp,p)
 
 --IO to checkfilename
 header:: Parser (Header Annotation)
@@ -165,7 +169,7 @@ documentation = lexeme $
 
 docLiteral :: Parser String
 docLiteral   = lexeme (
-    do{ str <- between (symbol "/*" <?> "Start of Documentation String (/*)")
+    do{ str <- between (symbol "/**" <?> "Start of Documentation String (/*)")
         (symbol "*/" <?> "end of Documentation String (*/)")
         --(many anyChar)
         (many docChar)
@@ -320,7 +324,7 @@ singleComp = lexeme(
 
 computation::Parser (Computation Annotation)
 computation =
-    try (liftM2 Foreach foreach  manyComp {-(try-} {- <|> singleComp)-})
+    try (liftM3 Foreach foreach manyComp getPosition{-(try-} {- <|> singleComp)-})
     <|> try (table)
     <|> try (list)
     <|> try (liftM Print prints)
@@ -366,20 +370,17 @@ seqField::Parser (SeqField Annotation)
 seqField =
     do
         (optional semi)
-        x <-    try(seqStar)<|> try (seqComma) <|>  try(seqNeg) <|>  try(seqBar)<?>"Sequence Event"
+        x <-    try(seqStar)<|> try (seqComma) <|>
+          try(seqNeg) <|>  try(seqBar)<?>"Sequence Event"
         (optional semi)
         return x
 
- -- try(seqSingle) <|>
--- seqSingle::Parser SeqField
--- seqSingle = lexeme (
---     do{
---         e <- event;
---         return $ Single e}<?>"Single Event")
+
 seqStar :: Parser (SeqField Annotation)
 seqStar =
     do
-        e <- curlies $ sepBy1 (do {(optional semi) ; e<-event; (optional semi);return e}) comma
+        e <- curlies $ sepBy1 (do {(optional semi) ;
+             e<-event; (optional semi);return e}) comma
         star
         return $ Star e
 seqNeg::Parser (SeqField Annotation)
@@ -387,11 +388,6 @@ seqNeg =
     do
         e <- parens $ reserved "not" >> event --TODO: Write this better
         return $ Neg e
--- seqNot::Parser Event
--- seqNot =
---     do
---         reserved "not"
---         event
 
 seqComma :: Parser (SeqField Annotation)
 seqComma =
@@ -426,7 +422,8 @@ barchart =  lexeme (
 
 foreach::Parser (ForEachDef Annotation)
 foreach =lexeme(
-    do{  f<-try(forEachFilter) <|> try(forEachTable) <|> try(forEachSequence) <|> try(forEachList);
+    do{  f<-try(forEachFilter) <|> try(forEachTable) <|> 
+        try(forEachSequence) <|> try(forEachList);
         optional semi;
         return f;
 } <?> "For Each Definition")
@@ -437,7 +434,7 @@ forEachFilter =
         reserved "foreach"
         f <- lexeme filterName
         v <- var
-        return $ ForEachFilter f v
+        return $ ForEachFilter f v 
 
 
 forEachTable::Parser (ForEachDef Annotation)
@@ -448,7 +445,8 @@ forEachTable =
         v1 <- var
         reserved "of"
         v2 <- var
-        return $ ForEachTable v1 v2
+        p <- getPosition
+        return $ ForEachTable v1 v2 
 
 forEachSequence::Parser (ForEachDef Annotation)
 forEachSequence =
@@ -481,7 +479,8 @@ printvar =
 prints:: Parser (PrintAction Annotation)
 prints = lexeme (
     do{
-   x<-(try printvar <|> try printTimeLine <|> try printLength <|> try printFilters <|> try printElement);
+   x<-(try printvar <|> try printTimeLine <|> 
+    try printLength <|> try printFilters <|> try printElement);
 
    return x;
    } <?> "Print Statement")

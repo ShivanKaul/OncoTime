@@ -17,7 +17,7 @@ import Text.ParserCombinators.Parsec.Language
 import Text.ParserCombinators.Parsec.Char
 
 import qualified Text.ParserCombinators.Parsec.Token as Token
-
+import Text.Parsec.Pos
 import TypeUtils
 import Debug.Trace
 
@@ -28,7 +28,7 @@ import PrettyPrinter
 import Formatter
 import Weeder
 
-parseFile :: String -> IO (Program Annotation)
+parseFile :: String -> IO ((Program Annotation),SourcePos)
 parseFile filename =
     do
         program <- readFile filename
@@ -75,19 +75,34 @@ prettyPrintFile :: (Program Annotation) -> String -> IO()
 prettyPrintFile prog file =
     do
         writeFile (replaceExtension file ".pretty.onc") (pretty prog)
-        putStrLn "\n"
-        print (file ++ " is VALID")
+        putStrLn "VALID\n"
+
+removeWildcardsFilters :: [Filter Annotation] -> [Filter Annotation]
+removeWildcardsFilters filters =
+    do
+        map (removeWildcardsFieldDefs) filters
+
+removeWildcardsFieldDefs :: Filter Annotation -> Filter Annotation
+removeWildcardsFieldDefs (Filter fname fieldefs) =
+    do
+        Filter fname (foldl (\acc (FieldDef fielddefname fieldvals) -> case fieldvals of
+            [GroupWildcard] -> acc
+            _ -> (acc ++ [(FieldDef fielddefname fieldvals)]) ) [] fieldefs)
+
 
 prettyPrintTypes :: (Program Annotation)-> String -> IO()
 prettyPrintTypes (Program header docs usefilelist groups filt comps) file =
     do
-        writeFile (replaceExtension file ".pptype.onc") ((prettyPrint header) ++ (prettyPrint docs)
-            ++ (prettyPrint groups) ++ (printGroupsPPTYPE groups) ++ (prettyPrint filt) ++
+        writeFile (replaceExtension file ".pptype.onc") ((prettyPrint header) ++
+            (prettyPrint docs) ++
+            (printHeadsPPTYPE header) ++ (prettyPrint groups) ++
+            (printGroupsPPTYPE groups) ++
+            (prettyPrint (removeWildcardsFilters filt)) ++
             (printFiltersPPTYPE filt) ++ ("{\n" ++ (prettyIndent "\t" comps) ++ "}\n"))
             -- ++ (printCompsPPTYPE comps))
-        print ("Printed types for " ++ file ++ " in " ++ (replaceExtension file ".pptype.onc"))
+        putStrLn ("Printed types for " ++ file ++ " in " ++ (replaceExtension file ".pptype.onc\n"))
 
-parseString :: String -> (Program Annotation)
+parseString :: String -> (Program Annotation,SourcePos)
 parseString str =
     case parse (oncoParser <* eof) "" str of
         Left e-> error $ show e
@@ -128,20 +143,20 @@ main =
     do
         -- oncotime filename flags
         (filename:flags) <- getArgs
-        parsed <- parseFile filename
+        (parsed,pos) <- parseFile filename
         let symTabFun = if "-dumpsymtab" `elem` flags
             then
                 (\a ->do {
                     let {symFile = replaceExtension filename ".symtab"};
 
-                    putStrLn $ "dumping symtable to " ++ symFile;
+                    putStrLn $ "Dumping symtable to " ++ symFile;
                     writeFile symFile a
                 })
             else
                 (\a->return ())
 
 
-        weededProg <- weed filename symTabFun parsed
+        weededProg <- weed filename symTabFun parsed pos
         prettyPrintFile parsed filename
         if "-pptype" `elem` flags then
             prettyPrintTypes weededProg filename
@@ -149,8 +164,8 @@ main =
             return ()
 
 mainDebug filename = do
-        parsed <- parseFile filename
+        (parsed,p) <- parseFile filename
 
-        weededProg <- weed filename (pure $ pure ()) parsed 
+        weededProg <- weed filename (pure $ pure ()) parsed p
         prettyPrintFile parsed filename
         prettyPrintTypes weededProg filename

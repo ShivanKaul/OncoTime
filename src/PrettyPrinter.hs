@@ -8,7 +8,7 @@ import Lexer
 import Data.List
 import Parser
 import qualified Data.Text as T
-import Text.Parsec.String 
+import Text.Parsec.String
 
 
 class PrettyPrint a where
@@ -29,6 +29,13 @@ printTypesGroups groups =
                                 ("// Group " ++ v ++ " : " ++ t ++ "\n")) groups
         (intercalate "\n" groupListString)
 
+printTypesHeader :: (Header Annotation) -> String
+printTypesHeader (Header name args) =
+    do
+        let argsListString = map (\(Arg (GroupType t) (Var v _ )) ->
+                                ("// Header param " ++ v ++ " : " ++ t ++ "\n")) args
+        (intercalate "\n" argsListString)
+
 printTypesFilters :: [(Filter Annotation)] -> String
 printTypesFilters filters =
     do
@@ -39,17 +46,22 @@ printGroupsPPTYPE groups =
     do
         "// PRINTING GROUPS\n" ++ (printTypesGroups groups)
 
+printHeadsPPTYPE :: (Header Annotation) -> String
+printHeadsPPTYPE header =
+    do
+        "// PRINTING HEADER PARAMS\n" ++ (printTypesHeader header)
 printFiltersPPTYPE :: ([Filter Annotation]) -> String
 printFiltersPPTYPE filters =
     do
         "// PRINTING FILTERS\n" ++ (printTypesFilters filters)
 
 instance PrettyPrint (PrintAction Annotation) where
-    prettyPrint (PrintVar var) = "print " ++ prettyPrint var ++"//"++prettyAnnotated var
-    prettyPrint (PrintTimeLine ptimeline) = "print timeline of " ++ prettyPrint ptimeline++ "//"++prettyAnnotated ptimeline
-    prettyPrint (PrintLength plength) = "print " ++ prettyPrint plength ++ ".length" ++ "//"++prettyAnnotated plength
-    prettyPrint (PrintFilters pfilters var) = "print " ++ (intercalate ", " pfilters) ++    " of " ++ prettyPrint var ++  "//"++prettyAnnotated var
-    prettyPrint (PrintElement v1 v2) = "print " ++ prettyPrint v1 ++ "[" ++ prettyPrint v2 ++ "]" ++ "//"++prettyAnnotated v1++  " "++prettyAnnotated v2
+    prettyPrint (PrintVar var) = "print " ++ prettyPrint var ++" // "++prettyAnnotated var
+    prettyPrint (PrintTimeLine ptimeline) = "print timeline of " ++ prettyPrint ptimeline++ " // "++prettyAnnotated ptimeline
+    prettyPrint (PrintLength plength) = "print " ++ prettyPrint plength ++ ".length" ++ " // "++prettyAnnotated plength
+    prettyPrint (PrintFilters pfilters var) = "print " ++ (intercalate ", " pfilters) ++    " of " ++ prettyPrint var ++  " // "++prettyAnnotated var
+    prettyPrint (PrintElement v1 v2) = "print " ++ prettyPrint v1 ++ "[" ++ prettyPrint v2 ++ "]" ++ " // "++prettyAnnotated v1++  " "++prettyAnnotated v2
+
 
 
 -- instance PrettyPrint TableAction where
@@ -57,11 +69,11 @@ instance PrettyPrint (PrintAction Annotation) where
 --         "count " ++ fname ++ " by " ++ prettyPrint fval
 
 instance PrettyPrint (ForEachDef Annotation) where
-    prettyPrint (ForEachFilter fname var) = "foreach " ++ fname ++ " " ++ prettyPrint var ++ "//"++prettyAnnotated var
-    prettyPrint (ForEachTable var1 var2) = "foreach element " ++ prettyPrint var1 ++ " of " ++ prettyPrint var2  ++ "//"++prettyAnnotated var1 ++" "++prettyAnnotated var
-    prettyPrint (ForEachSequence var sequ) = "foreach sequence " ++ prettyPrint var ++ " like " ++ prettyPrint sequ ++ "//"++prettyAnnotated var ++ " "++prettyAnnotated sequ
-    prettyPrint (ForEachList var1 var2) = "foreach member " ++ prettyPrint var1 ++ 
-        " in " ++ prettyPrint var2 ++ "//"++prettyAnnotated var1 ++ " "++prettyAnnotated var2
+    prettyPrint (ForEachFilter fname var) = "foreach " ++ fname ++ " " ++ prettyPrint var ++ " // "++prettyAnnotated var
+    prettyPrint (ForEachTable var1 var2) = "foreach element " ++ prettyPrint var1 ++ " of " ++ prettyPrint var2  ++ " // "++prettyAnnotated var1 ++" "++prettyAnnotated var
+    prettyPrint (ForEachSequence var sequ) = "foreach sequence " ++ prettyPrint var ++ " like " ++ prettyPrint sequ ++ " // "++prettyAnnotated var ++ " "++prettyAnnotated sequ
+    prettyPrint (ForEachList var1 var2) = "foreach member " ++ prettyPrint var1 ++
+        " in " ++ prettyPrint var2 ++ " // "++prettyAnnotated var1 ++ " "++prettyAnnotated var2
 
 instance PrettyPrint (Event Annotation) where
     prettyPrint (Event ename a) = ename
@@ -79,12 +91,12 @@ instance PrettyPrint ([(SeqField Annotation)] ) where
 
 
 instance PrettyPrint (Computation Annotation) where
-    prettyIndent  (indent) (Foreach foreachdef comps) = indent ++ prettyPrint foreachdef ++ " " ++ "\n" ++ indent ++ "{\n" ++ (intercalate "\n" (map (prettyIndent (indent ++ "\t")) comps)) ++ "\n" ++ indent ++ "}"
+    prettyIndent  (indent) (Foreach foreachdef comps _) = indent ++ prettyPrint foreachdef ++ " " ++ "\n" ++ indent ++ "{\n" ++ (intercalate "\n" (map (prettyIndent (indent ++ "\t")) comps)) ++ "\n" ++ indent ++ "}"
     prettyIndent (indent) (Table var fname ffield) = indent ++"table " ++ prettyPrint var ++ " = " ++
         "count " ++ fname ++ " by " ++ prettyPrint ffield
     prettyIndent (indent) (List var seq) = indent ++ "list " ++ prettyPrint var ++ " = " ++ "sequences like "
     prettyIndent (indent) (Print p) = indent ++ prettyPrint p
-    prettyIndent (indent) (Barchart bchart) = indent ++ "barchart " ++ prettyPrint bchart ++"//"++prettyAnnotated barchart
+    prettyIndent (indent) (Barchart bchart) = indent ++ "barchart " ++ prettyPrint bchart ++" // "++prettyAnnotated barchart
 
 
 instance PrettyPrint GroupType where
@@ -128,7 +140,7 @@ instance PrettyPrint (Docs) where
 
 instance PrettyPrint (Var Annotation) where
     prettyPrint (Var v a) = v
-    prettyAnnotated  (Var v (Annotation a))= "("++v++" = "++a ++")"
+    prettyAnnotated  (Var v (Annotation a))= "TYPE ("++v++" : "++a ++")"
 
 instance PrettyPrint  ( Parser(Var Annotation)) where
     prettyAnnotated  _ = ""
