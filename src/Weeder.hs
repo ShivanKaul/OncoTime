@@ -510,10 +510,13 @@ checkValidParams c@(Config conf) symTab (Arg gt@(GroupType gtype) var@(Var v an@
         let listWithVal = getAllFields c
         case (M.lookup gtype listWithVal ) of --header name exists in 
             Nothing -> Left $ TypeError ("Wait what. How did you get here? Param Not in Symbol Table" ++ show gtype)
+ 
+            Just j -> Right (Arg gt (Var v an))
+ {-
             Just j -> case ((compareFieldTypes j (FieldMap listWithVal) symTab ) (GroupVar var)) of --check the type is valid
                 Right r -> Right (Arg gt (Var v an))
                 Left e -> Left e 
-
+-}
 
 --get tye from
 --take fieldDefs anda  fieldMap, return an error or a field deaf after calling Field

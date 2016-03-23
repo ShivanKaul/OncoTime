@@ -1,4 +1,4 @@
-script brendan3(a a, b a)
+script brendan3(Id Int, sex a)
 /**
 This program generates the barcharts of all patients between the ages of 20 and 30 who have prostate cancer
 */
