@@ -70,7 +70,16 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
             [] -> print "No recursively defined groups"
             vars -> hPrint stderr (RecursiveGroups ("Following group vars " ++
                 "recursively defined: " ++ varsToStr (vars))) >> exitFailure
-
+        -- Check types of groups
+        print allGroups
+        -- get list of all types of groups
+        let groupTypesList = map (\(Group gtype _ _) -> gtype) allGroups
+        print groupTypesList
+        -- get list of all valid types
+        let validTypes = [GroupType "Sex", GroupType "id", GroupType "birthyear", GroupType "diagnosis", GroupType "gender", GroupType "postalcode", GroupType "years", GroupType "days", GroupType "months", GroupType "oncologist"]
+        case (checkIfValidGroupTypes groupTypesList validTypes) of
+            True -> print "Group types valid!"
+            False -> hPrint stderr "Group Type invalid!" >> exitFailure
         -- check if variable being used in group is actually defined in symbol table #83
         -- check types of groups and if they exist #99
         let symbolTableH = buildHeadSymbolTable allGroups hdr
@@ -138,6 +147,11 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
                     putStrLn "Weeded successfully"
                     return (Program hdr docs [] (allGroups) filtersWithVarsReplaced (annComps))
 
+
+checkIfValidGroupTypes :: [GroupType] -> [GroupType] -> Bool
+checkIfValidGroupTypes groupTypes validTypes =
+    do
+        foldl (\bool grp -> if grp `elem` validTypes then bool else False) True groupTypes
 
 checkForRecursiveGroups :: [GroupDefs Annotation] -> [Var Annotation]
 checkForRecursiveGroups groups =
