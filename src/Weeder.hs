@@ -29,7 +29,7 @@ import Formatter
 
 --the function that does all weeding
 weed::String->(String -> IO())->(Program Annotation)->IO(Program Annotation)
-weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
+weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDefs filters comps) =
     do
         --get Config file
         conf <- readConfig file
@@ -49,7 +49,7 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
 
         --putStrLn ("Group files are " ++ (show useFilesToParse))
         case grpFileList of
-            Left e -> hPutStrLn stderr (file ++ ": ") >> print e >> exitFailure
+            Left e -> hPutStrLn stderr (file ++ ": ") >> hPrint stderr e >> exitFailure
             Right weededGrpFiles -> putStrLn $ file ++ ": All Group files exist"
 
         --parsing each group file
@@ -84,22 +84,30 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
         -- check if variable being used in group is actually defined in symbol table #83
         -- check types of groups and if they exist #99
         let symbolTableH = buildHeadSymbolTable allGroups hdr
+       
         
+        --Header CHeck
+        case mapM (checkValidParams conf symbolTableH ) paramList  of
+            Left e -> hPrint stderr e >> exitFailure
+            Right r -> putStrLn "all params are of valid types" 
+
+
+        --Check Group Validity
         case mapM (checkValidGroups conf symbolTableH ) allGroups  of
-            Left e -> print e >> exitFailure
+            Left e -> hPrint stderr e >> exitFailure
             Right r -> putStrLn "all groups contain valid values" 
 
         --check erroneous subfields i.e. whether all fields exist
         case (checkFilters filters filterable) of
-            Left e -> print e >>  hPutStrLn stderr "FILTERS:" >>
-                print filters >> putStrLn "CONF:" >> print filterable >> exitFailure
+            Left e -> hPrint stderr e >>  hPutStrLn stderr "FILTERS:" >>
+                print filters >> hPutStrLn stderr "CONF:" >> print filterable >> exitFailure
             Right checkedFilters -> putStrLn "All Fields valid"
 
         case  mapM (checkFilterTypes conf symbolTableH) filters of
                 Left e -> hPrint stderr e >> print filters >> exitFailure
                 Right annotatedFilters -> do
-                    print filters
 
+{-
                     print "Printing old filters"
 
                     print filters
@@ -107,17 +115,16 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
                     print "Printing new filters"
 
                     --let newFilters = (populateDefaultValuesFilters filters (Config confmap))
+-}
 
                     let newFilters = (populateDefaultValuesFilters (annotatedFilters) (Config confmap))
-                    print newFilters
-
-
+ --                   print newFilters
 
                     -- Replace vars with symbol table h
-                    print "Printing with vars replaced"
+   --                 print "Printing with vars replaced"
 
                     let filtersWithVarsReplaced = (map (replaceVarsFilter symbolTableH) newFilters)
-                    print filtersWithVarsReplaced
+     --               print filtersWithVarsReplaced
 
                     -------- UNTEST -------
 
@@ -479,11 +486,12 @@ getAllFields (Config conf) =  M.unions $ map (\(_,(FieldMap b )) -> b) (M.toList
 checkValidGroups::(Config Annotation)->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))->(GroupDefs Annotation)->Either LexError (GroupDefs Annotation)
 checkValidGroups c@(Config conf) symTab (Group gt@(GroupType gtype) (Var v an) (gitem )) = 
     do
-        
         let listWithVal = getAllFields c
         --let fieldList = getAllFields c
         --multiple with the same name??
         --let listWithVal = M.filterWithKey (\fn (Field a) -> fn == gtype && a == an) fieldList
+        
+        
         case (M.lookup gtype listWithVal) of
             Nothing -> Left $ TypeError (show gtype ++ " is not defined in config file")
             Just g -> case (mapM (compareFieldTypes g (FieldMap listWithVal) symTab )  gitem) of --check the type is valid
@@ -491,12 +499,23 @@ checkValidGroups c@(Config conf) symTab (Group gt@(GroupType gtype) (Var v an) (
                 Left e -> Left e 
         --check getAllFields
 
+checkValidParams
+    :: (Config Annotation)
+    -> (HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))
+    -> (Arg Annotation)
+    -> Either LexError (Arg Annotation)
+checkValidParams c@(Config conf) symTab (Arg gt@(GroupType gtype) var@(Var v an@(Annotation a))) = 
+    do
+        --get list of all fields
+        let listWithVal = getAllFields c
+        case (M.lookup gtype listWithVal ) of --header name exists in 
+            Nothing -> Left $ TypeError ("Wait what. How did you get here? Param Not in Symbol Table" ++ show gtype)
+            Just j -> case ((compareFieldTypes j (FieldMap listWithVal) symTab ) (GroupVar var)) of --check the type is valid
+                Right r -> Right (Arg gt (Var v an))
+                Left e -> Left e 
 
---checkValidParams
 
 --get tye from
---
---
 --take fieldDefs anda  fieldMap, return an error or a field deaf after calling Field
 
 --check to see if it's in the table. 

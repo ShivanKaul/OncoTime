@@ -75,7 +75,8 @@ prettyPrintFile :: (Program Annotation) -> String -> IO()
 prettyPrintFile prog file =
     do
         writeFile (replaceExtension file ".pretty.onc") (pretty prog)
-        print "VALID"
+        putStrLn "\n"
+        print (file ++ " is VALID")
 
 prettyPrintTypes :: (Program Annotation)-> String -> IO()
 prettyPrintTypes (Program header docs usefilelist groups filt comps) file =
