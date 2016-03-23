@@ -46,7 +46,7 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) pos =
         let grpFiles = filter (\x -> takeExtension x == ".grp") dirContents
         let grpFileNames = map dropExtension grpFiles
         let grpFileList = weedGroupFiles useList grpFileNames
-        let useFilesToParse = map (\x -> "programs/valid/" ++ x ++ ".grp") (flattenUseFile useList)
+        let useFilesToParse = map (\x -> (dropFileName file) ++ x ++ ".grp") (flattenUseFile useList)
 
         let (Config confmap) = conf
             loopable = Config $ M.filterWithKey (\(name,valid) t -> valid) confmap

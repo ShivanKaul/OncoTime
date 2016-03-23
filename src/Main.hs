@@ -145,7 +145,7 @@ main =
                 (\a ->do {
                     let {symFile = replaceExtension filename ".symtab"};
 
-                    putStrLn $ "dumping symtable to " ++ symFile;
+                    putStrLn $ "Dumping symtable to " ++ symFile;
                     writeFile symFile a
                 })
             else
