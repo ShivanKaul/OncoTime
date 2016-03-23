@@ -96,14 +96,12 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
                     print newFilters
 
 
-                    
-                    putStrLn "all field types check out"
-            --case  mapM_ (checkFilterTypes (filterable) symbolTableH) [filters] of
 
-                    -------- TEST ---------
-                    -- Replace vars with symbol table h
-                    print "Printing with vars replaced"
-                    print (map (replaceVarsFilter symbolTableH) newFilters)
+        -- Replace vars with symbol table h
+        print "Printing with vars replaced"
+
+        let filtersWithVarsReplaced = (map (replaceVarsFilter symbolTableH) newFilters)
+        print filtersWithVarsReplaced
 
         -------- UNTEST -------
 
@@ -132,7 +130,7 @@ weed file symTabFun prg@(Program hdr docs useList groupDefs filters comps) =
         -- print (show (prg))
 
         putStrLn "Weeded successfully"
-        return (Program hdr docs [] (allGroups) filters (comps))
+        return (Program hdr docs [] (allGroups) filtersWithVarsReplaced (comps))
 
 
 checkForRecursiveGroups :: [GroupDefs Annotation] -> [Var Annotation]
@@ -401,7 +399,7 @@ checkFilterTypes::(Config Annotation)->(HashMap.HashMap (Var Annotation) (GroupT
 checkFilterTypes (Config conf) hmap ms =
     do
 --How can I accumulate stuff?
-        
+
        -- forM_ ms  (\x -> do
         foldM (\acc x-> do
             --from fields
@@ -417,14 +415,14 @@ checkFilterTypes (Config conf) hmap ms =
                     Just val -> case ((typeCheckFieldMap val hmap) fieldDefs) of
                         Left e -> Left e
                         Right r -> Right $ (Filter filterName r ):acc
-                ) [] ms 
+                ) [] ms
 
 --return a list of things that don't type check
 
 --NEED TO RETURN ANNOTATED FIELD MAP MAYBE?
-typeCheckFieldMap::(FieldMap Annotation)->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))->[(FieldDef Annotation)]->Either LexError [(FieldDef Annotation)] -- () --[FieldDef] 
+typeCheckFieldMap::(FieldMap Annotation)->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))->[(FieldDef Annotation)]->Either LexError [(FieldDef Annotation)] -- () --[FieldDef]
 typeCheckFieldMap (FieldMap fm) hmap fdList = do
-   foldM (\acc x-> do 
+   foldM (\acc x-> do
             let fieldName = getFieldName x
             let fvalList  = getFieldValList x
             case (M.lookup fieldName fm) of
@@ -436,8 +434,8 @@ typeCheckFieldMap (FieldMap fm) hmap fdList = do
 
 --take fieldDefs anda  fieldMap, return an error or a field deaf after calling Field
 compareFieldTypes::(Field Annotation)->(FieldMap Annotation)->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))->(GroupItem Annotation)->Either LexError (GroupItem Annotation)
-compareFieldTypes (FieldValue allValList an ) fm hm (GroupValString s a)  = 
-    if (s `elem` allValList) then Right (GroupValString s an) --Right (GroupValString s) 
+compareFieldTypes (FieldValue allValList an ) fm hm (GroupValString s a)  =
+    if (s `elem` allValList) then Right (GroupValString s an) --Right (GroupValString s)
     else Left (AllowedValError ("Error. " ++ s ++ " is not defined in the config file list that also contains: " ++ (intercalate "," allValList)))
 compareFieldTypes (FieldType "String" an) fm hm (GroupValString s a)  = Right (GroupValString s (an))
 compareFieldTypes (FieldType "Int" an) fm hm (GroupRange a ) = Right (GroupRange a)
@@ -451,7 +449,7 @@ compareFieldTypes _ (FieldMap fm) hm  (GroupVar var@(Var v an) ) =
                 False -> Left $ TypeError ("ERROR. variable " ++
                     (varToStr var) ++" is used with wrong field")
                 True  -> Right (GroupVar var)
-compareFieldTypes b fm hm a = Left $ TypeError ("Type Error between " ++ 
+compareFieldTypes b fm hm a = Left $ TypeError ("Type Error between " ++
     (show a) ++ " and " ++ (show b))
 
 varToStr::(Var Annotation)->String
@@ -475,7 +473,7 @@ events = ["consult_referral_received","initial_consult_booked","initial_consult_
 
 
 weedComputationList :: (Config Annotation)->[(Computation Annotation)]->Either LexError String
-weedComputationList config comps = 
+weedComputationList config comps =
     do
 
         let compSymbolTable = [emptyScope]
@@ -484,7 +482,7 @@ weedComputationList config comps =
             Left e -> Left e
 
 weedFold :: (Config Annotation)->CompSymTable -> [(Computation Annotation)] -> Either LexError String
-weedFold conf symtable computations =  
+weedFold conf symtable computations =
     let errorOrSym = (foldl' (weedEach conf) (Right(symtable,"")) computations)
     in case errorOrSym of
             Right (newSymtable,internalSymRep) ->
@@ -535,7 +533,7 @@ getFromScope  hashmap v = (HashMap.lookup v hashmap)
 
 getFromSymbolTable :: CompSymTable -> (Var Annotation) -> Maybe ComputationType
 getFromSymbolTable  sym v =
-    foldr fun Nothing sym  
+    foldr fun Nothing sym
     where fun  scope prev = case (prev) of
                             Nothing -> getFromScope scope v
                             _ -> prev
@@ -595,7 +593,7 @@ weedPrintAction symtable (PrintLength variable) = case getFromSymbolTable symtab
                     "Cannot have length of "++ (show variable)++". It is a " ++ (show t) ++ "Not a Table"
 weedPrintAction symtable printAction = Left $ ComputationWrongScope "Unimplemented"
 
-weedForEach :: (Config Annotation)->CompSymTable -> [(Computation Annotation)] ->(ForEachDef Annotation) 
+weedForEach :: (Config Annotation)->CompSymTable -> [(Computation Annotation)] ->(ForEachDef Annotation)
     -> Either LexError (CompSymTable,String)
 weedForEach conf symtable newcomp (ForEachFilter filterName var )  =
     if (fieldExists conf filterName)

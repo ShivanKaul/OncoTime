@@ -7,6 +7,7 @@ import Types
 import Lexer
 import Data.List
 import Parser
+import qualified Data.Text as T
 
 
 class PrettyPrint a where
@@ -22,25 +23,23 @@ printTypesGroups :: [(GroupDefs Annotation)] -> String
 printTypesGroups groups =
     do
         let groupListString = map (\(Group (GroupType t) (Var v _ ) _) ->
-                                ("// Group " ++ v ++ " : " ++ t)) groups
+                                ("// Group " ++ v ++ " : " ++ t ++ "\n")) groups
         (intercalate "\n" groupListString)
 
--- printTypesFilters :: [Filter] -> String
--- printTypesFilters filters =
---     do
---         let filtersListString = map (\(Filter filtername (Var v) _) ->
---                                 (v ++ " : " ++ t)) filtersListString
---         (intercalate "\n" filtersListString)
-
--- printTypesVars :: [Var] -> String
--- printTypesVars vars =
-    -- do
-
-
-printTypes :: (Program Annotation) -> String
-printTypes (Program _ _ _ groups filt comps) =
+printTypesFilters :: [(Filter Annotation)] -> String
+printTypesFilters filters =
     do
-        "// PRINTING GROUPS\n" ++ (printTypesGroups groups)-- ++ (printTypesFilters filt)
+        intercalate "\n//" (map (T.unpack) (T.split (=='\n') (T.pack ("//" ++ prettyPrint filters)))) ++ "\n"
+
+printGroupsPPTYPE :: ([GroupDefs Annotation]) -> String
+printGroupsPPTYPE groups =
+    do
+        "// PRINTING GROUPS\n" ++ (printTypesGroups groups)
+
+printFiltersPPTYPE :: ([Filter Annotation]) -> String
+printFiltersPPTYPE filters =
+    do
+        "// PRINTING FILTERS\n" ++ (printTypesFilters filters)
 
 instance PrettyPrint (PrintAction Annotation) where
     prettyPrint (PrintVar var) = "print " ++ prettyPrint var
@@ -56,10 +55,10 @@ instance PrettyPrint (PrintAction Annotation) where
 --         "count " ++ fname ++ " by " ++ prettyPrint fval
 
 instance PrettyPrint (ForEachDef Annotation) where
-    prettyPrint (ForEachFilter fname var) = "foreach " ++ fname ++ " " ++ prettyPrint var 
-    prettyPrint (ForEachTable var1 var2) = "foreach element " ++ prettyPrint var1 ++ " of " ++ prettyPrint var2 
-    prettyPrint (ForEachSequence var seq) = "foreach sequence " ++ prettyPrint var ++ " like " ++ prettyPrint seq 
-    prettyPrint (ForEachList var1 var2) = "foreach member " ++ prettyPrint var1 ++ 
+    prettyPrint (ForEachFilter fname var) = "foreach " ++ fname ++ " " ++ prettyPrint var
+    prettyPrint (ForEachTable var1 var2) = "foreach element " ++ prettyPrint var1 ++ " of " ++ prettyPrint var2
+    prettyPrint (ForEachSequence var seq) = "foreach sequence " ++ prettyPrint var ++ " like " ++ prettyPrint seq
+    prettyPrint (ForEachList var1 var2) = "foreach member " ++ prettyPrint var1 ++
         " in " ++ prettyPrint var2
 
 instance PrettyPrint (Event Annotation) where
@@ -106,6 +105,7 @@ instance PrettyPrint (GroupItem Annotation) where
     prettyPrint (GroupDate y m d a) = (prettyPrint y) ++"-"++ (prettyPrint m) ++"-"++ (prettyPrint d)
     prettyPrint (GroupVar gvar) = "<" ++ prettyPrint gvar ++ ">"
     prettyPrint (GroupRange grange) = prettyPrint grange
+    prettyPrint (GroupWildcard) = "*"
 
 instance PrettyPrint FieldName where
     prettyPrint (ffield) = ffield

@@ -78,9 +78,12 @@ prettyPrintFile prog file =
         print "VALID"
 
 prettyPrintTypes :: (Program Annotation)-> String -> IO()
-prettyPrintTypes prog file =
+prettyPrintTypes (Program header docs usefilelist groups filt comps) file =
     do
-        writeFile (replaceExtension file ".pptype.onc") ((pretty prog) ++ (printTypes prog))
+        writeFile (replaceExtension file ".pptype.onc") ((prettyPrint header) ++ (prettyPrint docs)
+            ++ (prettyPrint groups) ++ (printGroupsPPTYPE groups) ++ (prettyPrint filt) ++
+            (printFiltersPPTYPE filt) ++ ("{\n" ++ (prettyIndent "\t" comps) ++ "}\n"))
+            -- ++ (printCompsPPTYPE comps))
         print ("Printed types for " ++ file ++ " in " ++ (replaceExtension file ".pptype.onc"))
 
 parseString :: String -> (Program Annotation)
@@ -125,19 +128,19 @@ main =
         -- oncotime filename flags
         (filename:flags) <- getArgs
         parsed <- parseFile filename
-        let symTabFun = if "-dumpsymtab" `elem` flags 
+        let symTabFun = if "-dumpsymtab" `elem` flags
             then
                 (\a ->do {
                     let {symFile = replaceExtension filename ".symtab"};
 
                     putStrLn $ "dumping symtable to " ++ symFile;
-                    writeFile symFile a 
+                    writeFile symFile a
                 })
             else
                 (\a->return ())
 
 
-        weededProg <- weed filename symTabFun parsed 
+        weededProg <- weed filename symTabFun parsed
         prettyPrintFile parsed filename
         if "-pptype" `elem` flags then
             prettyPrintTypes weededProg filename
