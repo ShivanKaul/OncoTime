@@ -1,0 +1,9 @@
+script MileStone2InvalidBarchart()
+	/*can only have barcharts of tables*/
+
+{
+	list a = sequences like [patient_arrived -> patient_arrives]
+	barchart a //can only have barcharts of tables
+
+
+}

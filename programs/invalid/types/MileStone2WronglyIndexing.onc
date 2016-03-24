@@ -3,6 +3,7 @@ script MileStone2WronglyIndexing()
 		print i[t]//Wrong:trying to see table t inside index*/
 
 {
+	table t= count patient by birthyear
 	foreach element i of t
 	{
 		print t[i]//Right:getting index i in table
