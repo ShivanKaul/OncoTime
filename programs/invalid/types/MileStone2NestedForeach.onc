@@ -1,0 +1,34 @@
+script MileStone2NestedForeach()
+
+	/*<3Milestone2 E>*/
+
+{
+	foreach Patient p //can be singular or plural
+	{
+		print p
+	}
+
+	foreach Patients p
+	{
+		print p
+	}
+
+	foreach Patients p
+	{
+		foreach Doctor p //overshadows but doesn't warn
+		{
+			print p 
+		}
+	}
+
+	foreach Patients p //cannot nest constructor twice inside foreach
+	{
+		foreach Patient p
+		{
+			print p
+		}
+	}
+
+
+
+}

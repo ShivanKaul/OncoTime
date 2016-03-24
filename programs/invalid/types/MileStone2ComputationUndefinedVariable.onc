@@ -1,0 +1,18 @@
+script MileStone2ComputationUndefinedVariable()
+	/*UndefinedVariable */
+
+{
+	foreach Doctor d{
+		print d
+		foreach Patient p{
+			print p
+			foreach diagnosis s{
+				print s
+				print t //not defined yet
+			}
+		}
+
+	}
+	table t = count diagnosis by t
+
+}

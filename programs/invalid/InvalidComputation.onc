@@ -3,52 +3,62 @@ script InvalidComputation()
  * Demonstrates invalid computations. 
  */
 
-group Id myId = {1001}
-group Id extraId = {400, 500}
-group Id myPatientIds = {100, 200, 300, <extraId>}
-group Sex myGenders = {M, F}
-group Birthyear myBirthyears = {1993, 2014, 1960}
-group Diagnosis myDiagnosis = {breast, prostate, liver}
-group Days myWorkDays = {Mon, Tues, Wed, Thurs, Fri}
-group Years my_years = {2014, 2015, 2016}
-group Events my_events = {ct_sim_booked, patient_arrives, patient_soon}
+//group Id myId = {1001}
+//group Id extraId = {400, 500}
+//group Id myPatientIds = {100, 200, 300, <extraId>}
+//group Sex myGenders = {M, F}
+//group Birthyear myBirthyears = {1993, 2014, 1960}
+//group Diagnosis myDiagnosis = {breast, prostate, liver}
+//group Days myWorkDays = {Mon, Tues, Wed, Thurs, Fri}
+//group Years my_years = {2014, 2015, 2016}
+//group Events my_events = {ct_sim_booked, patient_arrives, patient_soon}
 
-population is
-	Id: <myId>
-	Sex: <myGenders>
+//population is
+//	Id: <myId>
+//	Sex: <myGenders>
 
-period is
-	Days: <myWorkDays>
-	Years: <my_years>
+//period is
+//	Days: <myWorkDays>
+//	Years: <my_years>
 //	Times: 10:00, 10:10
 
-events are
-	Events: <my_events>
+//events are
+//	Events: <my_events>
 
 
 // --- Computations --- 
+
+
 {
 
 	// Variable has not been defined. 
 	foreach Patient p
+
+	{	
 		print d
+	
+
+	}
+
 
 	// Reuse of Actors and redefinition of variable name. 
 	foreach Patient p
 	{
-		foreach Patient d
-		{
+	//	foreach Patient d
+	//	{
 			// Table declared incorrect scope. 
 			table p = count Patients by Birthyear
 
 			foreach Doctor d
-				print d
-		}
+			{	print d
+			}
+	//	}
 	}
 
 	// I can imagine this being a common mistake non programmers would make. 
-	foreach Patient patient
+	foreach Patient patient{
 		table p = count Patients by Birthyear
+	}
 
 	// We are trying to create a table with incorrect types. 
 	table t = count Doctors by Birthyear
@@ -63,18 +73,20 @@ events are
 	}
 
 	// Trying to print the birthyear of a table. 
-	foreach Doctor t
+	foreach Doctor t{
 		print Birthyear of t
+	}
 
 	// Trying to print the incorrect values of a diagnosis. 
-	foreach Diagnosis d
+	foreach Diagnosis d{
 		print Sex, Birthyear of d
 		print timeline of d
+	}
 
 	// Trying again to print the incorrect value of a diagnosiss
 	foreach Diagnosis d
 	{
-		print length of d
+		//print length of d
 	}
 
 	// Trying to barchart something that is not a table. 
@@ -88,7 +100,9 @@ events are
 
 	// We need to really validate sequence parameters
 	foreach Patient p
-		foreach sequence s like [ct_sim_booked -> ct_sim_completed -> {treatment_begin, patent_scheduled} -> end]
+	{	foreach sequence s like [ct_sim_booked -> ct_sim_completed -> {treatment_begin, patent_scheduled} -> end]{
 			print s 
+		}
+	}
 
 }

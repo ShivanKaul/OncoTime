@@ -1,4 +1,4 @@
-script example4(Sex s, Birthyear b1, Birthyear b2, Events e)
+script example5(Sex s, Birthyear b1, Birthyear b2, Events e)
 // Example 5 from Reference Compiler
 /**
 Parameter example.
@@ -16,7 +16,7 @@ period is
 	Days: Mon, Tues, Wed, Thurs, Fri, Sat, Sun
 events are
 	Events: <e>
-{ 
+{
 	foreach Doctor d
 	{
 		print d

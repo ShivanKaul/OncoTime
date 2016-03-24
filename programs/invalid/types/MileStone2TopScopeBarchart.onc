@@ -1,0 +1,10 @@
+script MileStone2InvalidBarchart()
+	/*can only have barcharts of tables*/
+
+{
+	table a = count patient by id;
+	foreach i of a{
+		barchart a //barcharts can only be in outermost scope
+
+	}
+}

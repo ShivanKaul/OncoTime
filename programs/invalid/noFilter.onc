@@ -1,17 +1,16 @@
-script noFilter(a a, b b)
+script noFilter(Id a, Id b)
 /** test */
 use a.grp, b.grp
 use t.grp
 
-group Id x = {1, 2, <x>, 1200 to 123123}
-group Id x = {1, 2, <x>, 1200 to 123123}	
+group Id x = {1, 2, 1200 to 123123}
 
 {
-	foreach Patient p 
+	foreach Patient p
 	{
 		print p
 	}
-	foreach Patient p 
+	foreach Patient p
 	{
 		print p
 		foreach Doctor D
@@ -23,7 +22,7 @@ group Id x = {1, 2, <x>, 1200 to 123123}
 			{
 			}
 		}
-		
+
 	}
 
 	table t = count Patients by Birthyear

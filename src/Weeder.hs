@@ -121,6 +121,7 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
             hPutStrLn stderr "Var in group declaration does not typecheck!" >> exitFailure
             else putStrLn "Vars in group declarations typecheck!"
 
+
         let expandedGroups = expandGroups symbolTableH
         --Header CHeck
         case mapM (checkValidParams conf symbolTableH ) paramList  of
@@ -177,8 +178,9 @@ checkIfGroupTypesOfVarsBelong hmap group@(Group gtype gvar gitems) =
                 GroupVar x -> True
                 _ -> False) gitems
         -- check if all group vars exist in symbol table and have same type as gtype
-        foldl (\bool gvar@(GroupVar (Var v _)) -> case HashMap.lookup (Var v (Annotation "")) hmap of
-            Just (gtypeMap, gitemsMap) -> if gtypeMap == gtype then bool else False) True varList
+        foldl (\bool gvar@(GroupVar (Var v _)) -> case HashMap.lookup (Var (map toLower v) (Annotation "")) hmap of
+            Just (gtypeMap, gitemsMap) -> if gtypeMap == gtype then bool else False
+            Nothing -> False) True varList
 
 expandGroups :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> [GroupDefs Annotation]
 expandGroups symbolTableH =
@@ -260,7 +262,7 @@ replaceVarsGroup symbolTableH (Group _ var items) =
 replaceVarsGroupItem :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> GroupItem Annotation -> [GroupItem Annotation]
 replaceVarsGroupItem symbolTableH (GroupVar v@(Var vv a)) =
     do
-        case (HashMap.lookup (Var vv (Annotation "")) symbolTableH) of
+        case (HashMap.lookup (Var (map toLower vv) (Annotation "")) symbolTableH) of
             Just (t, items) -> items
 
 replaceVarsGroupItemGroup :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> GroupItem Annotation -> Either LexError [GroupItem Annotation]
@@ -277,7 +279,7 @@ instance (Hashable (Var Annotation)) where
 -- Utility test function to check if symbol table contains a key
 testIfHSymbolTableContains :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> (Var Annotation) -> IO()
 testIfHSymbolTableContains hashmap (Var v a) =
-        case (HashMap.lookup (Var v (Annotation "")) hashmap) of
+        case (HashMap.lookup (Var (map toLower v) (Annotation "")) hashmap) of
             Nothing -> hPrint stderr "nothing found!"
             Just r -> print ("Found VALUE " ++ show r ++ " for KEY " ++
                 v ++ " in symboltable1")
@@ -319,7 +321,8 @@ readConfig::String->IO((Config Annotation))
 readConfig file =
     do
         program <- readFile file
-        readData <- readFile "config.conf"
+        path <- getExecutablePath
+        readData <- readFile $ (dropFileName path) ++"config.conf" 
         let l= lines readData
         let totalMap = configListToMap $ map makeConfig l
         return $ Config totalMap
@@ -328,7 +331,7 @@ readConfig file =
 populateDefaultValuesFilters :: [Filter Annotation] -> (Config Annotation)-> [Filter Annotation]
 populateDefaultValuesFilters filters config =
     do
-        map (findDefaultValuesFilt config) (filters)
+        map (findDefaultValuesFilt config) (filters) 
 
 findDefaultValuesFilt :: (Config Annotation)-> Filter Annotation -> Filter Annotation
 findDefaultValuesFilt (Config conf) (Filter fname defs) =
@@ -643,7 +646,7 @@ compareFieldTypes (FieldVar fv (Annotation an)) fm hm (GroupVar v@(Var gv (Annot
 
 compareFieldTypes f (FieldMap fm) hm  (GroupVar var@(Var v an) ) =
     do
-        case (HashMap.lookup (Var v (Annotation "")) hm) of
+        case (HashMap.lookup (Var (map toLower v) (Annotation "")) hm) of
             Nothing -> Left $ TypeError ("ERROR. var " ++ (varToStr var) ++ " not declared " ++ "FIELD IS: " ++ show f ++ " VAR IS : " ++ show var ++ "\n" ++ show hm ++ "\n")
 
             Just (a,_) -> case (M.member ((groupTypeToStr a)) fm) of
@@ -850,17 +853,17 @@ weedForEach :: (Config Annotation)->CompSymTable -> [(Computation Annotation)] -
     ->Either LexError (CompSymTable,String,(Computation Annotation))
 weedForEach conf symtable newcomp pos (ForEachFilter filterName var@(Var iname _) )  =
     if (fieldExists conf filterName)
-    then    if (isValidInNested conf symtable filterName)
-            then do
-                newsym <- ( addToSymTable (symtable++[emptyScope])
-                                    var (TFilter filterName) )
-                (intSymRep,annComps)<- (weedFold conf newsym newcomp pos)
-                Right (symtable,intSymRep,(Foreach (ForEachFilter filterName (Var
+    then do
+            fname <- isValidInNested conf symtable filterName pos
+            newsym <- ( addToSymTable (symtable++[emptyScope])
+                                    var (TFilter fname) )
+            (intSymRep,annComps)<-  (weedFold conf newsym newcomp pos)
+
+            Right (symtable,intSymRep,(Foreach (ForEachFilter filterName (Var
                                  iname (Annotation filterName))) annComps pos) )
-            else Left (
-                ComputationWrongScope "Foreach is not valid in this scope")
+            
     else Left $  FieldNameError $ ""++
-            filterName++" is not a valid loopable Filter"
+            filterName++" is not a valid loopable Filter at line " ++ (show $sourceLine pos)
 
 weedForEach config symtable newcomp pos (ForEachTable indexVar@(Var iname _) tableVar@(Var tname _) )  =
     evaluateInTopScope symtable (\sym->
@@ -873,7 +876,7 @@ weedForEach config symtable newcomp pos (ForEachTable indexVar@(Var iname _) tab
                                         (Var tname $Annotation"Table")) annComps pos) )
             Just t-> Left ( ComputationTypeMismatch $
                     "Cannot go through loop for "++ (prettyPrint tableVar)
-                    ++". It is a " ++ (prettyPrint t) ++ "Not a Table")
+                    ++". It is a " ++ (prettyPrint t) ++ "Not a Table at scope ending in line " ++ (show $sourceLine pos))
                 )
 weedForEach config symtable newcomp pos (ForEachSequence memberVar@(Var mname _) undefSequence) =
     evaluateInTopScope symtable check
@@ -899,7 +902,7 @@ weedForEach config symtable newcomp pos (ForEachList memberVar@(Var mname _) lis
                                  (Var lname (Annotation"List"))) annComps pos)
                 Just t-> Left ( ComputationTypeMismatch $
                         "CAnnot Go through loop for "++ (prettyPrint listVar)++
-                        ". It is a " ++ (prettyPrint t) ++ "Not a List")
+                        ". It is a " ++ (prettyPrint t) ++ "Not a List at scope ending in line " ++ (show $sourceLine pos))
 
 
 weedSequence :: (SeqField Annotation)-> Either String Bool
@@ -921,14 +924,18 @@ foldWeedList prev curr =
         Left evname -> Left $ IncorrectEvent evname
         _-> prev
 
-isValidInNested ::(Config Annotation)-> CompSymTable -> FilterName -> Bool
-isValidInNested conf symtable filterName =
+isValidInNested ::(Config Annotation)-> CompSymTable -> FilterName -> SourcePos-> Either LexError FilterName
+isValidInNested conf symtable filterName pos =
     let
         filtersUsed = (findAllFilters symtable)
         noFilters = null filtersUsed
         topScope = isNowInTopScope symtable
-        prevUsed = (elem filterName filtersUsed)
-    in ((noFilters && topScope)|| ( (not noFilters)&&(not prevUsed)))
+        prevUsed = (elem filterName filtersUsed) || (elem (init filterName) filtersUsed) || (elem (filterName++"s") filtersUsed) --patient or patients
+    in case ((noFilters && topScope), ( (not noFilters)&&(not prevUsed))) of
+        (True,_)-> Right filterName
+        (False,True) -> Right filterName
+        (False,False)->Left $ComputationWrongScope $ " filtered forloop is invalid at scope ending  line " ++ (show $ sourceLine pos)
+        --(_,False)->Left $ComputationWrongScope $ filterName ++ " is already being looped over in an outerscope ending at line " ++ (show $ sourceLine pos)
 
 
 findAllFilters :: CompSymTable -> [FilterName]

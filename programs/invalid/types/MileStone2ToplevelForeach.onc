@@ -1,0 +1,13 @@
+script MileStone2ToplevelForeach()
+	/*Toplevel outermost filtered foreach must be in top scope*/
+
+{
+	list a = sequences like [patient_arrived -> patient_arrives]
+	foreach member s in a{
+		foreach  Patient p{
+			print p
+		}
+	}
+
+
+}
