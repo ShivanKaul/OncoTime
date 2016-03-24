@@ -1,0 +1,13 @@
+script MileStone2WronglyIndexing()
+	/*print t[i]//Right:getting index i in table
+		print i[t]//Wrong:trying to see table t inside index*/
+
+{
+	foreach element i of t
+	{
+		print t[i]//Right:getting index i in table
+		print i[t]//Wrong:trying to see table t inside index
+	}
+
+
+}

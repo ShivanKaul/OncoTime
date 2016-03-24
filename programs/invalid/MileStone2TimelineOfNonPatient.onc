@@ -1,0 +1,11 @@
+script MileStone2TimelineOfNonPatient()
+	/*timeline only in patient*/
+
+{
+	Foreach diagnosis p{ //constructor names are case insensitive
+		print timeline of p //timeline only valid for patient
+		
+	}
+
+
+}

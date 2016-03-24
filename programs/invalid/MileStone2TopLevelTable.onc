@@ -1,0 +1,11 @@
+script MileStone2TopLevelTable()
+	/*<3Milestone2 E>*/
+
+{
+	list a = sequences like [patient_arrived -> patient_arrives]
+	foreach member s in a{
+		table b = count Patient by id
+	}
+
+
+}
