@@ -113,8 +113,15 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
                 Right x -> x
 
 
-        let expandedGroups = expandGroups symbolTableH
+        -- check types of groups
+        -- every groupvar in [group item] of every group should
+        -- have same group type as group
+        let listOfBools = map (checkIfGroupTypesOfVarsBelong symbolTableH) allGroups
+        if False `elem` listOfBools then
+            hPutStrLn stderr "Var in group declaration does not typecheck!" >> exitFailure
+            else putStrLn "Vars in group declarations typecheck!"
 
+        let expandedGroups = expandGroups symbolTableH
         --Header CHeck
         case mapM (checkValidParams conf symbolTableH ) paramList  of
             Left e -> hPrint stderr e >> exitFailure
@@ -171,6 +178,18 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
 
                     putStrLn "Weeded successfully!"
                     return (Program hdr docs [] (expandedGroups) filtersWithVarsReplaced (annComps))
+
+-- get grouptypes of all groupvars for a group
+checkIfGroupTypesOfVarsBelong :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> GroupDefs Annotation -> Bool
+checkIfGroupTypesOfVarsBelong hmap group@(Group gtype gvar gitems) =
+    do
+        -- all group vars in gitems
+        let varList = filter (\v -> case v of
+                GroupVar x -> True
+                _ -> False) gitems
+        -- check if all group vars exist in symbol table and have same type as gtype
+        foldl (\bool gvar@(GroupVar (Var v _)) -> case HashMap.lookup (Var v (Annotation "")) hmap of
+            Just (gtypeMap, gitemsMap) -> if gtypeMap == gtype then bool else False) True varList
 
 expandGroups :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> [GroupDefs Annotation]
 expandGroups symbolTableH =
