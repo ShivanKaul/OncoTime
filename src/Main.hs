@@ -36,7 +36,7 @@ parseFile filename =
         case parse ((oncoParser)<* eof) filename (formatFile program) of
             Left e ->
                 do
-                    die ("ERROR while parsing: " ++ show e)
+                    die ("ERROR while parsing: " ++ show e) >> exitFailure
             Right parsedProg -> return parsedProg
 
 checkForErrors :: String -> String -> IO()
@@ -52,7 +52,7 @@ checkExtensionName file =
     do
         if takeExtension file /= ".onc"
             then die ("ERROR: while reading " ++
-                file ++ ": File extension not .onc")
+                file ++ ": File extension not .onc") >> exitFailure
             else return ()
 
 -- Check if script name == filename
@@ -67,7 +67,7 @@ fileNameCheck file prog  =
                 then do
                     die ("ERROR: while reading " ++
                         file ++
-                        ": Filename does not match script name")
+                        ": Filename does not match script name") >> exitFailure
                 else return ()
 
 
@@ -117,7 +117,7 @@ tparseFile file =
         case parse (testParser <* eof) file program of
             Left e ->
                 do
-                    hPutStrLn stderr ("ERROR: " ++ (show e))
+                    hPutStrLn stderr ("ERROR: " ++ (show e)) >> exitFailure
             Right r -> print r
 
 tparseString :: String -> (TestProgram Annotation)
@@ -138,6 +138,7 @@ tparseFileCheck file =
                 do
                     hPutStrLn stderr "ERROR"
                     print e
+                    >> exitFailure
             Right r -> print r
 main =
     do

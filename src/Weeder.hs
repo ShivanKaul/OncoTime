@@ -36,7 +36,7 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
         putStrLn $ "File "++file
         let validTypes = [GroupType "sex", GroupType "id", GroupType "birthyear",
                 GroupType "diagnosis", GroupType "gender",
-                GroupType "postalcode", GroupType "years",
+                GroupType "postalcode", GroupType "years", GroupType "date",
                 GroupType "days", GroupType "months", GroupType "oncologist", GroupType "events", GroupType "eventfkjahfanf" ]
         -- get params from header
         let headerParams = case hdr of
@@ -147,19 +147,8 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
                 Right annotatedFilters -> do
 
                     let newFilters = (populateDefaultValuesFilters (annotatedFilters) (Config confmap))
- --                   print newFilters
-
-                    -- Replace vars with symbol table h
-   --                 print "Printing with vars replaced"
 
                     let filtersWithVarsReplaced = (map (replaceVarsFilter symbolTableH) newFilters)
-     --               print filtersWithVarsReplaced
-
-                    -------- UNTEST -------
-
-                    case (M.lookup ("patient", True) confmap) of
-                        Nothing -> hPrint stderr "key not found in confmap!"
-                        Just (FieldMap r) -> print "here's a confmap" >> print (show (M.toList r))
 
                     let compsResult=   weedComputationList conf comps pos
                     case  compsResult of
@@ -632,7 +621,7 @@ compareFieldTypes (FieldType "String" (Annotation an)) fm hm gv =
     case gv of
         (GroupValString s (Annotation a)) ->
             if a == an then Right $ (GroupValString s (Annotation an))
-            else Left (TypeError ("STring Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
+            else Left (TypeError ("String Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
 
 compareFieldTypes (FieldType "Date" (Annotation an)) fm hm gd =
     case gd of
