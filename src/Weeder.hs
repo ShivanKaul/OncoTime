@@ -628,12 +628,19 @@ compareFieldTypes (FieldType "String" (Annotation an)) fm hm gv =
         (GroupValString s (Annotation a)) ->
             if a == an then Right $ (GroupValString s (Annotation an))
             else Left (TypeError ("STring Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
+        gvv@(GroupVar var@(Var v (Annotation a))) ->
+            if  (HashMap.member (Var (map toLower v) (Annotation ""))  hm) then Right $   (GroupVar (Var v (Annotation an)))
+            else Left $ TypeError ("INTCHECK ERROR : " ++ show v ++ "of ann " ++ a ++ " is not in Symbol Table" ++ show (HashMap.keys hm) )
+        dat@(GroupDate x y z (Annotation annot)) -> if (annot == an) then Right dat else  Left (AllowedValError ("String Type Error " ++ show an  ++ show gv ++ show hm ))
+        _ -> Left (AllowedValError ("String Type Error " ++ show an  ++ show gv ++ show hm ))
 
 compareFieldTypes (FieldType "Date" (Annotation an)) fm hm gd =
     case gd of
         (GroupValString s (Annotation a)) ->
             if a == an then Right $ (GroupValString s (Annotation an))
             else Left (TypeError ("Date Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
+        
+
 
 compareFieldTypes (FieldVar fv (Annotation an)) fm hm (GroupVar v@(Var gv (Annotation a))) =
     if  (HashMap.member (Var (map toLower gv) (Annotation ""))  hm) then Right $ (GroupVar (Var gv (Annotation an)))

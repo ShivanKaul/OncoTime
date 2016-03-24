@@ -1,0 +1,16 @@
+script IntTypes()
+/**
+ * THis shows that only Ints can be declared in groups that are defined as
+ * Int in the Config File
+ */
+
+// ---- Change data in this group file ----
+group Id myIdReal = {1,2,3} 
+group Id myMixId = {1,2, a} //A is a string, and this will fail when a is caught
+group Id myId = {M, F}
+
+// ---- We can add or change Filters here ---- 
+
+// --- Computations --- 
+{
+}
