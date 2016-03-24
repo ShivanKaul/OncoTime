@@ -121,6 +121,7 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
             hPutStrLn stderr "Var in group declaration does not typecheck!" >> exitFailure
             else putStrLn "Vars in group declarations typecheck!"
 
+
         let expandedGroups = expandGroups symbolTableH
         --Header CHeck
         case mapM (checkValidParams conf symbolTableH ) paramList  of
@@ -177,8 +178,9 @@ checkIfGroupTypesOfVarsBelong hmap group@(Group gtype gvar gitems) =
                 GroupVar x -> True
                 _ -> False) gitems
         -- check if all group vars exist in symbol table and have same type as gtype
-        foldl (\bool gvar@(GroupVar (Var v _)) -> case HashMap.lookup (Var v (Annotation "")) hmap of
-            Just (gtypeMap, gitemsMap) -> if gtypeMap == gtype then bool else False) True varList
+        foldl (\bool gvar@(GroupVar (Var v _)) -> case HashMap.lookup (Var (map toLower v) (Annotation "")) hmap of
+            Just (gtypeMap, gitemsMap) -> if gtypeMap == gtype then bool else False
+            Nothing -> False) True varList
 
 expandGroups :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> [GroupDefs Annotation]
 expandGroups symbolTableH =
@@ -260,7 +262,7 @@ replaceVarsGroup symbolTableH (Group _ var items) =
 replaceVarsGroupItem :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> GroupItem Annotation -> [GroupItem Annotation]
 replaceVarsGroupItem symbolTableH (GroupVar v@(Var vv a)) =
     do
-        case (HashMap.lookup (Var vv (Annotation "")) symbolTableH) of
+        case (HashMap.lookup (Var (map toLower vv) (Annotation "")) symbolTableH) of
             Just (t, items) -> items
 
 replaceVarsGroupItemGroup :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> GroupItem Annotation -> Either LexError [GroupItem Annotation]
@@ -277,7 +279,7 @@ instance (Hashable (Var Annotation)) where
 -- Utility test function to check if symbol table contains a key
 testIfHSymbolTableContains :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> (Var Annotation) -> IO()
 testIfHSymbolTableContains hashmap (Var v a) =
-        case (HashMap.lookup (Var v (Annotation "")) hashmap) of
+        case (HashMap.lookup (Var (map toLower v) (Annotation "")) hashmap) of
             Nothing -> hPrint stderr "nothing found!"
             Just r -> print ("Found VALUE " ++ show r ++ " for KEY " ++
                 v ++ " in symboltable1")
@@ -643,7 +645,7 @@ compareFieldTypes (FieldVar fv (Annotation an)) fm hm (GroupVar v@(Var gv (Annot
 
 compareFieldTypes f (FieldMap fm) hm  (GroupVar var@(Var v an) ) =
     do
-        case (HashMap.lookup (Var v (Annotation "")) hm) of
+        case (HashMap.lookup (Var (map toLower v) (Annotation "")) hm) of
             Nothing -> Left $ TypeError ("ERROR. var " ++ (varToStr var) ++ " not declared " ++ "FIELD IS: " ++ show f ++ " VAR IS : " ++ show var ++ "\n" ++ show hm ++ "\n")
 
             Just (a,_) -> case (M.member ((groupTypeToStr a)) fm) of
