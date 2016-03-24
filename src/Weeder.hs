@@ -73,8 +73,7 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
 
         let allGroups = (concat (newGroups)) ++ groupDefs
         --may need a function to annotate everything
-        print allGroups
-        
+
         -- check for redeclarations for group
         case (checkForGroupRedecl allGroups) of
             Left e -> hPrint stderr e >> exitFailure
@@ -89,32 +88,21 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
         -- get list of all types of groups
         let groupTypesList = map (\(Group gtype _ _) -> gtype) allGroups
         -- get list of all valid types
-        
+
         case (checkIfValidGroupTypes groupTypesList validTypes) of
             True -> putStrLn $ "Group types valid!"
             False -> hPrint stderr "Group Type invalid!" >> exitFailure
         -- check if variable being used in group is actually defined in symbol table #83
         -- check types of groups and if they exist #99
-        let symbolTableH = buildHeadSymbolTable hdr
-       
-        --Header CHeck
-        case mapM (checkValidParams conf symbolTableH ) paramList  of
-            Left e -> hPrint stderr e >> exitFailure
-            Right r -> putStrLn "all params are of valid types" 
-
-        --Check Group Validity
-        case mapM (checkValidGroups conf symbolTableH ) allGroups  of
-            Left e -> hPrint stderr e >> exitFailure
-            Right r -> putStrLn "all groups contain valid values" 
 
         let symbolTableHeaders = buildHeadSymbolTable hdr
 
-        let symTabH = foldl (\ errorOrMap (Group gtype gvar gitems) ->
+        let symTabH = foldl (\ errorOrMap (Group gtype (Var gvar ga) gitems) ->
                 case errorOrMap of
                     Left err -> Left err
-                    Right hmap -> case (replaceVarsGroup hmap (Group gtype gvar gitems)) of
+                    Right hmap -> case (replaceVarsGroup hmap (Group gtype (Var gvar ga) gitems)) of
                         Left err -> Left err
-                        Right x -> Right $ HashMap.insert (gvar)
+                        Right x -> Right $ HashMap.insert (Var gvar (Annotation ""))
                             (gtype, x) (hmap)
 
                 )
@@ -125,6 +113,17 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
                 Right x -> x
 
         let expandedGroups = expandGroups symbolTableH
+
+        --Header CHeck
+        case mapM (checkValidParams conf symbolTableH ) paramList  of
+            Left e -> hPrint stderr e >> exitFailure
+            Right r -> putStrLn "all params are of valid types"
+
+        --Check Group Validity
+        case mapM (checkValidGroups conf symbolTableH ) allGroups  of
+            Left e -> hPrint stderr e >> exitFailure
+            Right r -> putStrLn "all groups contain valid values"
+
 
         let groupsymstring = HashMap.foldrWithKey  (\(Var s _) ((GroupType t),_) p ->
                 p++ "\t" ++s ++ "\t" ++ t
@@ -250,17 +249,17 @@ replaceVarsGroup symbolTableH (Group _ var items) =
         Right (nonVarList ++ expandedList)
 
 replaceVarsGroupItem :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> GroupItem Annotation -> [GroupItem Annotation]
-replaceVarsGroupItem symbolTableH (GroupVar v) =
+replaceVarsGroupItem symbolTableH (GroupVar v@(Var vv a)) =
     do
-        case (HashMap.lookup v symbolTableH) of
+        case (HashMap.lookup (Var vv (Annotation "")) symbolTableH) of
             Just (t, items) -> items
 
 replaceVarsGroupItemGroup :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> GroupItem Annotation -> Either LexError [GroupItem Annotation]
-replaceVarsGroupItemGroup symbolTableH (GroupVar v) =
+replaceVarsGroupItemGroup symbolTableH (GroupVar (Var v a)) =
     do
-        case (HashMap.lookup v symbolTableH) of
+        case (HashMap.lookup (Var v (Annotation "")) symbolTableH) of
             Just (t, items) -> Right $ items
-            Nothing -> Left $ NotFoundInSymbolTable ((varToStr v) ++ " not declared previously.")
+            Nothing -> Left $ NotFoundInSymbolTable ((v) ++ " not declared previously.")
 
 -- Make (Var Annotation) hashable
 instance (Hashable (Var Annotation)) where
@@ -269,7 +268,7 @@ instance (Hashable (Var Annotation)) where
 -- Utility test function to check if symbol table contains a key
 testIfHSymbolTableContains :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> (Var Annotation) -> IO()
 testIfHSymbolTableContains hashmap (Var v a) =
-        case (HashMap.lookup (Var v a) hashmap) of
+        case (HashMap.lookup (Var v (Annotation "")) hashmap) of
             Nothing -> hPrint stderr "nothing found!"
             Just r -> print ("Found VALUE " ++ show r ++ " for KEY " ++
                 v ++ " in symboltable1")
@@ -278,7 +277,7 @@ testIfHSymbolTableContains hashmap (Var v a) =
 buildHeadSymbolTable :: (Header Annotation) -> HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation])
 buildHeadSymbolTable (Header _ args) =
     do
-        let keyValuesHeader = map (\(Arg (t) (v)) -> (v, (t, []))) (args)
+        let keyValuesHeader = map (\(Arg (t) (Var v _)) -> ((Var v (Annotation "")), (t, []))) (args)
         (HashMap.fromList (keyValuesHeader))
 
 weedGroupFiles::[UseFile]->[String]->Either LexError [UseFile]
@@ -513,19 +512,19 @@ getAllFields (Config conf) =  M.unions $ map (\(_,(FieldMap b )) -> b) (M.toList
     --M.unions (map (FieldMap . snd) (M.toList conf))
 
 checkValidGroups::(Config Annotation)->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))->(GroupDefs Annotation)->Either LexError (GroupDefs Annotation)
-checkValidGroups c@(Config conf) symTab (Group gt@(GroupType gtype) (Var v an) (gitem )) = 
+checkValidGroups c@(Config conf) symTab (Group gt@(GroupType gtype) (Var v an) (gitem )) =
     do
         let listWithVal = getAllFields c
         --let fieldList = getAllFields c
         --multiple with the same name??
         --let listWithVal = M.filterWithKey (\fn (Field a) -> fn == gtype && a == an) fieldList
-        
-        
+
+
         case (M.lookup gtype listWithVal) of
             Nothing -> Left $ TypeError (show gtype ++ " is not defined in config file")
             Just g -> case (mapM (compareFieldTypes g (FieldMap listWithVal) symTab )  gitem) of --check the type is valid
                 Right r -> Right (Group gt (Var v an) gitem )
-                Left e -> Left e 
+                Left e -> Left e
         --check getAllFields
 
 checkValidParams
@@ -533,18 +532,18 @@ checkValidParams
     -> (HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))
     -> (Arg Annotation)
     -> Either LexError (Arg Annotation)
-checkValidParams c@(Config conf) symTab (Arg gt@(GroupType gtype) var@(Var v an@(Annotation a))) = 
+checkValidParams c@(Config conf) symTab (Arg gt@(GroupType gtype) var@(Var v an@(Annotation a))) =
     do
         --get list of all fields
         let listWithVal = getAllFields c
-        case (M.lookup gtype listWithVal ) of --header name exists in 
+        case (M.lookup gtype listWithVal ) of --header name exists in
             Nothing -> Left $ TypeError ("Wait what. How did you get here? Param Not in Symbol Table" ++ show gtype)
- 
+
             Just j -> Right (Arg gt (Var v an))
  {-
             Just j -> case ((compareFieldTypes j (FieldMap listWithVal) symTab ) (GroupVar var)) of --check the type is valid
                 Right r -> Right (Arg gt (Var v an))
-                Left e -> Left e 
+                Left e -> Left e
 -}
 
 --get tye from
@@ -560,14 +559,14 @@ compareFieldTypes::(Field Annotation)->(FieldMap Annotation)->(HashMap.HashMap (
 compareFieldTypes (FieldValue allValList an@(Annotation a) ) fm hm gi =
     case gi of
         (GroupValString s sa) -> case (s `elem` allValList) of
-                True ->  Right (GroupValString s an) --Right (GroupValString s) 
+                True ->  Right (GroupValString s an) --Right (GroupValString s)
                 False-> Left (AllowedValError ("Error. " ++ s ++ " is not defined in the config file list that also contains: " ++ (intercalate "," allValList)))
         (GroupVar (Var v va)) -> case (an == va) of
             True -> Right (GroupVar (Var v va))
             False -> Left (AllowedValError ("Var Error while comparing field types" ++ " varaiable " ++ show v ++ ": " ++ show va ++ " versus " ++ show a ))
-        _ -> Left (AllowedValError ("Error " ++ show a  ++ show gi ++ show allValList))
+        g -> Left (AllowedValError ("Error " ++ show g  ++ show gi ++ show allValList))
 --intshow s
-compareFieldTypes (FieldType "Int" (Annotation an)) fm hm gr = 
+compareFieldTypes (FieldType "Int" (Annotation an)) fm hm gr =
     case gr of
         (GroupRange (Before i (Annotation a))) ->
             if a == an then Right $ (GroupRange (Before i (Annotation an)) )
@@ -582,11 +581,11 @@ compareFieldTypes (FieldType "Int" (Annotation an)) fm hm gr =
             if a == an then Right $ (GroupRange (SingleInt i (Annotation an) ))
             else Left (TypeError ("Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
         (GroupVar var@(Var v (Annotation a))) ->
-            if  (HashMap.member var hm) && (a == an) then Right $ (GroupVar (Var v (Annotation an)))
+            if  (HashMap.member (Var v (Annotation "")) hm) then Right $ (GroupVar (Var v (Annotation an)))
             else Left $ TypeError ("ERROR : " ++ show v ++ "of ann " ++ a ++ " is not in Symbol Table" ++ show hm)
         _ -> Left (AllowedValError ("Error Invalid Type" ++ show an  ++ show gr))
-        
-compareFieldTypes (FieldType "String" (Annotation an)) fm hm gv = 
+
+compareFieldTypes (FieldType "String" (Annotation an)) fm hm gv =
     case gv of
         (GroupValString s (Annotation a)) ->
             if a == an then Right $ (GroupValString s (Annotation an))
@@ -599,13 +598,13 @@ compareFieldTypes (FieldType "Date" (Annotation an)) fm hm gd =
             else Left (TypeError ("Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
 
 compareFieldTypes (FieldVar fv (Annotation an)) fm hm (GroupVar v@(Var gv (Annotation a))) =
-    if  (HashMap.member v  hm) && (a == an) then Right $ (GroupVar (Var gv (Annotation an)))
+    if  (HashMap.member (Var gv (Annotation ""))  hm) then Right $ (GroupVar (Var gv (Annotation an)))
     else Left $ TypeError ("ERROR : " ++ show gv ++ " is not in Symbol Table")
 --I need a new type that allows me to pull out the type of var
 
 compareFieldTypes f (FieldMap fm) hm  (GroupVar var@(Var v an) ) =
     do
-        case (HashMap.lookup var hm) of
+        case (HashMap.lookup (Var v (Annotation "")) hm) of
             Nothing -> Left $ TypeError ("ERROR. var " ++ (varToStr var) ++ " not declared " ++ "FIELD IS: " ++ show f ++ " VAR IS : " ++ show var ++ "\n" ++ show hm ++ "\n")
 
             Just (a,_) -> case (M.member ((groupTypeToStr a)) fm) of
