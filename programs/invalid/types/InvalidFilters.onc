@@ -1,30 +1,13 @@
 script InvalidFilters()
 /**
- * We are confirming that we throw errors when incorrect types are use.
+ * this demonstrates how filters need to match those defined in the config
  */
 
-// ---- Change data in this group file ----
-group Id myId = {M, F}
-
 // ---- We can add or change Filters here ---- 
-population is
+populations is
 	Id: 19992
 	Birthyear: 1932
 	Sex: M, ct_cim_booked
 
-period is
-	Months: 12414, M
-
-events are
-	Events: ct_sim_booked, 12311
-
-doctors are
-	Id: 11231//, 10:10
-
-// --- Computations --- 
 {
-	foreach Patient p
-	{
-		print p
-	}
 }

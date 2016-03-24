@@ -1,0 +1,16 @@
+script FieldTypeCheck()
+/**
+ * This program demonstrates that even though a group may type check correctly, if it is used witht the wrong field it will fail
+ */
+
+// ---- Change data in this group file ----
+group Id myId = {1,2,3}
+
+// ---- We can add or change Filters here ---- 
+period is
+    Id: myId //Id is not defined for the period filter, so this will fail
+	Months: 12414, M
+
+// --- Computations --- 
+{
+}

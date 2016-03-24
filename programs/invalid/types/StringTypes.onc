@@ -1,0 +1,14 @@
+script StringTypes()
+/**
+ * THis shows that only Strings can be declared in groups that are defined as
+ * String in the Config File
+ */
+
+// ---- Change data in this group file ----
+group Date postalcode = {ABC123, 1} //Will fail since 1 is an Int
+
+// ---- We can add or change Filters here ---- 
+
+// --- Computations --- 
+{
+}

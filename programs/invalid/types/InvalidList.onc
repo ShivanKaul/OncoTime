@@ -1,0 +1,16 @@
+script InvalidGroups2()
+/**
+ * This demonstrates a matching against predefined values in the value lists defined in our config file 
+ */
+
+// ---- We can add or change Filters here ---- 
+population is
+	Id: 19992
+	Birthyear: 1932
+	Sex: M
+    Diagnosis: brain, eyes //eyes is not defined in the list of permissible values for a diagnosis field in the population filter
+
+
+// --- Computations --- 
+{
+}
