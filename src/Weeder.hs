@@ -271,7 +271,7 @@ replaceVarsGroupItem symbolTableH (GroupVar v@(Var vv a)) =
 replaceVarsGroupItemGroup :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> GroupItem Annotation -> Either LexError [GroupItem Annotation]
 replaceVarsGroupItemGroup symbolTableH (GroupVar (Var v a)) =
     do
-        case (HashMap.lookup (Var v (Annotation "")) symbolTableH) of
+        case (HashMap.lookup (Var (map toLower v) (Annotation "")) symbolTableH) of
             Just (t, items) -> Right $ items
             Nothing -> Left $ NotFoundInSymbolTable ((v) ++ " not declared previously.")
 
