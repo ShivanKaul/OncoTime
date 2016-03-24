@@ -853,17 +853,17 @@ weedForEach :: (Config Annotation)->CompSymTable -> [(Computation Annotation)] -
     ->Either LexError (CompSymTable,String,(Computation Annotation))
 weedForEach conf symtable newcomp pos (ForEachFilter filterName var@(Var iname _) )  =
     if (fieldExists conf filterName)
-    then    if (isValidInNested conf symtable filterName)
-            then do
-                newsym <- ( addToSymTable (symtable++[emptyScope])
-                                    var (TFilter filterName) )
-                (intSymRep,annComps)<- (weedFold conf newsym newcomp pos)
-                Right (symtable,intSymRep,(Foreach (ForEachFilter filterName (Var
+    then do
+            fname <- isValidInNested conf symtable filterName pos
+            newsym <- ( addToSymTable (symtable++[emptyScope])
+                                    var (TFilter fname) )
+            (intSymRep,annComps)<-  (weedFold conf newsym newcomp pos)
+
+            Right (symtable,intSymRep,(Foreach (ForEachFilter filterName (Var
                                  iname (Annotation filterName))) annComps pos) )
-            else Left (
-                ComputationWrongScope "Foreach is not valid in this scope")
+            
     else Left $  FieldNameError $ ""++
-            filterName++" is not a valid loopable Filter"
+            filterName++" is not a valid loopable Filter at line " ++ (show $sourceLine pos)
 
 weedForEach config symtable newcomp pos (ForEachTable indexVar@(Var iname _) tableVar@(Var tname _) )  =
     evaluateInTopScope symtable (\sym->
@@ -876,7 +876,7 @@ weedForEach config symtable newcomp pos (ForEachTable indexVar@(Var iname _) tab
                                         (Var tname $Annotation"Table")) annComps pos) )
             Just t-> Left ( ComputationTypeMismatch $
                     "Cannot go through loop for "++ (prettyPrint tableVar)
-                    ++". It is a " ++ (prettyPrint t) ++ "Not a Table")
+                    ++". It is a " ++ (prettyPrint t) ++ "Not a Table at scope ending in line " ++ (show $sourceLine pos))
                 )
 weedForEach config symtable newcomp pos (ForEachSequence memberVar@(Var mname _) undefSequence) =
     evaluateInTopScope symtable check
@@ -902,7 +902,7 @@ weedForEach config symtable newcomp pos (ForEachList memberVar@(Var mname _) lis
                                  (Var lname (Annotation"List"))) annComps pos)
                 Just t-> Left ( ComputationTypeMismatch $
                         "CAnnot Go through loop for "++ (prettyPrint listVar)++
-                        ". It is a " ++ (prettyPrint t) ++ "Not a List")
+                        ". It is a " ++ (prettyPrint t) ++ "Not a List at scope ending in line " ++ (show $sourceLine pos))
 
 
 weedSequence :: (SeqField Annotation)-> Either String Bool
@@ -924,14 +924,18 @@ foldWeedList prev curr =
         Left evname -> Left $ IncorrectEvent evname
         _-> prev
 
-isValidInNested ::(Config Annotation)-> CompSymTable -> FilterName -> Bool
-isValidInNested conf symtable filterName =
+isValidInNested ::(Config Annotation)-> CompSymTable -> FilterName -> SourcePos-> Either LexError FilterName
+isValidInNested conf symtable filterName pos =
     let
         filtersUsed = (findAllFilters symtable)
         noFilters = null filtersUsed
         topScope = isNowInTopScope symtable
         prevUsed = (elem filterName filtersUsed) || (elem (init filterName) filtersUsed) || (elem (filterName++"s") filtersUsed) --patient or patients
-    in ((noFilters && topScope)|| ( (not noFilters)&&(not prevUsed)))
+    in case ((noFilters && topScope), ( (not noFilters)&&(not prevUsed))) of
+        (True,_)-> Right filterName
+        (False,True) -> Right filterName
+        (False,False)->Left $ComputationWrongScope $ " filtered forloop is invalid at scope ending  line " ++ (show $ sourceLine pos)
+        --(_,False)->Left $ComputationWrongScope $ filterName ++ " is already being looped over in an outerscope ending at line " ++ (show $ sourceLine pos)
 
 
 findAllFilters :: CompSymTable -> [FilterName]
