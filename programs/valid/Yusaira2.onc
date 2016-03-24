@@ -2,10 +2,17 @@ script Yusaira2(Events y)
 /** no star signs are allowed in the  */
 
 
+<<<<<<< HEAD
 //group Eventfkjahfanf z = {patient_arrived,<y1>}
 //group Events z1 = {patient_arrived,<z>}
 
 group Events z1 = {patient_arrived}
+=======
+group Eventfkjahfanf z = {patient_arrived,<y1>}
+group Events z1 = {patient_arrived,<z>}
+--group Events z1 = {patient_arrived,<z>}
+group name a ={}
+>>>>>>> c751f5e8f78fb7e39f6a3784ce667a73baeb1afe
 
 //Patient are
 //	Id : 30,5000

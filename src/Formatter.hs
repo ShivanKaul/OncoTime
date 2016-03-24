@@ -1,4 +1,4 @@
-module Formatter(formatFile) where
+module Formatter(formatFile, removeNewLines) where
 
 import Text.Regex.Posix
 import Text.Regex

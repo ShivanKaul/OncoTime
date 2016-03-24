@@ -1,0 +1,10 @@
+script ComputationRedeclarations()
+	/*<3 E>*/
+
+{
+	list a = sequences like [patient_arrived -> patient_arrives]
+	list a = sequences like [patient_arrived -> patient_arrives]
+	table a = count Patient by Id
+
+
+}

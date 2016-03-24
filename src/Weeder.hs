@@ -73,7 +73,6 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
 
         let allGroups = (concat (newGroups)) ++ groupDefs
         --may need a function to annotate everything
-        --print allGroups
         
         -- check for redeclarations for group
         case (checkForGroupRedecl allGroups) of
@@ -89,22 +88,23 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
         -- get list of all types of groups
         let groupTypesList = map (\(Group gtype _ _) -> gtype) allGroups
         -- get list of all valid types
-        
+
         case (checkIfValidGroupTypes groupTypesList validTypes) of
             True -> putStrLn $ "Group types valid!"
             False -> hPrint stderr "Group Type invalid!" >> exitFailure
         -- check if variable being used in group is actually defined in symbol table #83
         -- check types of groups and if they exist #99
-        --let symbolTableH = buildHeadSymbolTable hdr
+
+        
 
         let symbolTableHeaders = buildHeadSymbolTable hdr
-        
-        let symTabH = foldl (\ errorOrMap (Group gtype gvar gitems) ->
+
+        let symTabH = foldl (\ errorOrMap (Group gtype (Var gvar ga) gitems) ->
                 case errorOrMap of
                     Left err -> Left err
-                    Right hmap -> case (replaceVarsGroup hmap (Group gtype gvar gitems)) of
+                    Right hmap -> case (replaceVarsGroup hmap (Group gtype (Var gvar ga) gitems)) of
                         Left err -> Left err
-                        Right x -> Right $ HashMap.insert (gvar)
+                        Right x -> Right $ HashMap.insert (Var gvar (Annotation ""))
                             (gtype, x) (hmap)
 
                 )
@@ -114,6 +114,7 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
                 Left err -> error (show err)
                 Right x -> x
 
+        let expandedGroups = expandGroups symbolTableH
 
         --Header CHeck
         case mapM (checkValidParams conf symbolTableH ) paramList  of
@@ -129,11 +130,13 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
 -- HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation])
 -- replaceVarsGroup :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> GroupDefs Annotation -> GroupDefs Annotation
 
+            Right r -> putStrLn "all params are of valid types"
 
-        -- putStrLn (show symbolTableH)
+        --Check Group Validity
+        case mapM (checkValidGroups conf symbolTableH ) allGroups  of
+            Left e -> hPrint stderr e >> exitFailure
+            Right r -> putStrLn "all groups contain valid values"
 
-        -- expand variables in allgroups
-        let expandedGroups = (expandGroups symbolTableH allGroups)
 
         let groupsymstring = HashMap.foldrWithKey  (\(Var s _) ((GroupType t),_) p ->
                 p++ "\t" ++s ++ "\t" ++ t
@@ -147,16 +150,6 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
         case  mapM (checkFilterTypes conf symbolTableH) filters of
                 Left e -> hPrint stderr e >> print filters >> exitFailure
                 Right annotatedFilters -> do
-
-{-
-                    print "Printing old filters"
-
-                    print filters
-
-                    print "Printing new filters"
-
-                    --let newFilters = (populateDefaultValuesFilters filters (Config confmap))
--}
 
                     let newFilters = (populateDefaultValuesFilters (annotatedFilters) (Config confmap))
  --                   print newFilters
@@ -188,15 +181,13 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
                     -- SAMPLE USES OF SYMBOL TABLE
                     -- testIfSymbolTableContains symbolTable1 (Var "x")
 
-
-
                     putStrLn "Weeded successfully!"
-                    return (Program hdr docs [] (allGroups) filtersWithVarsReplaced (annComps))
+                    return (Program hdr docs [] (expandedGroups) filtersWithVarsReplaced (annComps))
 
-expandGroups :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> [GroupDefs Annotation] -> [GroupDefs Annotation]
-expandGroups config groups =
+expandGroups :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> [GroupDefs Annotation]
+expandGroups symbolTableH =
     do
-        groups
+        map (\(gname, (gtype, gdefs)) -> Group gtype gname gdefs) (HashMap.toList symbolTableH)
 
 checkIfValidGroupTypes :: [GroupType] -> [GroupType] -> Bool
 checkIfValidGroupTypes groupTypes validTypes =
@@ -271,17 +262,17 @@ replaceVarsGroup symbolTableH (Group _ var items) =
         Right (nonVarList ++ expandedList)
 
 replaceVarsGroupItem :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> GroupItem Annotation -> [GroupItem Annotation]
-replaceVarsGroupItem symbolTableH (GroupVar v) =
+replaceVarsGroupItem symbolTableH (GroupVar v@(Var vv a)) =
     do
-        case (HashMap.lookup v symbolTableH) of
+        case (HashMap.lookup (Var vv (Annotation "")) symbolTableH) of
             Just (t, items) -> items
 
 replaceVarsGroupItemGroup :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> GroupItem Annotation -> Either LexError [GroupItem Annotation]
-replaceVarsGroupItemGroup symbolTableH (GroupVar v) =
+replaceVarsGroupItemGroup symbolTableH (GroupVar (Var v a)) =
     do
-        case (HashMap.lookup v symbolTableH) of
+        case (HashMap.lookup (Var v (Annotation "")) symbolTableH) of
             Just (t, items) -> Right $ items
-            Nothing -> Left $ NotFoundInSymbolTable ((varToStr v) ++ " not declared previously.")
+            Nothing -> Left $ NotFoundInSymbolTable ((v) ++ " not declared previously.")
 
 -- Make (Var Annotation) hashable
 instance (Hashable (Var Annotation)) where
@@ -290,7 +281,7 @@ instance (Hashable (Var Annotation)) where
 -- Utility test function to check if symbol table contains a key
 testIfHSymbolTableContains :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> (Var Annotation) -> IO()
 testIfHSymbolTableContains hashmap (Var v a) =
-        case (HashMap.lookup (Var v a) hashmap) of
+        case (HashMap.lookup (Var v (Annotation "")) hashmap) of
             Nothing -> hPrint stderr "nothing found!"
             Just r -> print ("Found VALUE " ++ show r ++ " for KEY " ++
                 v ++ " in symboltable1")
@@ -299,7 +290,7 @@ testIfHSymbolTableContains hashmap (Var v a) =
 buildHeadSymbolTable :: (Header Annotation) -> HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation])
 buildHeadSymbolTable (Header _ args) =
     do
-        let keyValuesHeader = map (\(Arg (t) (v)) -> (v, (t, []))) (args)
+        let keyValuesHeader = map (\(Arg (t) (Var v _)) -> ((Var v (Annotation "")), (t, []))) (args)
         (HashMap.fromList (keyValuesHeader))
 
 weedGroupFiles::[UseFile]->[String]->Either LexError [UseFile]
@@ -311,7 +302,6 @@ weedGroupFiles useList grpFiles =
             then Right $ useList
             else
                 case (null $ filter (not . (`elem` grpFiles)) declaredUseFiles) of
-        --case (sort declaredUseFiles) == (sort grpFiles) of
                     False -> Left $ MissingFilesError (
                         "ERROR: Missing one of group files: "
                         ++ ( intercalate ","  declaredUseFiles) ++
@@ -321,16 +311,11 @@ weedGroupFiles useList grpFiles =
                     True -> Right $ useList
 
 
---what is the symbol table doing exactly?
---buildBodySymbolTable::[Computation]->M.Map (Var Annotation)  Type??
---Table
---List
-
 getGroupDefs::IO(String) -> IO([(GroupDefs Annotation)])
 getGroupDefs grpFileData =
     do
         readData <- grpFileData
-        case parse (manyGroups) "" (readData) of
+        case parse (manyGroups) "" (removeNewLines readData) of
             Left e -> hPutStrLn stderr ("ERROR: " ++ show e) >> return []
             Right r -> return r
 
@@ -341,8 +326,6 @@ readConfig file =
         readData <- readFile "config.conf"
         let l= lines readData
         let totalMap = configListToMap $ map makeConfig l
-        --hPrint stderr $ M.showTree $ totalMap
-        --print $ M.showTree $ totalMap
         return $ Config totalMap
 
 -- use config to populate default values for a filter
@@ -542,19 +525,19 @@ getAllFields (Config conf) =  M.unions $ map (\(_,(FieldMap b )) -> b) (M.toList
     --M.unions (map (FieldMap . snd) (M.toList conf))
 
 checkValidGroups::(Config Annotation)->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))->(GroupDefs Annotation)->Either LexError (GroupDefs Annotation)
-checkValidGroups c@(Config conf) symTab (Group gt@(GroupType gtype) (Var v an) (gitem )) = 
+checkValidGroups c@(Config conf) symTab (Group gt@(GroupType gtype) (Var v an) (gitem )) =
     do
         let listWithVal = getAllFields c
         --let fieldList = getAllFields c
         --multiple with the same name??
         --let listWithVal = M.filterWithKey (\fn (Field a) -> fn == gtype && a == an) fieldList
-        
-        
+
+
         case (M.lookup gtype listWithVal) of
             Nothing -> Left $ TypeError (show gtype ++ " is not defined in config file")
             Just g -> case (mapM (compareFieldTypes g (FieldMap listWithVal) symTab )  gitem) of --check the type is valid
                 Right r -> Right (Group gt (Var v an) gitem )
-                Left e -> Left e 
+                Left e -> Left e
         --check getAllFields
 
 checkValidParams
@@ -562,18 +545,18 @@ checkValidParams
     -> (HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))
     -> (Arg Annotation)
     -> Either LexError (Arg Annotation)
-checkValidParams c@(Config conf) symTab (Arg gt@(GroupType gtype) var@(Var v an@(Annotation a))) = 
+checkValidParams c@(Config conf) symTab (Arg gt@(GroupType gtype) var@(Var v an@(Annotation a))) =
     do
         --get list of all fields
         let listWithVal = getAllFields c
-        case (M.lookup gtype listWithVal ) of --header name exists in 
+        case (M.lookup gtype listWithVal ) of --header name exists in
             Nothing -> Left $ TypeError ("Wait what. How did you get here? Param Not in Symbol Table" ++ show gtype)
- 
+
             Just j -> Right (Arg gt (Var v an))
  {-
             Just j -> case ((compareFieldTypes j (FieldMap listWithVal) symTab ) (GroupVar var)) of --check the type is valid
                 Right r -> Right (Arg gt (Var v an))
-                Left e -> Left e 
+                Left e -> Left e
 -}
 
 --get tye from
@@ -589,7 +572,7 @@ compareFieldTypes::(Field Annotation)->(FieldMap Annotation)->(HashMap.HashMap (
 compareFieldTypes (FieldValue allValList an@(Annotation fa) ) fm hm gi =
     case gi of
         (GroupValString s sa) -> case (s `elem` allValList) of
-                True ->  Right (GroupValString s an) --Right (GroupValString s) 
+                True ->  Right (GroupValString s an) --Right (GroupValString s)
                 False-> Left (AllowedValError ("Error. " ++ s ++ " is not defined in the config file list that also contains: " ++ (intercalate "," allValList)))
         --(GroupVar (Var v va)) -> case (an == va) of
           --  True -> Right (GroupVar (Var v va))
@@ -607,8 +590,8 @@ compareFieldTypes (FieldValue allValList an@(Annotation fa) ) fm hm gi =
             if a == fa then Right $ (GroupRange (SingleInt i (Annotation a) ))
             else Left (TypeError ("ValList Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
         (GroupVar var@(Var v (Annotation a))) ->
-            if  (HashMap.member var hm) then Right $ (GroupVar (Var v (Annotation a)))  
-            else Left $ TypeError ("ERROR : " ++ show v ++ "of ann " ++ a ++ " is not in Symbol Table" ++ show hm)
+            if  (HashMap.member (Var v (Annotation "" )) hm) then Right $ (GroupVar (Var v (Annotation a)))  
+            else Left $ TypeError ("VAL LIST ERROR: " ++ show v ++ "of ann " ++ a ++ " is not in Symbol Table" ++ show hm)
         (GroupDate yy mm dd (Annotation a)) -> 
             if ((a == fa) && ((1900 <(yy)) && ((yy) < 2050))  && ((1 <= (mm)) && ((mm) <= 12)) && ((1<= (dd)) && ((dd) <= 31))) 
             then Right $ (GroupDate yy mm dd (Annotation a)) 
@@ -618,7 +601,7 @@ compareFieldTypes (FieldValue allValList an@(Annotation fa) ) fm hm gi =
 
 
 
-compareFieldTypes (FieldType "Int" (Annotation an)) fm hm gr = 
+compareFieldTypes (FieldType "Int" (Annotation an)) fm hm gr =
     case gr of
         (GroupRange (Before i (Annotation a))) ->
             if a == an then Right $ (GroupRange (Before i (Annotation an)) )
@@ -632,15 +615,12 @@ compareFieldTypes (FieldType "Int" (Annotation an)) fm hm gr =
         (GroupRange (SingleInt i (Annotation a))) ->
             if a == an then Right $ (GroupRange (SingleInt i (Annotation an) ))
             else Left (TypeError ("Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
-        (GroupVar var@(Var v (Annotation a))) ->
-            if  (HashMap.member var hm) && (a == an) then Right $ (GroupVar (Var v (Annotation an)))
-            else Left $ TypeError ("ERROR : " ++ show v ++ "of ann " ++ a ++ " is not in Symbol Table" ++ show hm) 
-        st@(GroupValString s (Annotation a)) ->
-            if a == an && (HashMap.member (Var s (Annotation"") ) hm) then Right $ st 
-            else Left  (AllowedValError "ERRO WITH STRING BEING COMPARED TO INT" )
-        g -> Left (AllowedValError ("***IntFieldType Error Invalid Type of Annotation " ++ show an  ++ "And over grouprange " ++ show gr ++ "\n And has hashmap \n" ++ show hm ++"        " ++ show g))
+        gvv@(GroupVar var@(Var v (Annotation a))) ->
+            if  (HashMap.member (Var v (Annotation ""))  hm) then Right $ (GroupVar (Var v (Annotation an)))
+            else Left $ TypeError ("INTCHECK ERROR : " ++ show v ++ "of ann " ++ a ++ " is not in Symbol Table" ++ show (HashMap.keys hm) )
+        _ -> Left (AllowedValError ("Error Invalid Type" ++ show an  ++ show gr))
 
-compareFieldTypes (FieldType "String" (Annotation an)) fm hm gv = 
+compareFieldTypes (FieldType "String" (Annotation an)) fm hm gv =
     case gv of
         (GroupValString s (Annotation a)) ->
             if a == an then Right $ (GroupValString s (Annotation an))
@@ -653,13 +633,13 @@ compareFieldTypes (FieldType "Date" (Annotation an)) fm hm gd =
             else Left (TypeError ("Date Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
 
 compareFieldTypes (FieldVar fv (Annotation an)) fm hm (GroupVar v@(Var gv (Annotation a))) =
-    if  (HashMap.member v  hm) && (a == an) then Right $ (GroupVar (Var gv (Annotation an)))
+    if  (HashMap.member (Var gv (Annotation ""))  hm) then Right $ (GroupVar (Var gv (Annotation an)))
     else Left $ TypeError ("ERROR : " ++ show gv ++ " is not in Symbol Table")
 --I need a new type that allows me to pull out the type of var
 
 compareFieldTypes f (FieldMap fm) hm  (GroupVar var@(Var v an) ) =
     do
-        case (HashMap.lookup var hm) of
+        case (HashMap.lookup (Var v (Annotation "")) hm) of
             Nothing -> Left $ TypeError ("ERROR. var " ++ (varToStr var) ++ " not declared " ++ "FIELD IS: " ++ show f ++ " VAR IS : " ++ show var ++ "\n" ++ show hm ++ "\n")
 
             Just (a,_) -> case (M.member ((groupTypeToStr a)) fm) of
@@ -690,28 +670,21 @@ events = ["consult_referral_received","initial_consult_booked","initial_consult_
 
 
 weedComputationList :: (Config Annotation)->[(Computation Annotation)]-> SourcePos->Either LexError (String,[(Computation Annotation)])
-weedComputationList config comps pos =
-    do
+weedComputationList config comps pos = (weedFold config [emptyScope] comps pos)
 
-        let compSymbolTable = [emptyScope]
-        case (weedFold config compSymbolTable comps pos) of
-            Right r -> Right  r--(trace ("OH" ++ (show r)) r )
-            Left e -> Left e
 
 weedFold :: (Config Annotation)->CompSymTable -> [(Computation Annotation)] ->SourcePos-> Either LexError (String,[(Computation Annotation)])
-weedFold conf symtable computations pos=
-    let
-        errorOrSym = (foldl' (weedEach conf) (Right(symtable,"",[])) computations)
-        lineCol = sourceColumn pos
-        wrongLinenum = sourceLine pos
-        linenum = if lineCol ==1 then wrongLinenum-1 else wrongLinenum
-    in case errorOrSym of
-            Right (newSymtable,internalSymRep,newcops) ->
-                Right $ (internalSymRep++
-                    "\nDumping Removed Scope at line: "++(show linenum )++ "\n"
+weedFold conf symtable computations pos =
+    do
+        let
+            errorOrSym = (foldl' (weedEach conf) (Right(symtable,"",[])) computations)
+            lineCol = sourceColumn pos
+            wrongLinenum = sourceLine pos
+            linenum = if lineCol ==1 then wrongLinenum-1 else wrongLinenum
+        (newSymtable,internalSymRep,newcops)<-errorOrSym
+        Right $ (internalSymRep++"\nDumping Removed Scope at line: "++(show linenum )++ "\n"
                     ++"\tName\tType\tNesting level\n"
                     ++ (stringOfLastScope newSymtable),newcops)
-            (Left e) -> Left e
 
 
 
@@ -726,28 +699,30 @@ stringOfLastScope symtable =
 
 weedEach::(Config Annotation)->(Either LexError (CompSymTable,String,[(Computation Annotation)]))
     ->(Computation Annotation)->(Either LexError (CompSymTable,String,[(Computation Annotation)]))
-weedEach conf errorOrSym comp =  case errorOrSym of
-    Right (sym,ret,compsSoFar) ->
-        case (weedAndTypeCheckComp conf sym comp) of
-            Left x ->  Left x --trace ("Error! "++ (show x) ++ " occured but not handled") sym
-            Right (newsym,newret,newAnnCom) -> Right (newsym,ret++newret,compsSoFar++[newAnnCom])
-    _ -> errorOrSym
+weedEach conf errorOrSym comp =  do
+    (sym,ret,compsSoFar) <- errorOrSym
+    (newsym,newret,newAnnCom) <- (weedAndTypeCheckComp conf sym comp)
+    Right (newsym,ret++newret,compsSoFar++[newAnnCom])
 
 printFold :: CompSymTable -> String
 printFold symtable =
     let
         len = show $ length symtable
-        curr= last symtable
+        curr = last symtable
     in HashMap.foldrWithKey  (\(Var s _) t p -> p ++ s ++ "\t" ++ (tail $ show t) ++"\t" ++len++ "\n" )  "" curr
 
 
 
-addToSymTable :: CompSymTable -> (Var Annotation) -> ComputationType-> CompSymTable
-addToSymTable symtable v  comptype =
-    let prev= init symtable
+addToSymTable :: CompSymTable -> (Var Annotation) -> ComputationType-> Either LexError CompSymTable
+addToSymTable symtable v@(Var name _)  comptype =
+    let 
+        prev = init symtable
         local = last symtable
-        updated = HashMap.insert  v comptype local
-    in prev++[updated]
+        errorMayBe = HashMap.lookup v local
+        updated = HashMap.insert v comptype local
+    in case errorMayBe of 
+        Nothing->Right$ prev++[updated]
+        (Just t) ->  Left$ RedecError $ "'"++name++"' has already been declared in this scope as a " ++ prettyPrint t 
 
 type Scope = HashMap.HashMap (Var Annotation) ComputationType
 
@@ -771,8 +746,6 @@ evaluateInTopScope symtable f = if isNowInTopScope symtable
     then f symtable
     else Left $ ComputationWrongScope "Can only be in top scope"
 
-isInLoopableScope = error
-
 
 emptyScope :: HashMap.HashMap (Var Annotation) ComputationType
 emptyScope = HashMap.fromList []
@@ -782,17 +755,19 @@ weedAndTypeCheckComp :: (Config Annotation) ->(CompSymTable) -> (Computation Ann
 weedAndTypeCheckComp conf symtable  (Table variable@(Var name _) constructor  field) =
     evaluateInTopScope symtable check
     where check sym = if ((subFieldExists conf constructor field))
-            then Right $ ((addToSymTable sym  variable TTable),"", Table (Var name (Annotation "Table")) constructor  field) --(TFilter constructor)
+            then 
+                do
+                    newSym <- addToSymTable sym  variable TTable
+                    Right $ (newSym,"", Table (Var name (Annotation "Table")) constructor  field) --(TFilter constructor)
             else Left . FieldNameError $ "Field "++field++
                 " does not belong to " ++ constructor
 weedAndTypeCheckComp conf symtable (List variable@(Var name _) seqlist) =
     evaluateInTopScope symtable check
-    where check sym =
-            let errorOrSym = foldl' foldWeedList
-                    (Right $ addToSymTable sym  variable TList) seqlist
-            in case errorOrSym of
-                Right s -> Right (s,"", List (Var name (Annotation "List")) seqlist)
-                Left l -> Left l
+    where check sym = 
+            do
+                newSym <- addToSymTable sym  variable TList
+                s<-foldl' foldWeedList  (Right $ newSym) seqlist
+                Right (s,"", List (Var name (Annotation "List")) seqlist)
 
 weedAndTypeCheckComp conf symtable (Barchart variable@(Var name _)) =
     evaluateInTopScope symtable check
@@ -872,14 +847,12 @@ weedForEach :: (Config Annotation)->CompSymTable -> [(Computation Annotation)] -
 weedForEach conf symtable newcomp pos (ForEachFilter filterName var@(Var iname _) )  =
     if (fieldExists conf filterName)
     then    if (isValidInNested conf symtable filterName)
-            then let
-                    newsym = ( addToSymTable (symtable++[emptyScope])
+            then do
+                newsym <- ( addToSymTable (symtable++[emptyScope])
                                     var (TFilter filterName) )
-                in case (weedFold conf newsym newcomp pos) of
-                            Right (intSymRep,annComps) -> Right (symtable,intSymRep,
-                                (Foreach (ForEachFilter filterName (Var
+                (intSymRep,annComps)<- (weedFold conf newsym newcomp pos)
+                Right (symtable,intSymRep,(Foreach (ForEachFilter filterName (Var
                                  iname (Annotation filterName))) annComps pos) )
-                            Left e -> Left e
             else Left (
                 ComputationWrongScope "Foreach is not valid in this scope")
     else Left $  FieldNameError $ ""++
@@ -889,15 +862,11 @@ weedForEach config symtable newcomp pos (ForEachTable indexVar@(Var iname _) tab
     evaluateInTopScope symtable (\sym->
         case getFromSymbolTable sym tableVar of
             Nothing -> Left . UndefinedVariable $ prettyPrint  tableVar
-            Just TTable -> let
-                            newsym = (addToSymTable
-                                (sym++[emptyScope]) indexVar TIndex)
-                        in case (weedFold config newsym newcomp pos) of
-                            Right (intSymRep,annComps) ->
-                                Right (sym,intSymRep, (Foreach
-                                    (ForEachTable (Var iname $Annotation"index")
+            Just TTable -> do
+                newsym <- (addToSymTable  (sym++[emptyScope]) indexVar TIndex)
+                (intSymRep,annComps)<-(weedFold config newsym newcomp pos)
+                Right (sym,intSymRep, (Foreach  (ForEachTable (Var iname $Annotation"index")
                                         (Var tname $Annotation"Table")) annComps pos) )
-                            Left e -> Left e
             Just t-> Left ( ComputationTypeMismatch $
                     "Cannot go through loop for "++ (prettyPrint tableVar)
                     ++". It is a " ++ (prettyPrint t) ++ "Not a Table")
@@ -905,17 +874,13 @@ weedForEach config symtable newcomp pos (ForEachTable indexVar@(Var iname _) tab
 weedForEach config symtable newcomp pos (ForEachSequence memberVar@(Var mname _) undefSequence) =
     evaluateInTopScope symtable check
     where check sym=
-            let
-                newsym = (addToSymTable (sym++[emptyScope])
-                                memberVar TSequence)
-                errorOrSym = foldl' foldWeedList (Right newsym) undefSequence
-            in case errorOrSym of
-                Right s -> case (weedFold config s newcomp pos) of
-                    Right (intSymRep,annComps) -> Right (s,intSymRep, (Foreach
-                        ((ForEachSequence
-                            (Var mname (Annotation "sequence member")) undefSequence) ) annComps pos))
-                    Left e -> Left e
-                Left l -> Left l
+            do
+                newsym <- (addToSymTable (sym++[emptyScope]) memberVar TSequence)
+                s <- foldl' foldWeedList (Right newsym) undefSequence
+                (intSymRep,annComps) <- (weedFold config s newcomp pos) 
+                Right (s,intSymRep, (Foreach((ForEachSequence  (Var mname (Annotation "sequence member"))
+                 undefSequence) ) annComps pos))
+
 
 weedForEach config symtable newcomp pos (ForEachList memberVar@(Var mname _) listVar@(Var lname _) )  =
 
@@ -923,14 +888,11 @@ weedForEach config symtable newcomp pos (ForEachList memberVar@(Var mname _) lis
     where check sym=
             case getFromSymbolTable sym listVar of
                 Nothing -> Left . UndefinedVariable $ prettyPrint  listVar
-                Just TList -> let
-                                newsym =(addToSymTable (sym++[emptyScope])
-                                    memberVar TSequence)
-                        in case (weedFold config newsym newcomp pos) of
-                            Right (intSymRep,annComps) -> Right (sym,intSymRep,Foreach (
-                                ForEachList (Var mname  (Annotation"sequence member"))
+                Just TList -> do
+                    newsym <-(addToSymTable (sym++[emptyScope])   memberVar TSequence)
+                    (intSymRep,annComps) <- (weedFold config newsym newcomp pos) 
+                    Right (sym,intSymRep,Foreach (ForEachList (Var mname  (Annotation"sequence member"))
                                  (Var lname (Annotation"List"))) annComps pos)
-                            Left e -> Left e
                 Just t-> Left ( ComputationTypeMismatch $
                         "CAnnot Go through loop for "++ (prettyPrint listVar)++
                         ". It is a " ++ (prettyPrint t) ++ "Not a List")
