@@ -1,0 +1,18 @@
+script TypeMismatch()
+/**
+ * Demonstrates how IDs are of type Int in the config, but when given a string it will fail to type check
+ * 
+ */
+
+// ---- Change data in this group file ----
+group Id myIdReal = {1,2,3} 
+
+doctors
+    Id: a
+
+
+// ---- We can add or change Filters here ---- 
+
+// --- Computations --- 
+{
+}
