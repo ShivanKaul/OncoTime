@@ -7,7 +7,6 @@ use PatientData.grp
 
 group sex a = {M, F}
 
-
 population is
     sex:<a>
     Diagnosis: prostate

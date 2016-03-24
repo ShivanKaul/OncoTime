@@ -2,10 +2,10 @@ script Yusaira2(Events y)
 /** no star signs are allowed in the  */
 
 
-group Eventfkjahfanf z = {patient_arrived,<y1>}
-group Events z1 = {patient_arrived,<z>}
-group Events z1 = {patient_arrived,<z>}
-group name a ={}
+//group Eventfkjahfanf z = {patient_arrived,<y1>}
+//group Events z1 = {patient_arrived,<z>}
+
+group Events z1 = {patient_arrived}
 
 //Patient are
 //	Id : 30,5000

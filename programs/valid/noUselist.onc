@@ -1,4 +1,4 @@
-script noUselist(a a, b b)
+script noUselist(Id a, Id b)
 /** test */
 
 {

@@ -33,10 +33,10 @@ weed::String->(String -> IO())->(Program Annotation)->SourcePos->IO(Program Anno
 weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDefs filters comps) pos =
     do
         putStrLn $ "File "++file
-        let validTypes = [GroupType "Sex", GroupType "id", GroupType "birthyear",
+        let validTypes = [GroupType "sex", GroupType "id", GroupType "birthyear",
                 GroupType "diagnosis", GroupType "gender",
                 GroupType "postalcode", GroupType "years",
-                GroupType "days", GroupType "months", GroupType "oncologist"]
+                GroupType "days", GroupType "months", GroupType "oncologist", GroupType "events", GroupType "eventfkjahfanf" ]
         -- get params from header
         let headerParams = case hdr of
                 (Header fname args) -> args
@@ -607,8 +607,12 @@ compareFieldTypes (FieldValue allValList an@(Annotation fa) ) fm hm gi =
             if a == fa then Right $ (GroupRange (SingleInt i (Annotation a) ))
             else Left (TypeError ("ValList Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
         (GroupVar var@(Var v (Annotation a))) ->
-            if  (HashMap.member var hm) && (a == fa) then Right $ (GroupVar (Var v (Annotation a)))
+            if  (HashMap.member var hm) then Right $ (GroupVar (Var v (Annotation a)))  
             else Left $ TypeError ("ERROR : " ++ show v ++ "of ann " ++ a ++ " is not in Symbol Table" ++ show hm)
+        (GroupDate yy mm dd (Annotation a)) -> 
+            if ((a == fa) && ((1900 <(yy)) && ((yy) < 2050))  && ((1 <= (mm)) && ((mm) <= 12)) && ((1<= (dd)) && ((dd) <= 31))) 
+            then Right $ (GroupDate yy mm dd (Annotation a)) 
+            else Left $ (TypeError ("ValList Error with Field Type Mismatch with Date"))
         _ -> Left (AllowedValError ("ValList Error " ++ show fa  ++ show gi ++ show allValList))
 --intshow s
 
@@ -630,9 +634,12 @@ compareFieldTypes (FieldType "Int" (Annotation an)) fm hm gr =
             else Left (TypeError ("Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
         (GroupVar var@(Var v (Annotation a))) ->
             if  (HashMap.member var hm) && (a == an) then Right $ (GroupVar (Var v (Annotation an)))
-            else Left $ TypeError ("ERROR : " ++ show v ++ "of ann " ++ a ++ " is not in Symbol Table" ++ show hm)
-        _ -> Left (AllowedValError ("***IntFieldType Error Invalid Type of Annotation " ++ show an  ++ "And ove grouprange " ++ show gr ++ "And has hashmap \n" ++ show hm))
-        
+            else Left $ TypeError ("ERROR : " ++ show v ++ "of ann " ++ a ++ " is not in Symbol Table" ++ show hm) 
+        st@(GroupValString s (Annotation a)) ->
+            if a == an && (HashMap.member (Var s (Annotation"") ) hm) then Right $ st 
+            else Left  (AllowedValError "ERRO WITH STRING BEING COMPARED TO INT" )
+        g -> Left (AllowedValError ("***IntFieldType Error Invalid Type of Annotation " ++ show an  ++ "And over grouprange " ++ show gr ++ "\n And has hashmap \n" ++ show hm ++"        " ++ show g))
+
 compareFieldTypes (FieldType "String" (Annotation an)) fm hm gv = 
     case gv of
         (GroupValString s (Annotation a)) ->

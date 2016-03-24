@@ -17,10 +17,11 @@ doctors are
 
 period is
     Years: 2010 to 2016
+
 {
     foreach doctor d
     {
-    barchart d
+    print d
     }
 
 }

@@ -4,11 +4,11 @@ use file1.grp, file2.grp
 
 
 group BirthYear x = {1971,1972}
-group BirthYear z = {1971,1972, <k>}
+group BirthYear z = {1971,1972, <x>}
 
 population are
 	Sex : M, F
-	BirthYear : <k>
+	BirthYear : <x>
 
 period is
 	Years: 2012, 2012, 2014, 2013-01-02
@@ -18,7 +18,7 @@ period is
 	table t = count Patients by Birthyear
 	print t.length
 	foreach Patient p{
-	print Sex, Postal_Code of p	
+	print Sex, PostalCode of p	
 	foreach Doctor d{
 	 foreach Diagnosis i {
 	 

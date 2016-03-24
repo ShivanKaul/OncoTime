@@ -8,7 +8,9 @@ This file also shows off type inferencing.
 use myGroups.grp, ExtraGroups.grp
 
 //group Id moreIds = {1000, 15 to 30}
-//group Id moreIds = {2000, <moreIds>}
+group Id moreIds = {2000, <moreIds>}
+
+group days myWorkDays = {2000, <moreIds>}
 
 // ---- We can add or change Filters here ---- 
 population is
