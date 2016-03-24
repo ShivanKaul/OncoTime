@@ -5,7 +5,7 @@ prints 3  doctors, who in the past 6 years, who were assigned for breast, stomac
 
 use PatientData.grp
 
-group Id doctorIDs = {1234,1235,1236}
+group Id doctorids = {1234,1235,1236}
 
 population is
     Sex: F

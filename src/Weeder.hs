@@ -12,6 +12,7 @@ import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as M
 import Data.Hashable
 import Data.List
+import Data.Char
 import Control.Monad
 import Control.Applicative
 import Text.ParserCombinators.Parsec
@@ -104,7 +105,7 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
                     Left err -> Left err
                     Right hmap -> case (replaceVarsGroup hmap (Group gtype (Var gvar ga) gitems)) of
                         Left err -> Left err
-                        Right x -> Right $ HashMap.insert (Var gvar (Annotation ""))
+                        Right x -> Right $ HashMap.insert (Var (map toLower gvar) (Annotation ""))
                             (gtype, x) (hmap)
 
                 )
@@ -590,7 +591,7 @@ compareFieldTypes (FieldValue allValList an@(Annotation fa) ) fm hm gi =
             if a == fa then Right $ (GroupRange (SingleInt i (Annotation a) ))
             else Left (TypeError ("ValList Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
         (GroupVar var@(Var v (Annotation a))) ->
-            if  (HashMap.member (Var v (Annotation "" )) hm) then Right $ (GroupVar (Var v (Annotation a)))  
+            if  (HashMap.member (Var (map toLower v) (Annotation "" )) hm) then Right $ (GroupVar (Var v (Annotation a)))  
             else Left $ TypeError ("VAL LIST ERROR: " ++ show v ++ "of ann " ++ a ++ " is not in Symbol Table" ++ show hm)
         (GroupDate yy mm dd (Annotation a)) -> 
             if ((a == fa) && ((1900 <(yy)) && ((yy) < 2050))  && ((1 <= (mm)) && ((mm) <= 12)) && ((1<= (dd)) && ((dd) <= 31))) 
@@ -616,9 +617,11 @@ compareFieldTypes (FieldType "Int" (Annotation an)) fm hm gr =
             if a == an then Right $ (GroupRange (SingleInt i (Annotation an) ))
             else Left (TypeError ("Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
         gvv@(GroupVar var@(Var v (Annotation a))) ->
-            if  (HashMap.member (Var v (Annotation ""))  hm) then Right $ (GroupVar (Var v (Annotation an)))
+            if  (HashMap.member (Var (map toLower v) (Annotation ""))  hm) then Right $ (GroupVar (Var v (Annotation an)))
             else Left $ TypeError ("INTCHECK ERROR : " ++ show v ++ "of ann " ++ a ++ " is not in Symbol Table" ++ show (HashMap.keys hm) )
-        _ -> Left (AllowedValError ("Error Invalid Type" ++ show an  ++ show gr))
+        g@(GroupValString s (Annotation a)) ->  if (HashMap.member (Var (map toLower s) (Annotation"")) hm) then Right g else Left (AllowedValError ("Error Invalid Type" ++ show an  ++ show g ++ "                              " ++ show s ++ "!!!!!!!!!!!!" ++ show hm))
+
+        --I DON'T LIKE THAT BUT IT WORKS
 
 compareFieldTypes (FieldType "String" (Annotation an)) fm hm gv =
     case gv of
@@ -633,7 +636,7 @@ compareFieldTypes (FieldType "Date" (Annotation an)) fm hm gd =
             else Left (TypeError ("Date Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
 
 compareFieldTypes (FieldVar fv (Annotation an)) fm hm (GroupVar v@(Var gv (Annotation a))) =
-    if  (HashMap.member (Var gv (Annotation ""))  hm) then Right $ (GroupVar (Var gv (Annotation an)))
+    if  (HashMap.member (Var (map toLower gv) (Annotation ""))  hm) then Right $ (GroupVar (Var gv (Annotation an)))
     else Left $ TypeError ("ERROR : " ++ show gv ++ " is not in Symbol Table")
 --I need a new type that allows me to pull out the type of var
 
