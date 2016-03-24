@@ -36,7 +36,7 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
         putStrLn $ "File "++file
         let validTypes = [GroupType "sex", GroupType "id", GroupType "birthyear",
                 GroupType "diagnosis", GroupType "gender",
-                GroupType "postalcode", GroupType "years",
+                GroupType "postalcode", GroupType "years", GroupType "date",
                 GroupType "days", GroupType "months", GroupType "oncologist", GroupType "events", GroupType "eventfkjahfanf" ]
         -- get params from header
         let headerParams = case hdr of
@@ -74,7 +74,7 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
 
         let allGroups = (concat (newGroups)) ++ groupDefs
         --may need a function to annotate everything
-        
+
         -- check for redeclarations for group
         case (checkForGroupRedecl allGroups) of
             Left e -> hPrint stderr e >> exitFailure
@@ -93,10 +93,7 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
         case (checkIfValidGroupTypes groupTypesList validTypes) of
             True -> putStrLn $ "Group types valid!"
             False -> hPrint stderr "Group Type invalid!" >> exitFailure
-        -- check if variable being used in group is actually defined in symbol table #83
-        -- check types of groups and if they exist #99
 
-        
 
         let symbolTableHeaders = buildHeadSymbolTable hdr
 
@@ -115,28 +112,25 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
                 Left err -> error (show err)
                 Right x -> x
 
-        let expandedGroups = expandGroups symbolTableH
 
+        -- check types of groups
+        -- every groupvar in [group item] of every group should
+        -- have same group type as group
+        let listOfBools = map (checkIfGroupTypesOfVarsBelong symbolTableH) allGroups
+        if False `elem` listOfBools then
+            hPutStrLn stderr "Var in group declaration does not typecheck!" >> exitFailure
+            else putStrLn "Vars in group declarations typecheck!"
+
+        let expandedGroups = expandGroups symbolTableH
         --Header CHeck
         case mapM (checkValidParams conf symbolTableH ) paramList  of
             Left e -> hPrint stderr e >> exitFailure
-            Right r -> putStrLn "all params are of valid types" 
+            Right r -> putStrLn "All params are of valid types!"
 
         --Check Group Validity
         case mapM (checkValidGroups conf symbolTableH ) allGroups  of
             Left e -> hPrint stderr e >> exitFailure
-            Right r -> putStrLn "all groups contain valid values" 
-
-        -- let symbolTableHeaders = buildHeadSymbolTable hdr
--- HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation])
--- replaceVarsGroup :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> GroupDefs Annotation -> GroupDefs Annotation
-
-            Right r -> putStrLn "all params are of valid types"
-
-        --Check Group Validity
-        case mapM (checkValidGroups conf symbolTableH ) allGroups  of
-            Left e -> hPrint stderr e >> exitFailure
-            Right r -> putStrLn "all groups contain valid values"
+            Right r -> putStrLn "All groups contain valid values!"
 
 
         let groupsymstring = HashMap.foldrWithKey  (\(Var s _) ((GroupType t),_) p ->
@@ -153,19 +147,8 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
                 Right annotatedFilters -> do
 
                     let newFilters = (populateDefaultValuesFilters (annotatedFilters) (Config confmap))
- --                   print newFilters
-
-                    -- Replace vars with symbol table h
-   --                 print "Printing with vars replaced"
 
                     let filtersWithVarsReplaced = (map (replaceVarsFilter symbolTableH) newFilters)
-     --               print filtersWithVarsReplaced
-
-                    -------- UNTEST -------
-
-                    case (M.lookup ("patient", True) confmap) of
-                        Nothing -> hPrint stderr "key not found in confmap!"
-                        Just (FieldMap r) -> print "here's a confmap" >> print (show (M.toList r))
 
                     let compsResult=   weedComputationList conf comps pos
                     case  compsResult of
@@ -184,6 +167,18 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
 
                     putStrLn "Weeded successfully!"
                     return (Program hdr docs [] (expandedGroups) filtersWithVarsReplaced (annComps))
+
+-- get grouptypes of all groupvars for a group
+checkIfGroupTypesOfVarsBelong :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> GroupDefs Annotation -> Bool
+checkIfGroupTypesOfVarsBelong hmap group@(Group gtype gvar gitems) =
+    do
+        -- all group vars in gitems
+        let varList = filter (\v -> case v of
+                GroupVar x -> True
+                _ -> False) gitems
+        -- check if all group vars exist in symbol table and have same type as gtype
+        foldl (\bool gvar@(GroupVar (Var v _)) -> case HashMap.lookup (Var v (Annotation "")) hmap of
+            Just (gtypeMap, gitemsMap) -> if gtypeMap == gtype then bool else False) True varList
 
 expandGroups :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> [GroupDefs Annotation]
 expandGroups symbolTableH =
@@ -591,11 +586,11 @@ compareFieldTypes (FieldValue allValList an@(Annotation fa) ) fm hm gi =
             if a == fa then Right $ (GroupRange (SingleInt i (Annotation a) ))
             else Left (TypeError ("ValList Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
         (GroupVar var@(Var v (Annotation a))) ->
-            if  (HashMap.member (Var (map toLower v) (Annotation "" )) hm) then Right $ (GroupVar (Var v (Annotation a)))  
+            if  (HashMap.member (Var (map toLower v) (Annotation "" )) hm) then Right $ (GroupVar (Var v (Annotation a)))
             else Left $ TypeError ("VAL LIST ERROR: " ++ show v ++ "of ann " ++ a ++ " is not in Symbol Table" ++ show hm)
-        (GroupDate yy mm dd (Annotation a)) -> 
-            if ((a == fa) && ((1900 <(yy)) && ((yy) < 2050))  && ((1 <= (mm)) && ((mm) <= 12)) && ((1<= (dd)) && ((dd) <= 31))) 
-            then Right $ (GroupDate yy mm dd (Annotation a)) 
+        (GroupDate yy mm dd (Annotation a)) ->
+            if ((a == fa) && ((1900 <(yy)) && ((yy) < 2050))  && ((1 <= (mm)) && ((mm) <= 12)) && ((1<= (dd)) && ((dd) <= 31)))
+            then Right $ (GroupDate yy mm dd (Annotation a))
             else Left $ (TypeError ("ValList Error with Field Type Mismatch with Date"))
         _ -> Left (AllowedValError ("ValList Error " ++ show fa  ++ show gi ++ show allValList))
 --intshow s
@@ -621,7 +616,6 @@ compareFieldTypes (FieldType "Int" (Annotation an)) fm hm gr =
             else Left $ TypeError ("INTCHECK ERROR : " ++ show v ++ "of ann " ++ a ++ " is not in Symbol Table" ++ show (HashMap.keys hm) )
         g@(GroupValString s (Annotation a)) ->  if (HashMap.member (Var (map toLower s) (Annotation"")) hm) then Right g else Left (AllowedValError ("Error Invalid Type" ++ show an  ++ show g ++ "                              " ++ show s ++ "!!!!!!!!!!!!" ++ show hm))
 
-        --I DON'T LIKE THAT BUT IT WORKS
 
 compareFieldTypes (FieldType "String" (Annotation an)) fm hm gv =
     case gv of
@@ -725,14 +719,14 @@ printFold symtable =
 
 addToSymTable :: CompSymTable -> (Var Annotation) -> ComputationType-> Either LexError CompSymTable
 addToSymTable symtable v@(Var name _)  comptype =
-    let 
+    let
         prev = init symtable
         local = last symtable
         errorMayBe = HashMap.lookup v local
         updated = HashMap.insert v comptype local
-    in case errorMayBe of 
+    in case errorMayBe of
         Nothing->Right$ prev++[updated]
-        (Just t) ->  Left$ RedecError $ "'"++name++"' has already been declared in this scope as a " ++ prettyPrint t 
+        (Just t) ->  Left$ RedecError $ "'"++name++"' has already been declared in this scope as a " ++ prettyPrint t
 
 type Scope = HashMap.HashMap (Var Annotation) ComputationType
 
@@ -765,7 +759,7 @@ weedAndTypeCheckComp :: (Config Annotation) ->(CompSymTable) -> (Computation Ann
 weedAndTypeCheckComp conf symtable  (Table variable@(Var name _) constructor  field) =
     evaluateInTopScope symtable check
     where check sym = if ((subFieldExists conf constructor field))
-            then 
+            then
                 do
                     newSym <- addToSymTable sym  variable TTable
                     Right $ (newSym,"", Table (Var name (Annotation "Table")) constructor  field) --(TFilter constructor)
@@ -773,7 +767,7 @@ weedAndTypeCheckComp conf symtable  (Table variable@(Var name _) constructor  fi
                 " does not belong to " ++ constructor
 weedAndTypeCheckComp conf symtable (List variable@(Var name _) seqlist) =
     evaluateInTopScope symtable check
-    where check sym = 
+    where check sym =
             do
                 newSym <- addToSymTable sym  variable TList
                 s<-foldl' foldWeedList  (Right $ newSym) seqlist
@@ -887,7 +881,7 @@ weedForEach config symtable newcomp pos (ForEachSequence memberVar@(Var mname _)
             do
                 newsym <- (addToSymTable (sym++[emptyScope]) memberVar TSequence)
                 s <- foldl' foldWeedList (Right newsym) undefSequence
-                (intSymRep,annComps) <- (weedFold config s newcomp pos) 
+                (intSymRep,annComps) <- (weedFold config s newcomp pos)
                 Right (s,intSymRep, (Foreach((ForEachSequence  (Var mname (Annotation "sequence member"))
                  undefSequence) ) annComps pos))
 
@@ -900,7 +894,7 @@ weedForEach config symtable newcomp pos (ForEachList memberVar@(Var mname _) lis
                 Nothing -> Left . UndefinedVariable $ prettyPrint  listVar
                 Just TList -> do
                     newsym <-(addToSymTable (sym++[emptyScope])   memberVar TSequence)
-                    (intSymRep,annComps) <- (weedFold config newsym newcomp pos) 
+                    (intSymRep,annComps) <- (weedFold config newsym newcomp pos)
                     Right (sym,intSymRep,Foreach (ForEachList (Var mname  (Annotation"sequence member"))
                                  (Var lname (Annotation"List"))) annComps pos)
                 Just t-> Left ( ComputationTypeMismatch $
