@@ -129,7 +129,9 @@ tparseString str =
 tparseFileCheck :: String ->IO ()
 tparseFileCheck file =
     do
-        readData <- readFile "config.conf"
+
+        path <- getExecutablePath
+        readData <- readFile $ (dropFileName path) ++"config.conf"
         let l= lines readData
         let totalMap =  Config $ configListToMap $ map makeConfig l
         program <- readFile file

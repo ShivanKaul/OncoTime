@@ -321,7 +321,8 @@ readConfig::String->IO((Config Annotation))
 readConfig file =
     do
         program <- readFile file
-        readData <- readFile "config.conf"
+        path <- getExecutablePath
+        readData <- readFile $ (dropFileName path) ++"config.conf" 
         let l= lines readData
         let totalMap = configListToMap $ map makeConfig l
         return $ Config totalMap
@@ -330,7 +331,7 @@ readConfig file =
 populateDefaultValuesFilters :: [Filter Annotation] -> (Config Annotation)-> [Filter Annotation]
 populateDefaultValuesFilters filters config =
     do
-        map (findDefaultValuesFilt config) (filters)
+        map (findDefaultValuesFilt config) (filters) 
 
 findDefaultValuesFilt :: (Config Annotation)-> Filter Annotation -> Filter Annotation
 findDefaultValuesFilt (Config conf) (Filter fname defs) =
@@ -929,7 +930,7 @@ isValidInNested conf symtable filterName =
         filtersUsed = (findAllFilters symtable)
         noFilters = null filtersUsed
         topScope = isNowInTopScope symtable
-        prevUsed = (elem filterName filtersUsed)
+        prevUsed = (elem filterName filtersUsed) || (elem (init filterName) filtersUsed) || (elem (filterName++"s") filtersUsed) --patient or patients
     in ((noFilters && topScope)|| ( (not noFilters)&&(not prevUsed)))
 
 

@@ -16,6 +16,7 @@ import Text.ParserCombinators.Parsec.Char
 import qualified Text.ParserCombinators.Parsec.Token as Token
 import Data.Char
 import Debug.Trace
+import System.FilePath
 import Types
 -- import PrettyPrinter
 import Lexer
@@ -138,7 +139,9 @@ configToMap (Config conf) = conf
 testFieldStuff::IO()
 testFieldStuff =
     do
-        readData <-readFile "config.conf"
+        path <- getExecutablePath
+        readData <- readFile $ (dropFileName path) ++"config.conf"
+
         let l = lines readData
         let listOfMaps = map makeConfig l
   --      let totalMap = foldr M.union M.empty listOfMaps
