@@ -48,6 +48,10 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
             False -> hPutStrLn stderr "Header params have invalid types!" >> exitFailure
         --get Config file
         conf <- readConfig file
+
+
+        dbConf <- readDBConfig file
+
        --grpFile weeding
         case dupesExist (map (\x -> (Var x (Annotation ""))) (flattenUseFile useList)) of
             (_, []) -> putStrLn $ "Uselist is fine!"
@@ -326,6 +330,19 @@ readConfig file =
         let l= lines readData
         let totalMap = configListToMap $ map makeConfig l
         return $ Config totalMap
+
+
+readDBConfig::String->IO (DBConfig)
+readDBConfig file = 
+    do
+        program <- readFile file
+        path <- getExecutablePath
+        readData <- readFile $ (dropFileName path) ++"database.conf" 
+        let l= lines readData
+        let totalMap = dbConfigListToMap $ map makeDBConfig l
+        return $ DBConfig  totalMap
+
+
 
 -- use config to populate default values for a filter
 populateDefaultValuesFilters :: [Filter Annotation] -> (Config Annotation)-> [Filter Annotation]

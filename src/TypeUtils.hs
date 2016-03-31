@@ -27,6 +27,18 @@ makeConfig str =
     case parse (configParser <* eof) "" str of
         Left e-> error $ show e
         Right r -> r
+
+
+makeDBConfig::String->(DBConfig)
+makeDBConfig str = 
+    case parse (dbConfigParser <* eof) "" str of 
+        Left e-> error $ show e
+        Right r -> r
+
+
+
+
+
 {-
 
 typeMapMaker::Parser (String, (String, [String]))
@@ -112,14 +124,44 @@ configParser = lexeme $
         semi
         return $ Config (M.singleton ((map toLower fieldName), (c)) (FieldMap $  fieldMapList))
 
+dbConfigParser:: Parser (DBConfig)
+dbConfigParser = lexeme $
+    do 
+        whiteSpace
+        
+        cf <- identifier 
+        
+        colon
+        
+        db <- identifier
+
+        semi
+        return $ DBConfig (M.singleton cf db)
+
+
+
+
+
 configListToMap::[(Config Annotation)]->(Map (FieldName, Bool) (FieldMap Annotation))
 configListToMap ((Config (x)):[]) =
     case M.toList x of
         [] -> M.empty
         ((fname,loop), sub):[] -> M.singleton (fname,loop) sub
         mapList -> x
-
 configListToMap ((Config x):xs) = M.union x $ configListToMap xs
+
+
+dbConfigListToMap::[(DBConfig)]->(Map ConfigName DBField)
+dbConfigListToMap ((DBConfig (x)):[]) =
+    case M.toList x of
+        [] -> M.empty
+        (cfname ,dbname):[] -> M.singleton cfname dbname
+        --mapList -> x
+dbConfigListToMap ((DBConfig x):xs) = M.union x $ dbConfigListToMap xs
+
+
+
+
 
 configToMap::(Config Annotation)->(Map (FieldName, Bool) (FieldMap Annotation))
 configToMap (Config conf) = conf
