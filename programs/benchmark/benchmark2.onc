@@ -1,0 +1,24 @@
+script benchmark2(Id doctorids)
+/*
+ *
+ */
+
+use vikramPatientData.grp
+
+population is:
+    id: <patientGroupOne> 
+    gender: f
+    birthyear: <patientBirthyearRange>
+    diagnosis: stomach, lung, breast 
+    postalcode: A2C
+
+doctors is:
+    oncologist: Yes
+    id: <doctorids>
+
+{
+    
+    table x = count patients by diagnosis
+
+    
+}
