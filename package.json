@@ -1,0 +1,23 @@
+{
+  "name": "oncotime",
+  "version": "0.0.1",
+  "description": "DSL for cancer-based research",
+  "main": "index.js",
+  "directories": {
+    "doc": "doc"
+  },
+  "dependencies": {
+    "mysql": "^2.10.2"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sable/comp520-2016-18.git"
+  },
+  "author": "Brendan, Shivan, Yusaira",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Sable/comp520-2016-18/issues"
+  },
+  "homepage": "https://github.com/Sable/comp520-2016-18#readme"
+}

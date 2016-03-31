@@ -18,8 +18,6 @@ tests.sh - runs the tests (it runs the compiler on programs in programs/valid/ a
 everything.sh - runs both of the above two scripts
 ```
 
-We have placed a copy of the `oncotime` executable in the top-level folder. Note that this is compiled for Darwin.
-
 ## To Build
 
 We can use either the `build.sh` script, or:
@@ -29,8 +27,12 @@ cabal install --only-dependencies
 cabal build
 ```
 
-Note: we use some functions that are available starting GHC version 4.8.
-We used some of Vikram's test cases that were on the GitHub Oncotime repo.
+The flags are supported and can be used thusly:
+```
+./oncotime <filename> -pptype -dumpsymtab
+```
+
+Note that we have a `config.conf` file. This file must be at the top-level directory i.e. must be in the same directory as the `oncotime` executable.
 
 ## To Run
 - The compiled compiler is compiled into the `dist/build/oncotime` directory

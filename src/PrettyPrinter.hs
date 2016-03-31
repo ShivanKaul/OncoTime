@@ -83,7 +83,7 @@ instance PrettyPrint (SeqField Annotation) where
     prettyPrint (Comma events) = "{" ++ (intercalate ", " (map prettyPrint events)) ++ "}"
     prettyPrint (Bar events) = (intercalate " | " (map prettyPrint events))
     prettyPrint (Star events) = "{" ++ (intercalate ", " (map prettyPrint events)) ++ "}" ++ "*"
-    prettyPrint (Neg event) = "(not" ++ prettyPrint event ++ ")"
+    prettyPrint (Neg event) = "(not " ++ prettyPrint event ++ ")"
 
 instance PrettyPrint ([(SeqField Annotation)] ) where
     prettyPrint seqs = "[ " ++ (intercalate " -> " (map prettyPrint seqs)) ++ " ]"
