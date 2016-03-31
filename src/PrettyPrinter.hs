@@ -22,6 +22,94 @@ class PrettyPrint a where
 pretty :: (PrettyPrint a) => a -> String
 pretty program = prettyPrint program
 
+generateSQL :: (Program Annotation) -> String
+generateSQL program@(Program header docs usefilelist groups filt comps) =
+    do
+        -- show filt
+        let query = generateQuery filt
+        let display = generateDisplay comps
+        generateScaffoldingJS query display
+
+-- TODO: make this more meaningful using comps
+generateDisplay :: [Computation Annotation] -> String
+generateDisplay comps =
+    do
+        let forloop = "\tfor (var i = 0; i < rows.length; i++) {\n\
+                \\t\tvar Patient = {\n\
+                \\t\t    id: rows[i].PatientSerNum,\n\
+                \\t\t    dob: rows[i].DateOfBirth,\n\
+                \\t\t    sex: rows[i].Sex,\n\
+                \\t\t    postalcode: rows[i].PostalCode\n\
+                \\t\t}\n\
+                \\t\tprocess.stdout.write('Patient : ');\n\
+                \\t\tconsole.log(Patient);\n\
+            \\t}\n"
+        forloop
+
+generateQuery :: [Filter Annotation] -> String
+generateQuery filters =
+    do
+        let filterFields = concatMap (\(Filter _ fielddefs) -> fielddefs) filters
+        let filterFieldsWithoutWildcard = filter (\(FieldDef _ [fieldval]) -> if fieldval
+                == GroupWildcard then False else True) filterFields
+        -- TODO: replace Patient with filtername
+        "select * from " ++ "Patient" ++ ""
+
+        -- TODO: once field mapping works in config
+        -- " where " ++ (generateWhereClauses filterFieldsWithoutWildcard)
+
+generateWhereClauses :: [FieldDef Annotation] -> String
+generateWhereClauses fielddefs =
+    do
+        foldl (\acc (FieldDef fname fvals) -> acc ++ (fname) ++ " in (" ++
+            -- TODO: handle multiple by having AND in between
+            (generateFieldValsForWhere fvals) ++ ") ") "" fielddefs
+
+generateFieldValsForWhere :: [FieldVal Annotation] -> String
+generateFieldValsForWhere fvals =
+    do
+        let expanded = foldl (\acc fval -> case fval of
+            -- TODO: Handle multiple for both of these by having commas
+                GroupValString str _ -> acc ++ "'" ++ str ++ "'"
+                GroupRange (SingleInt i _) -> acc ++ (show i)
+                ) "" fvals
+        expanded
+
+
+generateScaffoldingJS :: String -> String -> String
+generateScaffoldingJS dbQuery dbDisplayFunction =
+    do
+        let mysqlReq = "var mysql = require('mysql');\n"
+        let config = "var db = mysql.createConnection({\n\
+                \\thost: 'localhost',\n\
+                \\tuser: '520student',\n\
+                \\tpassword: 'comp520',\n\
+                \\tdatabase: 'oncodb',\n\
+                \\tport: 33306\n\
+            \});\n"
+        let dbConnect = "db.connect(function(err) {\n\
+                \\tif (err) console.log(err);\n\
+                \\telse {\n"
+        let dbQueryLeft = "\t\tdb.query('"
+        let dbQueryRight = "', function(err, rows, fields) {\n\
+                \\t\t\tif (err) throw err;\n"
+        let dbDisplay = "\t\t\tconsole.log(display(rows));\n\
+            \\t\t});\n\
+            \\t}\n"
+
+        let dbEnd = "\tdb.end();\n\
+            \});\n\n"
+
+        let dbDisplayFunctionStart = "function display(rows) {\n"
+
+        let dbDisplayFunctionEnd = "\n}\n"
+
+        mysqlReq ++ config ++ dbConnect ++ dbQueryLeft ++ dbQuery ++
+            dbQueryRight ++ dbDisplay ++ dbEnd ++ dbDisplayFunctionStart ++
+            dbDisplayFunction ++ dbDisplayFunctionEnd
+
+
+
 printTypesGroups :: [(GroupDefs Annotation)] -> String
 printTypesGroups groups =
     do

@@ -1,0 +1,15 @@
+script DBTest()
+
+/*
+Simple test to get all patients from database and print each patient
+*/
+
+// ---- Filters ----
+population is
+    id: 1
+// ---- Computations ----
+{
+    foreach Patient p {
+        print p
+    }
+}
