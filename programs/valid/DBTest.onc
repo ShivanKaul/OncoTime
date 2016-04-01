@@ -6,7 +6,10 @@ Simple test to get all patients from database and print each patient
 
 // ---- Filters ----
 population is
-    id: 999
+    id: 1 to 999
+    id : 1
+    id : before 5
+    birthyear : 1959
 // ---- Computations ----
 {
     foreach Patient p {

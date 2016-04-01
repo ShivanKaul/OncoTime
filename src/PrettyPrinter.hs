@@ -67,18 +67,22 @@ generateQuery filters (DBConfig dbconfmap) =
 generateWhereClauses :: [FieldDef Annotation] -> String
 generateWhereClauses fielddefs =
     do
-        let whereQ = foldl (\acc (FieldDef fname fvals) -> acc ++ (fname) ++ " in (" ++
-                (generateFieldValsForWhere fvals) ++ ") AND ") "" fielddefs
+        let whereQ = foldl (\acc (FieldDef fname fvals) -> acc ++
+                (generateFieldValsForWhere fvals fname) ++ " AND ") "" fielddefs
         -- Hack for getting rid of last AND
         T.unpack (T.dropEnd 5 (T.pack whereQ))
 
-generateFieldValsForWhere :: [FieldVal Annotation] -> String
-generateFieldValsForWhere fvals =
+generateFieldValsForWhere :: [FieldVal Annotation] -> String -> String
+generateFieldValsForWhere fvals fname =
     do
         let expanded = foldl (\acc fval -> case fval of
             -- TODO: Handle multiple for both of these by having commas
-                GroupValString str _ -> acc ++ "'" ++ str ++ "'"
-                GroupRange (SingleInt i _) -> acc ++ (show i)
+                GroupValString str _ -> acc ++ fname ++ " = '" ++ str ++ "'"
+                GroupRange (SingleInt i _) -> acc ++ fname ++ " = " ++ (show i) ++ " "
+                GroupRange (Before i _) -> acc ++ fname ++ " < " ++ (show i) ++ " "
+                GroupRange (After i _) -> acc ++ fname ++ " > " ++ (show i) ++ " "
+                GroupRange (Between i1 i2 _) -> acc ++ fname ++ " > " ++ (show i1) ++
+                        " AND " ++ fname ++ " < " ++ (show i2) ++ " "
                 ) "" fvals
         expanded
 
