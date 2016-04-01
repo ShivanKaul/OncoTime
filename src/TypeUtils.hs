@@ -128,12 +128,9 @@ dbConfigParser:: Parser (DBConfig)
 dbConfigParser = lexeme $
     do 
         whiteSpace
-        
         cf <- identifier 
-        
         colon
-        
-        db <- identifier
+        db <- stringLit 
 
         semi
         return $ DBConfig (M.singleton cf db)

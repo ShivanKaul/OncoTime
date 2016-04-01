@@ -50,7 +50,6 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
         conf <- readConfig file
 
 
-        dbConf <- readDBConfig file
 
        --grpFile weeding
         case dupesExist (map (\x -> (Var x (Annotation ""))) (flattenUseFile useList)) of

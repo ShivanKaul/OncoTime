@@ -22,11 +22,11 @@ class PrettyPrint a where
 pretty :: (PrettyPrint a) => a -> String
 pretty program = prettyPrint program
 
-generateSQL :: (Program Annotation) -> String
-generateSQL program@(Program header docs usefilelist groups filt comps) =
+generateSQL :: (Program Annotation)->(DBConfig) -> String
+generateSQL program@(Program header docs usefilelist groups filt comps) dbconf =
     do
         -- show filt
-        let query = generateQuery filt
+        let query = generateQuery filt dbconf
         let display = generateDisplay comps
         generateScaffoldingJS query display
 
@@ -46,8 +46,8 @@ generateDisplay comps =
             \\t}\n"
         forloop
 
-generateQuery :: [Filter Annotation] -> String
-generateQuery filters =
+generateQuery :: [Filter Annotation]->DBConfig-> String
+generateQuery filters (DBConfig dbconfmap) =
     do
         let filterFields = concatMap (\(Filter _ fielddefs) -> fielddefs) filters
         let filterFieldsWithoutWildcard = filter (\(FieldDef _ [fieldval]) -> if fieldval

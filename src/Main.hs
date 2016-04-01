@@ -80,7 +80,8 @@ prettyPrintFile prog file =
 codeGen :: (Program Annotation) -> String -> IO()
 codeGen prog file =
     do
-        writeFile (replaceExtension file ".js") (generateSQL prog)
+        dbConf <- readDBConfig file
+        writeFile (replaceExtension file ".js") (generateSQL prog dbConf)
         putStrLn ("Printed to \n" ++ (replaceExtension file ".js"))
 
 removeWildcardsFilters :: [Filter Annotation] -> [Filter Annotation]
