@@ -53,17 +53,24 @@ generateQuery filters (DBConfig dbconfmap) =
         let filterFieldsWithoutWildcard = filter (\(FieldDef _ [fieldval]) -> if fieldval
                 == GroupWildcard then False else True) filterFields
         -- TODO: replace Patient with filtername
-        "select * from " ++ "Patient" ++ ""
+        let selectQuery = "select * from " ++ "Patient"
+        if (length filterFieldsWithoutWildcard) == 0 then
+            selectQuery
+            -- show filterFieldsWithoutWildcard
+            else do
+            -- TODO: once field mapping works in config
+                    let whereQuery = " where " ++ (generateWhereClauses filterFieldsWithoutWildcard)
+                    selectQuery ++ whereQuery
+                -- show filterFieldsWithoutWildcard
 
-        -- TODO: once field mapping works in config
-        -- " where " ++ (generateWhereClauses filterFieldsWithoutWildcard)
 
 generateWhereClauses :: [FieldDef Annotation] -> String
 generateWhereClauses fielddefs =
     do
-        foldl (\acc (FieldDef fname fvals) -> acc ++ (fname) ++ " in (" ++
-            -- TODO: handle multiple by having AND in between
-            (generateFieldValsForWhere fvals) ++ ") ") "" fielddefs
+        let whereQ = foldl (\acc (FieldDef fname fvals) -> acc ++ (fname) ++ " in (" ++
+                (generateFieldValsForWhere fvals) ++ ") AND ") "" fielddefs
+        -- Hack for getting rid of last AND
+        T.unpack (T.dropEnd 5 (T.pack whereQ))
 
 generateFieldValsForWhere :: [FieldVal Annotation] -> String
 generateFieldValsForWhere fvals =
