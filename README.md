@@ -25,6 +25,9 @@ We can use either the `build.sh` script, or:
 cabal sandbox init
 cabal install --only-dependencies
 cabal build
+
+npm install -g
+ssh -N -p 22 cs520@hig.cs.mcgill.ca -L 33306:localhost:3306
 ```
 
 The flags are supported and can be used thusly:

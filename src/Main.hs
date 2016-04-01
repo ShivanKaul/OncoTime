@@ -77,6 +77,12 @@ prettyPrintFile prog file =
         writeFile (replaceExtension file ".pretty.onc") (pretty prog)
         putStrLn "VALID\n"
 
+codeGen :: (Program Annotation) -> String -> IO()
+codeGen prog file =
+    do
+        writeFile (replaceExtension file ".js") (generateSQL prog)
+        putStrLn ("Printed to \n" ++ (replaceExtension file ".js"))
+
 removeWildcardsFilters :: [Filter Annotation] -> [Filter Annotation]
 removeWildcardsFilters filters =
     do
@@ -161,6 +167,7 @@ main =
 
         weededProg <- weed filename symTabFun parsed pos
         prettyPrintFile parsed filename
+        codeGen weededProg filename
         if "-pptype" `elem` flags then
             prettyPrintTypes weededProg filename
         else
