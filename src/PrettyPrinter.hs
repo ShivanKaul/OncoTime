@@ -9,6 +9,7 @@ import Data.List
 import Parser
 import qualified Data.Text as T
 import Text.Parsec.String
+import Text.Regex
 
 
 class PrettyPrint a where
@@ -50,39 +51,41 @@ generateQuery :: [Filter Annotation]->DBConfig-> String
 generateQuery filters (DBConfig dbconfmap) =
     do
         let filterFields = concatMap (\(Filter _ fielddefs) -> fielddefs) filters
-        let filterFieldsWithoutWildcard = filter (\(FieldDef _ [fieldval]) -> if fieldval
-                == GroupWildcard then False else True) filterFields
+        let filterFieldsWithoutWildcard = filter (\(FieldDef _ fieldvals) -> case fieldvals of
+                [fval] -> if fval == GroupWildcard then False else True
+                _ -> True) filterFields
         -- TODO: replace Patient with filtername
         let selectQuery = "select * from " ++ "Patient"
         if (length filterFieldsWithoutWildcard) == 0 then
             selectQuery
-            -- show filterFieldsWithoutWildcard
+
             else do
             -- TODO: once field mapping works in config
                     let whereQuery = " where " ++ (generateWhereClauses filterFieldsWithoutWildcard)
-                    selectQuery ++ whereQuery
-                -- show filterFieldsWithoutWildcard
+                    -- regex to replace all AND AND by AND
+                    let regexedWhere = subRegex (mkRegex " AND  AND ") whereQuery " AND "
+            -- Hack for getting rid of last AND
+                    selectQuery ++ (T.unpack (T.dropEnd 5 (T.pack regexedWhere)))
 
 
 generateWhereClauses :: [FieldDef Annotation] -> String
 generateWhereClauses fielddefs =
     do
-        let whereQ = foldl (\acc (FieldDef fname fvals) -> acc ++
+        foldl (\acc (FieldDef fname fvals) -> acc ++
                 (generateFieldValsForWhere fvals fname) ++ " AND ") "" fielddefs
-        -- Hack for getting rid of last AND
-        T.unpack (T.dropEnd 5 (T.pack whereQ))
+
 
 generateFieldValsForWhere :: [FieldVal Annotation] -> String -> String
 generateFieldValsForWhere fvals fname =
     do
         let expanded = foldl (\acc fval -> case fval of
             -- TODO: Handle multiple for both of these by having commas
-                GroupValString str _ -> acc ++ fname ++ " = '" ++ str ++ "'"
-                GroupRange (SingleInt i _) -> acc ++ fname ++ " = " ++ (show i) ++ " "
-                GroupRange (Before i _) -> acc ++ fname ++ " < " ++ (show i) ++ " "
-                GroupRange (After i _) -> acc ++ fname ++ " > " ++ (show i) ++ " "
+                GroupValString str _ -> acc ++ fname ++ " = '" ++ str ++ "' AND "
+                GroupRange (SingleInt i _) -> acc ++ fname ++ " = " ++ (show i) ++ " AND "
+                GroupRange (Before i _) -> acc ++ fname ++ " < " ++ (show i) ++ " AND "
+                GroupRange (After i _) -> acc ++ fname ++ " > " ++ (show i) ++ " AND "
                 GroupRange (Between i1 i2 _) -> acc ++ fname ++ " > " ++ (show i1) ++
-                        " AND " ++ fname ++ " < " ++ (show i2) ++ " "
+                        " AND " ++ fname ++ " < " ++ (show i2) ++ " AND "
                 ) "" fvals
         expanded
 
