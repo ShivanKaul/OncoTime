@@ -11,7 +11,7 @@ import qualified Data.Text as T
 import qualified Data.Map as M
 import Text.Parsec.String
 import Text.Regex
-
+import Debug.Trace
 
 class PrettyPrint a where
     prettyPrint :: a -> String
@@ -29,7 +29,12 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf =
     do
         -- show filt
         --let query = generateQuery filt dbconf
-        let query = (intercalate "\n" (generateQueries filt dbconf))
+        
+        let query = generateQueries filt dbconf
+        --let query = (intercalate " \n " (generateQueries filt dbconf))
+        --let query = concat $ generateQueries filt dbconf
+        --let query2 = generateQueries filt dbconf
+        trace ("calling generateQueries with filt and dbconf" ++ show query) (generateQueries filt dbconf)
         let display = generateDisplay comps
         generateScaffoldingJS query display
 
@@ -76,7 +81,9 @@ generateQueries filterList (DBConfig dbconfmap) =
                     selectQuery ++ (T.unpack (T.dropEnd 5 (T.pack regexedWhere)))
                 ) filterList
 
+        
         return queryList
+        --concat queryList
 
 
 generateQuery :: [Filter Annotation]->DBConfig-> String
@@ -120,8 +127,8 @@ generateFieldValsForWhere fvals fname =
         expanded
 
 
-generateScaffoldingJS :: String -> String -> String
-generateScaffoldingJS dbQuery dbDisplayFunction =
+generateScaffoldingJS :: [String] -> String -> String
+generateScaffoldingJS dbQueryList dbDisplayFunction =
     do
         let mysqlReq = "var mysql = require('mysql');\n"
         let config = "var db = mysql.createConnection({\n\
@@ -148,9 +155,12 @@ generateScaffoldingJS dbQuery dbDisplayFunction =
 
         let dbDisplayFunctionEnd = "\n}\n"
 
-        mysqlReq ++ config ++ dbConnect ++ dbQueryLeft ++ dbQuery ++
-            dbQueryRight ++ dbDisplay ++ dbEnd ++ dbDisplayFunctionStart ++
-            dbDisplayFunction ++ dbDisplayFunctionEnd
+        let formatQueryList = map (\x -> dbQueryLeft ++ x ++ dbQueryRight ++ dbDisplay ++ "\n") dbQueryList
+
+        --mysqlReq ++ config ++ dbConnect ++ dbQueryLeft ++ dbQuery ++
+          --  dbQueryRight ++ dbDisplay ++ dbEnd ++ dbDisplayFunctionStart ++
+            --dbDisplayFunction ++ dbDisplayFunctionEnd
+        mysqlReq ++ config ++ dbConnect ++ (concat formatQueryList) ++dbEnd ++ dbDisplayFunctionStart ++ dbDisplayFunction ++ dbDisplayFunctionEnd
 
 
 
