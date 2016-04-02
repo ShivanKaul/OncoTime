@@ -1,3 +1,5 @@
+programs/valid/*.js
+npm_modules
 *.pretty.onc
 *.symtab
 *.pptype.onc

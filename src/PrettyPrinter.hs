@@ -9,6 +9,7 @@ import Data.List
 import Parser
 import qualified Data.Text as T
 import Text.Parsec.String
+import Text.Regex
 
 
 class PrettyPrint a where
@@ -50,28 +51,41 @@ generateQuery :: [Filter Annotation]->DBConfig-> String
 generateQuery filters (DBConfig dbconfmap) =
     do
         let filterFields = concatMap (\(Filter _ fielddefs) -> fielddefs) filters
-        let filterFieldsWithoutWildcard = filter (\(FieldDef _ [fieldval]) -> if fieldval
-                == GroupWildcard then False else True) filterFields
+        let filterFieldsWithoutWildcard = filter (\(FieldDef _ fieldvals) -> case fieldvals of
+                [fval] -> if fval == GroupWildcard then False else True
+                _ -> True) filterFields
         -- TODO: replace Patient with filtername
-        "select * from " ++ "Patient" ++ ""
+        let selectQuery = "select * from " ++ "Patient"
+        if (length filterFieldsWithoutWildcard) == 0 then
+            selectQuery
 
-        -- TODO: once field mapping works in config
-        -- " where " ++ (generateWhereClauses filterFieldsWithoutWildcard)
+            else do
+            -- TODO: once field mapping works in config
+                    let whereQuery = " where " ++ (generateWhereClauses filterFieldsWithoutWildcard)
+                    -- regex to replace all AND AND by AND
+                    let regexedWhere = subRegex (mkRegex " AND  AND ") whereQuery " AND "
+            -- Hack for getting rid of last AND
+                    selectQuery ++ (T.unpack (T.dropEnd 5 (T.pack regexedWhere)))
+
 
 generateWhereClauses :: [FieldDef Annotation] -> String
 generateWhereClauses fielddefs =
     do
-        foldl (\acc (FieldDef fname fvals) -> acc ++ (fname) ++ " in (" ++
-            -- TODO: handle multiple by having AND in between
-            (generateFieldValsForWhere fvals) ++ ") ") "" fielddefs
+        foldl (\acc (FieldDef fname fvals) -> acc ++
+                (generateFieldValsForWhere fvals fname) ++ " AND ") "" fielddefs
 
-generateFieldValsForWhere :: [FieldVal Annotation] -> String
-generateFieldValsForWhere fvals =
+
+generateFieldValsForWhere :: [FieldVal Annotation] -> String -> String
+generateFieldValsForWhere fvals fname =
     do
         let expanded = foldl (\acc fval -> case fval of
             -- TODO: Handle multiple for both of these by having commas
-                GroupValString str _ -> acc ++ "'" ++ str ++ "'"
-                GroupRange (SingleInt i _) -> acc ++ (show i)
+                GroupValString str _ -> acc ++ fname ++ " = '" ++ str ++ "' AND "
+                GroupRange (SingleInt i _) -> acc ++ fname ++ " = " ++ (show i) ++ " AND "
+                GroupRange (Before i _) -> acc ++ fname ++ " < " ++ (show i) ++ " AND "
+                GroupRange (After i _) -> acc ++ fname ++ " > " ++ (show i) ++ " AND "
+                GroupRange (Between i1 i2 _) -> acc ++ fname ++ " > " ++ (show i1) ++
+                        " AND " ++ fname ++ " < " ++ (show i2) ++ " AND "
                 ) "" fvals
         expanded
 
