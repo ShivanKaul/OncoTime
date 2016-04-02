@@ -9,7 +9,7 @@ var db = mysql.createConnection({
 db.connect(function(err) {
 	if (err) console.log(err);
 	else {
-		db.query('select * from Patient', function(err, rows, fields) {
+		db.query('select * from Patient where birthyear > 1986 AND birthyear < 1996 AND diagnosis = 'prostate' AND sex = 'm'', function(err, rows, fields) {
 			if (err) throw err;
 			console.log(display(rows));
 		});

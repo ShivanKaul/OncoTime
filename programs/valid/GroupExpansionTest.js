@@ -9,7 +9,7 @@ var db = mysql.createConnection({
 db.connect(function(err) {
 	if (err) console.log(err);
 	else {
-		db.query('select * from Patient', function(err, rows, fields) {
+		db.query('select * from Patient where id > 10 AND id < 1000', function(err, rows, fields) {
 			if (err) throw err;
 			console.log(display(rows));
 		});

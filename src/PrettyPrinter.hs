@@ -8,6 +8,7 @@ import Lexer
 import Data.List
 import Parser
 import qualified Data.Text as T
+import qualified Data.Map as M
 import Text.Parsec.String
 import Text.Regex
 
@@ -27,7 +28,8 @@ generateSQL :: (Program Annotation)->(DBConfig) -> String
 generateSQL program@(Program header docs usefilelist groups filt comps) dbconf =
     do
         -- show filt
-        let query = generateQuery filt dbconf
+        --let query = generateQuery filt dbconf
+        let query = (intercalate "\n" (generateQueries filt dbconf))
         let display = generateDisplay comps
         generateScaffoldingJS query display
 
@@ -47,6 +49,36 @@ generateDisplay comps =
             \\t}\n"
         forloop
 
+
+generateQueries::[Filter Annotation]->DBConfig->[String]
+generateQueries filterList (DBConfig dbconfmap) =
+    do
+        let queryString = "select * from "
+        --iterate through filter list
+        queryList <- map (\(Filter filtName fdefList) ->
+            do
+                --add the filtername to the query
+                let selectQuery = queryString ++ (dbconfmap M.! filtName)
+                --get list of fields
+                
+                --get list of fields without wieldcard
+                let filterFieldsWithoutWildcard = filter (\(FieldDef _ fieldvals) -> case fieldvals of
+                        [fval] -> if fval == GroupWildcard then False else True
+                        _ -> True) (fdefList)
+               
+                --form the query
+                if (length filterFieldsWithoutWildcard) == 0 then selectQuery
+                else do
+                    let whereQuery = " where " ++ (generateWhereClauses filterFieldsWithoutWildcard)
+                    -- regex to replace all AND AND by AND
+                    let regexedWhere = subRegex (mkRegex " AND  AND ") whereQuery " AND "
+                    -- Hack for getting rid of last AND
+                    selectQuery ++ (T.unpack (T.dropEnd 5 (T.pack regexedWhere)))
+                ) filterList
+
+        return queryList
+
+
 generateQuery :: [Filter Annotation]->DBConfig-> String
 generateQuery filters (DBConfig dbconfmap) =
     do
@@ -56,9 +88,7 @@ generateQuery filters (DBConfig dbconfmap) =
                 _ -> True) filterFields
         -- TODO: replace Patient with filtername
         let selectQuery = "select * from " ++ "Patient"
-        if (length filterFieldsWithoutWildcard) == 0 then
-            selectQuery
-
+        if (length filterFieldsWithoutWildcard) == 0 then selectQuery
             else do
             -- TODO: once field mapping works in config
                     let whereQuery = " where " ++ (generateWhereClauses filterFieldsWithoutWildcard)
