@@ -29,31 +29,32 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
     do
         -- show filt
         --let query = generateQuery filt dbconf
-        
+
         let query = generateQueries filt dbconf
         --let query = (intercalate " \n " (generateQueries filt dbconf))
         --let query = concat $ generateQueries filt dbconf
         --let query2 = generateQueries filt dbconf
         trace ("calling generateQueries with filt and dbconf" ++ show query) (generateQueries filt dbconf)
-        let display = generateDisplay  comps "patients" dbconf weedconf
-        generateScaffoldingJS query display
+        let displayFunction = generateDisplayFunction comps "patients" dbconf weedconf
+        generateScaffoldingJS query displayFunction
+
 
 -- TODO: make this more meaningful using comps
-generateDisplay :: [Computation Annotation] ->String ->DBConfig->(Config Annotation)-> String
-generateDisplay comps loopablename (DBConfig dbconfmap) (Config config) =
-    do 
-        let 
+generateDisplayFunction :: [Computation Annotation] ->String ->DBConfig->(Config Annotation)-> String
+generateDisplayFunction comps loopablename (DBConfig dbconfmap) (Config config) =
+    do
+        let
             forloopbegin = "\tfor (var i = 0; i < rows.length; i++) {\n"
-            (Just (FieldMap fieldmap)) =  M.lookup (loopablename, True) config 
+            (Just (FieldMap fieldmap)) =  M.lookup (loopablename, True) config
             fields = M.keys fieldmap
             dbtablename = (dbconfmap M.! loopablename)
             middlestart = "\t\tvar "++ dbtablename ++" = {\n"
-            c0 = foldl' (\prev currfield -> prev ++ 
-                            if currfield == "diagnosis" 
+            c0 = foldl' (\prev currfield -> prev ++
+                            if currfield == "diagnosis"
                             then ""
-                            else "\t\t    "++currfield++": rows[i]."++(dbconfmap M.! currfield)++",\n") "" fields 
+                            else "\t\t    "++currfield++": rows[i]."++(dbconfmap M.! currfield)++",\n") "" fields
             c1 ="\t\t    id: rows[i].PatientSerNum,\n\
-                \\t\t    dob: rows[i].DateOfBirth,\n\
+            \\t\t    dob: rows[i].DateOfBirth,\n\
                 \\t\t    sex: rows[i].Sex,\n\
                 \\t\t    postalcode: rows[i].PostalCode\n"
             middleend = "\t\t}//How do you like me now?\n"
@@ -73,12 +74,12 @@ generateQueries filterList (DBConfig dbconfmap) =
                 --add the filtername to the query
                 let selectQuery = queryString ++ (dbconfmap M.! filtName)
                 --get list of fields
-                
+
                 --get list of fields without wieldcard
                 let filterFieldsWithoutWildcard = filter (\(FieldDef _ fieldvals) -> case fieldvals of
                         [fval] -> if fval == GroupWildcard then False else True
                         _ -> True) (fdefList)
-               
+
                 --form the query
                 if (length filterFieldsWithoutWildcard) == 0 then selectQuery
                 else do
@@ -89,7 +90,7 @@ generateQueries filterList (DBConfig dbconfmap) =
                     selectQuery ++  (T.unpack (T.dropEnd 5 (T.pack regexedWhere)))
                 ) filterList
 
-        
+
         return queryList
         --concat queryList
 
@@ -117,10 +118,10 @@ generateWhereClauses :: DBConfig->[FieldDef Annotation] -> String
 generateWhereClauses (DBConfig dbconfmap) fielddefs =
     do
 
-        foldl (\acc (FieldDef fname fvals) -> 
-            let 
-                tname = (dbconfmap M.! fname) 
-            in acc ++" (" 
+        foldl (\acc (FieldDef fname fvals) ->
+            let
+                tname = (dbconfmap M.! fname)
+            in acc ++" ("
                 ++  (generateFieldValsForWhere fvals tname) ++ ") AND ") "" fielddefs
 
 
