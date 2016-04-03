@@ -4,31 +4,21 @@ script Benchmarktest()
  */
 
 //use vikramPatientData.grp
-group Sex s = {Male}
+
 population is
-    Id: 1000 to 10000000
-    Sex: <s>
-    Birthyear: 0 to 1990
-    Diagnosis: breast,prostate
-
-//doctors is:
-//    oncologist: 
-//    id: 1300 to 3100
-
+    Id: 1 to 5
 
 {
-    //foreach Doctors d
-    //{
+
         foreach Patient p
         {
-            //foreach Diagnosis dg
-            //{
-              //  print d
                 print p
-                print timeline of p
-                //print dg
-            //}
+                print Id, Birthyear, Diagnosis of p
         }
-        //table t = count patient by Diagnosis
-    //}
 }
+
+//------------------------------------------------
+//Patient (1): Male born in 1943 with postalcode .
+//------------------------------------------------
+//Patient: Id: 1 Birthyear: 1943 Diagnosis: ["Ca colon, unspecified"] 
+
