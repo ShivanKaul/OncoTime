@@ -125,7 +125,7 @@ generateFieldValsForWhere fvals fname =
     do
         let expanded = foldl (\acc fval -> case fval of
             -- TODO: Handle multiple for both of these by having commas
-                GroupValString str _ -> acc ++ fname ++ " = \"" ++ str ++ "\" OR  "
+                GroupValString str _ -> acc ++ fname ++ " like \"" ++ str ++ "_\" OR  "
                 GroupRange (SingleInt i _) -> acc ++ fname ++ " = " ++ (show i) ++ " OR "
                 GroupRange (Before i _) -> acc ++ fname ++ " < " ++ (show i) ++ " OR "
                 GroupRange (After i _) -> acc ++ fname ++ " > " ++ (show i) ++ " OR "
