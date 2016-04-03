@@ -1,0 +1,26 @@
+script Bench1()
+/*
+ *
+ */
+
+//use vikramPatientData.grp
+
+population is
+    Id: 1 to 5
+
+{
+    //table a = count Patient by Id
+    //table b = count Patient by Birthyear
+    table c = count Patient by  Diagnosis
+    //table d = count Patient by Sex
+
+   foreach element i of c
+   {
+   print c[i]
+   }
+}
+//["Ca breast, unspecified"]: 1                        
+//["Ca bladder, unspecified"]: 1                        
+//["Ca colon, unspecified"]: 1                        
+//["Ca bronchus or lung, unspecified"]: 1                        
+//["Carcinoma in situ of breast, unspecified"]: 1  

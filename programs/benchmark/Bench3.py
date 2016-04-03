@@ -622,7 +622,7 @@ def printSequenceItem(sequenceList):
 #
 #
 #
-for p, pval in results.get_type("PATIENT").iteritems():
-	printActor(results, p, "PATIENT", tabCount=1)
-	printActorAttributes(results, p, "PATIENT", ["ID", "BIRTHYEAR", "DIAGNOSIS", ], tabCount=1)
+a = tableDecleration( "PATIENT", "SEX", results)
+for i in a: 
+	printTableItem(a,i)
 	
