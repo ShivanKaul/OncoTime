@@ -27,14 +27,7 @@ pretty program = prettyPrint program
 generateSQL :: (Program Annotation)->(DBConfig) ->(Config Annotation)-> String
 generateSQL program@(Program header docs usefilelist groups filt comps) dbconf weedconf =
     do
-        -- show filt
-        --let query = generateQuery filt dbconf
-
         let query = generateQueries filt dbconf
-        --let query = (intercalate " \n " (generateQueries filt dbconf))
-        --let query = concat $ generateQueries filt dbconf
-        --let query2 = generateQueries filt dbconf
-        trace ("calling generateQueries with filt and dbconf" ++ show query) (generateQueries filt dbconf)
         let displayFunction = generateDisplayFunction comps "patients" dbconf weedconf
         generateScaffoldingJS query displayFunction
 
