@@ -14,6 +14,7 @@ db.connect(function(err) {
 			console.log(display(rows));
 		});
 	}
+
 	db.end();
 });
 

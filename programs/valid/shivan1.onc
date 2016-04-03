@@ -3,7 +3,7 @@ script shivan1()
 
 population is
 	Birthyear: 1990 to 2015
-	Diagnosis: prostate
+	//Diagnosis: prostate
 
 {
 	foreach Patient p 

@@ -24,8 +24,8 @@ class PrettyPrint a where
 pretty :: (PrettyPrint a) => a -> String
 pretty program = prettyPrint program
 
-generateSQL :: (Program Annotation)->(DBConfig) -> String
-generateSQL program@(Program header docs usefilelist groups filt comps) dbconf =
+generateSQL :: (Program Annotation)->(DBConfig) ->(Config Annotation)-> String
+generateSQL program@(Program header docs usefilelist groups filt comps) dbconf weedconf =
     do
         -- show filt
         --let query = generateQuery filt dbconf
@@ -35,24 +35,32 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf =
         --let query = concat $ generateQueries filt dbconf
         --let query2 = generateQueries filt dbconf
         trace ("calling generateQueries with filt and dbconf" ++ show query) (generateQueries filt dbconf)
-        let display = generateDisplay comps
+        let display = generateDisplay  comps "patients" dbconf weedconf
         generateScaffoldingJS query display
 
 -- TODO: make this more meaningful using comps
-generateDisplay :: [Computation Annotation] -> String
-generateDisplay comps =
-    do
-        let forloop = "\tfor (var i = 0; i < rows.length; i++) {\n\
-                \\t\tvar Patient = {\n\
-                \\t\t    id: rows[i].PatientSerNum,\n\
+generateDisplay :: [Computation Annotation] ->String ->DBConfig->(Config Annotation)-> String
+generateDisplay comps loopablename (DBConfig dbconfmap) (Config config) =
+    do 
+        let 
+            forloopbegin = "\tfor (var i = 0; i < rows.length; i++) {\n"
+            (Just (FieldMap fieldmap)) =  M.lookup (loopablename, True) config 
+            fields = M.keys fieldmap
+            dbtablename = (dbconfmap M.! loopablename)
+            middlestart = "\t\tvar "++ dbtablename ++" = {\n"
+            c0 = foldl' (\prev currfield -> prev ++ 
+                            if currfield == "diagnosis" 
+                            then ""
+                            else "\t\t    "++currfield++": rows[i]."++(dbconfmap M.! currfield)++",\n") "" fields 
+            c1 ="\t\t    id: rows[i].PatientSerNum,\n\
                 \\t\t    dob: rows[i].DateOfBirth,\n\
                 \\t\t    sex: rows[i].Sex,\n\
-                \\t\t    postalcode: rows[i].PostalCode\n\
-                \\t\t}\n\
-                \\t\tprocess.stdout.write('Patient : ');\n\
-                \\t\tconsole.log(Patient);\n\
+                \\t\t    postalcode: rows[i].PostalCode\n"
+            middleend = "\t\t}//How do you like me now?\n"
+            forloopEnd ="\t\tprocess.stdout.write('"++dbtablename++" : ');\n\
+                \\t\tconsole.log("++dbtablename++");\n\
             \\t}\n"
-        forloop
+        forloopbegin++middlestart++c0++middleend++forloopEnd
 
 
 generateQueries::[Filter Annotation]->DBConfig->[String]
@@ -76,9 +84,9 @@ generateQueries filterList (DBConfig dbconfmap) =
                 else do
                     let whereQuery = " where " ++ (generateWhereClauses filterFieldsWithoutWildcard)
                     -- regex to replace all AND AND by AND
-                    let regexedWhere = subRegex (mkRegex " AND  AND ") whereQuery " AND "
+                    let regexedWhere = subRegex (mkRegex " OR[ ]+AND ") whereQuery " AND "
                     -- Hack for getting rid of last AND
-                    selectQuery ++ (T.unpack (T.dropEnd 5 (T.pack regexedWhere)))
+                    selectQuery ++  (T.unpack (T.dropEnd 5 (T.pack regexedWhere)))
                 ) filterList
 
         
@@ -117,12 +125,12 @@ generateFieldValsForWhere fvals fname =
     do
         let expanded = foldl (\acc fval -> case fval of
             -- TODO: Handle multiple for both of these by having commas
-                GroupValString str _ -> acc ++ fname ++ " = '" ++ str ++ "' AND "
-                GroupRange (SingleInt i _) -> acc ++ fname ++ " = " ++ (show i) ++ " AND "
-                GroupRange (Before i _) -> acc ++ fname ++ " < " ++ (show i) ++ " AND "
-                GroupRange (After i _) -> acc ++ fname ++ " > " ++ (show i) ++ " AND "
+                GroupValString str _ -> acc ++ fname ++ " = \"" ++ str ++ "\" OR  "
+                GroupRange (SingleInt i _) -> acc ++ fname ++ " = " ++ (show i) ++ " OR "
+                GroupRange (Before i _) -> acc ++ fname ++ " < " ++ (show i) ++ " OR "
+                GroupRange (After i _) -> acc ++ fname ++ " > " ++ (show i) ++ " OR "
                 GroupRange (Between i1 i2 _) -> acc ++ fname ++ " > " ++ (show i1) ++
-                        " AND " ++ fname ++ " < " ++ (show i2) ++ " AND "
+                        " AND " ++ fname ++ " < " ++ (show i2) ++ " OR "
                 ) "" fvals
         expanded
 
@@ -161,8 +169,6 @@ generateScaffoldingJS dbQueryList dbDisplayFunction =
           --  dbQueryRight ++ dbDisplay ++ dbEnd ++ dbDisplayFunctionStart ++
             --dbDisplayFunction ++ dbDisplayFunctionEnd
         mysqlReq ++ config ++ dbConnect ++ (concat formatQueryList) ++dbEnd ++ dbDisplayFunctionStart ++ dbDisplayFunction ++ dbDisplayFunctionEnd
-
-
 
 printTypesGroups :: [(GroupDefs Annotation)] -> String
 printTypesGroups groups =

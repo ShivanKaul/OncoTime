@@ -19,6 +19,8 @@ population is
    print a[i]
    }
 }
-
+//a = tableDecleration( "PATIENT", "SEX", results)
+//for i in a: 
+//	printTableItem(a,i)
 //Male                     : 3                        
 //Female                   : 2
