@@ -14,7 +14,7 @@ import Text.Regex
 import Debug.Trace
 
 
-generateSQL :: (Program Annotation)->(DBConfig) ->(Config Annotation)-> String
+generateSQL :: (Program Annotation)->DBConfig ->(Config Annotation)-> String
 generateSQL program@(Program header docs usefilelist groups filt comps) dbconf weedconf =
     do
         let diagnosis = (checkIfDiagnosis filt)
@@ -34,43 +34,54 @@ generateDisplayFunction comps dbconf conf diag =
         let compCodeList = intercalate "\n" (map (genCompCode dbconf conf diag) comps)
         compCodeList
 
+getNameInDatabase :: DBConfig -> String -> String
+getNameInDatabase (DBConfig dbconf) name = 
+    case M.lookup name dbconf of
+        Just a -> a
+        Nothing -> error $ name ++ " is not a valid name in " ++ show dbconf
+
 
 genCompCode::DBConfig->Config Annotation->Maybe [String] ->Computation Annotation ->String
 genCompCode  dbconf conf diag (Foreach forDef compList _) = (forEachGen forDef dbconf conf diag (generateDisplayFunction compList dbconf conf diag))
 genCompCode dbconf conf diag (Table v filtName fieldName) = ""  --left axis is index, right is value name, and then value
 genCompCode dbconf conf _ (List v seqLsit) = ""
-genCompCode dbconf conf _ (Print paction) = printGen paction dbconf
+genCompCode dbconf conf _ (Print paction) = printGen paction dbconf conf
 genCompCode dbconf conf _ (Barchart v) =  " // This is a cool barchart. We will use d3"
 
-printGen::PrintAction Annotation->DBConfig->String
-printGen (PrintVar (Var val (Annotation an))) (DBConfig dbconfmap) = 
-    let dbName = (dbconfmap M.! an) in
-        "\t console.log(" ++ dbName ++ ");"
-
-printGen (PrintTimeLine v) dbconf = "//Really cool timeline would go here"
-printGen (PrintFilters fnList v) (DBConfig dbconf) = 
+printGen::PrintAction Annotation->DBConfig -> Config Annotation->String
+printGen (PrintVar (Var val (Annotation an))) dbconfmap (Config conf) = 
+    let 
+        isLoopable = (M.member (an,True) (conf) )
+        dbName = if isLoopable 
+            then (dbconfmap `getNameInDatabase` an)
+            else "'"++an ++ " hasn't been implemented yet, sorry!'"
+    in "\t console.log(" ++ dbName ++ ");"
+    
+printGen(PrintLength var) dbconf  _= "//tables not yet implemented sorry!"
+printGen (PrintTimeLine v) dbconf  _= "//Really cool timeline would go here"
+printGen (PrintFilters fnList v) ( dbconf) _= 
     do
         "\t console.log(" ++ (intercalate ", " (map (\fname-> 
             do
-                let dbName = (dbconf M.! fname)
+                let dbName = (dbconf `getNameInDatabase` fname)
                 fname ++ ": " ++ "rows[" ++ "i_"++dbName++ "]." ++ dbName ) fnList)) ++ ");"  --Take a list of filters, and print the 
-printGen (PrintElement (Var v1 (Annotation an)) v2) (DBConfig dbconf) = 
+printGen (PrintElement (Var v1 (Annotation an)) v2) ( dbconf) _ = 
     do
-        let dbName = (dbconf M.! an)
+        let dbName = (dbconf `getNameInDatabase` an)
         "\t console.log(\"" ++ an ++ "\": " ++ "rows[" ++ "i_"++dbName++ "]." ++ dbName  ++ ");" 
 
 forEachGen::ForEachDef Annotation->DBConfig->Config Annotation->Maybe [String] ->String->String
-forEachGen (ForEachFilter fname (Var v an)) (DBConfig dbconfmap) (Config config)  diag stmts  =
+forEachGen (ForEachFilter fname (Var v an)) ( dbconfmap) (Config config)  diag stmts  =
     do
-        let index_name = "i_" ++ (dbconfmap M.! fname)
+        let index_name = "i_" ++ (dbconfmap `getNameInDatabase` fname)
         let loopablename = fname
         let 
             forloopbegin = "\tfor (var "++index_name++" = 0; "++index_name ++ "  < rows.length; "++index_name++") {\n"
             (Just (FieldMap fieldmap)) =  M.lookup (loopablename, True) config
             fields = M.keys fieldmap
             tableHeaders = case diag of
-                Nothing -> (delete "Diagnosis" (nub (map (\x -> dbconfmap M.! x) fields)))
-                _ -> (nub (map (\x -> dbconfmap M.! x) fields))
+                Nothing -> (delete "Diagnosis" (nub (map (\x -> dbconfmap `getNameInDatabase` x) fields)))
+                _ -> (nub (map (\x -> dbconfmap `getNameInDatabase` x) fields))
 
             tableLeft = "\tvar table = new Table({\n\
                         \\t\thead: "
@@ -78,7 +89,7 @@ forEachGen (ForEachFilter fname (Var v an)) (DBConfig dbconfmap) (Config config)
                     \\t});\n"
 
             tableInit = tableLeft ++ (show tableHeaders) ++ tableRight
-            dbtablename = (dbconfmap M.! loopablename)
+            dbtablename = (dbconfmap `getNameInDatabase` loopablename)
             middlestart = "\t\tvar "++ dbtablename ++" = {\n"
             c0 = foldl' (\prev currfield -> prev ++
                             "\t\t    "++
@@ -112,7 +123,7 @@ checkIfDiagnosis filters =
 
 
 generateQueries::[Filter Annotation]->DBConfig-> Maybe [String] -> [String]
-generateQueries filterList (DBConfig dbconfmap) diag =
+generateQueries filterList ( dbconfmap) diag =
     do
         let columns = case diag of
                 Nothing -> "*"
@@ -121,49 +132,51 @@ generateQueries filterList (DBConfig dbconfmap) diag =
         --iterate through filter list
         queryList <- map (\(Filter filtName fdefList) ->
             do
-                --add the filtername to the query
-                let fromQuery = case diag of
-                        Nothing -> (dbconfmap M.! filtName)
-                        _ -> (dbconfmap M.! filtName) ++ ", Diagnosis"
-                let joinClause = case diag of
-                        Nothing -> ""
-                        Just diagnoses -> generateWhereClauseForDiag diagnoses (DBConfig dbconfmap)
-                let selectQuery = queryString ++ fromQuery
-                --get list of fields
+                if filtName /= "population" 
+                    then "/*"++filtName++" filtering hasn't been implemented yet, sorry! */"
+                    else do
+                        let fromQuery = case diag of
+                                Nothing -> (dbconfmap `getNameInDatabase` filtName)
+                                _ -> (dbconfmap `getNameInDatabase` filtName) ++ ", Diagnosis"
+                        let joinClause = case diag of
+                                Nothing -> ""
+                                Just diagnoses -> generateWhereClauseForDiag diagnoses ( dbconfmap)
+                        let selectQuery = queryString ++ fromQuery
+                        --get list of fields
 
-                --get list of fields without wildcard
-                let filterFieldsWithoutWildcard = filter (\(FieldDef fname fieldvals) -> case fieldvals of
-                        [fval] -> fval /= GroupWildcard
-                        _ -> fname /= "diagnosis") (fdefList)
+                        --get list of fields without wildcard
+                        let filterFieldsWithoutWildcard = filter (\(FieldDef fname fieldvals) -> case fieldvals of
+                                [fval] -> fval /= GroupWildcard
+                                _ -> fname /= "diagnosis") (fdefList)
 
-                --form the query
-                if (length filterFieldsWithoutWildcard) == 0 then selectQuery
-                else do
-                    let whereQuery = " where " ++ joinClause ++
-                            (generateWhereClauses (DBConfig dbconfmap) filterFieldsWithoutWildcard filtName)
-                    -- regex to replace all AND AND by AND
-                    let regexedWhere = subRegex (mkRegex " OR[ )]+AND ") whereQuery ") AND "
-                    -- Hack for getting rid of last AND
-                    selectQuery ++  (T.unpack (T.dropEnd 5 (T.pack regexedWhere)))
+                        --form the query
+                        if (length filterFieldsWithoutWildcard) == 0 then selectQuery
+                        else do
+                            let whereQuery = " where " ++ joinClause ++
+                                    (generateWhereClauses ( dbconfmap) filterFieldsWithoutWildcard filtName)
+                            -- regex to replace all AND AND by AND
+                            let regexedWhere = subRegex (mkRegex " OR[ )]+AND ") whereQuery ") AND "
+                            -- Hack for getting rid of last AND
+                            selectQuery ++  (T.unpack (T.dropEnd 5 (T.pack regexedWhere)))
                 ) filterList
         return queryList
 
 generateWhereClauseForDiag :: [String] -> DBConfig -> String
-generateWhereClauseForDiag diagnoses (DBConfig dbconfmap) =
+generateWhereClauseForDiag diagnoses ( dbconfmap) =
     do
         let prefixDiags = "(Patient.PatientSerNum = Diagnosis.PatientSerNum) AND ("
         let whereDiags = map (\diagnosis -> "Diagnosis.DiagnosisCode like " ++
-                "\"" ++ (dbconfmap M.! diagnosis) ++ "%\"") diagnoses
+                "\"" ++ (dbconfmap `getNameInDatabase` diagnosis) ++ "%\"") diagnoses
         prefixDiags ++ (intercalate " OR " whereDiags) ++ ") AND "
 
 
 generateWhereClauses :: DBConfig->[FieldDef Annotation] -> String -> String
-generateWhereClauses (DBConfig dbconfmap) fielddefs filtername =
+generateWhereClauses ( dbconfmap) fielddefs filtername =
     do
 
         foldl (\acc (FieldDef fname fvals) ->
             let
-                tname = (dbconfmap M.! filtername) ++ "." ++ (dbconfmap M.! fname)
+                tname = (dbconfmap `getNameInDatabase` filtername) ++ "." ++ (dbconfmap `getNameInDatabase` fname)
             in acc ++" ("
                 ++  (generateFieldValsForWhere fvals tname) ++ ") AND ") "" fielddefs
 
