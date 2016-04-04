@@ -56,7 +56,7 @@ genCompCode dbconf conf (Barchart v) =  " // This is a cool barchart. We will us
 printGen::PrintAction Annotation->DBConfig->String
 printGen (PrintVar (Var val (Annotation an))) (DBConfig dbconfmap) = 
     let dbName = (dbconfmap M.! an) in
-        "\t console.log(" ++ "rows.[i_" ++ dbName ++ "]." ++ dbName ++ "]" ++ ");"
+        "\t console.log(" ++ "rows.[i_" ++ dbName ++ "]." ++ dbName ++ ");"
 
 printGen (PrintTimeLine v) dbconf = "//Really cool timeline would go here"
 printGen (PrintFilters fnList v) (DBConfig dbconf) = 
@@ -195,14 +195,14 @@ printTypesGroups :: [(GroupDefs Annotation)] -> String
 printTypesGroups groups =
     do
         let groupListString = map (\(Group (GroupType t) (Var v _ ) _) ->
-                                ("// Group " ++ v ++ ": " ++ t ++ "\n")) groups
+                                ("// Group " ++ v ++ " : " ++ t ++ "\n")) groups
         (intercalate "\n" groupListString)
 
 printTypesHeader :: (Header Annotation) -> String
 printTypesHeader (Header name args) =
     do
         let argsListString = map (\(Arg (GroupType t) (Var v _ )) ->
-                                ("// Header param " ++ v ++ ": " ++ t ++ "\n")) args
+                                ("// Header param " ++ v ++ " : " ++ t ++ "\n")) args
         (intercalate "\n" argsListString)
 
 printTypesFilters :: [(Filter Annotation)] -> String
@@ -279,8 +279,8 @@ instance PrettyPrint IntValue where
     prettyPrint i = show i
 
 instance PrettyPrint (RangeType Annotation) where
-    prettyPrint (Before i a) = "before " ++ prettyPrint i
-    prettyPrint (After i a) = "after " ++ prettyPrint i
+    prettyPrint (Before i a) = "Before " ++ prettyPrint i
+    prettyPrint (After i a) = "After " ++ prettyPrint i
     prettyPrint (Between i j a) = prettyPrint i ++ " to " ++ prettyPrint j
     prettyPrint (SingleInt g a) = prettyPrint g
 
@@ -295,7 +295,7 @@ instance PrettyPrint FieldName where
     prettyPrint (ffield) = ffield
 
 instance PrettyPrint (FieldDef Annotation) where
-    prettyPrint (FieldDef ffield fvals) = "\t" ++ prettyPrint ffield ++ ": " ++ (intercalate ", " (map prettyPrint fvals))
+    prettyPrint (FieldDef ffield fvals) = "\t" ++ prettyPrint ffield ++ " : " ++ (intercalate ", " (map prettyPrint fvals))
 
 instance PrettyPrint (Filter Annotation) where
     prettyPrint (Filter fname fdefs) = fname ++ " is" ++ "\n" ++
@@ -309,7 +309,7 @@ instance PrettyPrint (Docs) where
 
 instance PrettyPrint (Var Annotation) where
     prettyPrint (Var v a) = v
-    prettyAnnotated  (Var v (Annotation a))= "TYPE ("++v++": "++a ++")"
+    prettyAnnotated  (Var v (Annotation a))= "TYPE ("++v++" : "++a ++")"
 
 instance PrettyPrint  ( Parser(Var Annotation)) where
     prettyAnnotated  _ = ""
@@ -348,5 +348,5 @@ instance PrettyPrint (TestProgram Annotation) where
     -- prettyPrint (TestHeader header) = prettyPrint header
 instance PrettyPrint (ComputationType) where
     -- prettyPrint (TestProgram2 header docs [usefiles] [groups] [filt] [comps]) = (prettyPrint header) ++ (prettyPrint docs) ++ (prettyPrint usefiles)
-    prettyPrint (TFilter s) = "Single "++ s
+    prettyPrint (TFilter s) = s
     prettyPrint (t) = tail $ show t
