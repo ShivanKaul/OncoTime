@@ -9,24 +9,16 @@ var db = mysql.createConnection({
 db.connect(function(err) {
 	if (err) console.log(err);
 	else {
-		db.query('select * from Patient where sex = 'm' AND sex = 'f' AND birthyear > 1950 AND birthyear < 1970 AND id > 1 AND id < 250 AND id > 300 AND id < 400 AND id = 1001', function(err, rows, fields) {
+		db.query('select * from Patient where  (Sex like "m%" OR  Sex like "f%") AND  (DateOfBirth > 1950 AND DateOfBirth < 1970 AND ) AND  (DoctorSerNum > 1 AND DoctorSerNum < 250 AND DoctorSerNum > 300 AND DoctorSerNum < 400 AND DoctorSerNum = 1001)', function(err, rows, fields) {
 			if (err) throw err;
 			console.log(display(rows));
 		});
 	}
+
 	db.end();
 });
 
 function display(rows) {
-	for (var i = 0; i < rows.length; i++) {
-		var Patient = {
-		    id: rows[i].PatientSerNum,
-		    dob: rows[i].DateOfBirth,
-		    sex: rows[i].Sex,
-		    postalcode: rows[i].PostalCode
-		}
-		process.stdout.write('Patient : ');
-		console.log(Patient);
-	}
+
 
 }

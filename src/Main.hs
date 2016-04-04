@@ -60,14 +60,17 @@ fileNameCheck :: String -> String -> IO()
 fileNameCheck file prog  =
     do
         -- Get script name
+        let fileName = takeBaseName file
         case parse (getScriptName) "" prog of
-            Left e -> die ("ERROR for file: " ++ (takeBaseName file) ++ show e)
+            Left e -> die ("ERROR for file: " ++ (fileName) ++ show e)
             -- And die if != filename
-            Right r -> if takeBaseName file /= r
+            Right r -> if fileName /= r 
                 then do
-                    die ("ERROR: while reading " ++
+                    if r /= (takeBaseName fileName)
+                    then die ("ERROR: while reading " ++
                         file ++
                         ": Filename does not match script name") >> exitFailure
+                    else return ()
                 else return ()
 
 
@@ -81,7 +84,8 @@ codeGen :: (Program Annotation) -> String -> IO()
 codeGen prog file =
     do
         dbConf <- readDBConfig file
-        writeFile (replaceExtension file ".js") (generateSQL prog dbConf)
+        conf <- readConfig file
+        writeFile (replaceExtension file ".js") (generateSQL prog dbConf conf)
         putStrLn ("Printed to \n" ++ (replaceExtension file ".js"))
 
 removeWildcardsFilters :: [Filter Annotation] -> [Filter Annotation]

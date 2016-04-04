@@ -33,52 +33,53 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
         --let query = (intercalate " \n " (generateQueries filt dbconf))
         --let query = concat $ generateQueries filt dbconf
         --let query2 = generateQueries filt dbconf
-        trace ("calling generateQueries with filt and dbconf" ++ show query) (generateQueries filt dbconf)
-        let display = intercalate "\n" (generateDisplay comps dbconf weedconf [])
+        --trace ("calling generateQueries with filt and dbconf" ++ show query) (generateQueries filt dbconf)
+        let display = (generateDisplay comps dbconf weedconf) 
         --"patients" dbconf weedconf
         generateScaffoldingJS query display
 
 -- TODO: make this more meaningful using comps
-generateDisplay :: [Computation Annotation]->DBConfig->Config Annotation->[String]->String
-generateDisplay comps dbconf conf varList =
+generateDisplay :: [Computation Annotation]->DBConfig->Config Annotation->String
+generateDisplay comps dbconf conf =
     do
-        let compCodeList = concat (map genCompCode comps dbconf conf varList)
-        
-        return compCodeList
-{-
-        let forloop = "\tfor (var i = 0; i < rows.length; i++) {\n\
-                \\t\tvar Patient = {\n\
-                \\t\t    id: rows[i].PatientSerNum,\n\
-                \\t\t    dob: rows[i].DateOfBirth,\n\
-                \\t\t    sex: rows[i].Sex,\n\
-                \\t\t    postalcode: rows[i].PostalCode\n"
-            middleend = "\t\t}//How do you like me now?\n"
-            forloopEnd ="\t\tprocess.stdout.write('"++dbtablename++" : ');\n\
-                \\t\tconsole.log("++dbtablename++");\n\
-            \\t}\n"
-        forloopbegin++middlestart++c0++middleend++forloopEnd
--}
-
+        let compCodeList = intercalate "\n" (map (genCompCode dbconf conf) comps)
+        compCodeList
 
 --takes a list of variables
-genCompCode::Computation Annotation->DBConfig->Config Annotation->[String] -> String
-genCompCode (Foreach forDef compList _) dbconf conf varList = (forEachGen forDef dbconf conf varList)  ++ (generateDisplay compList dbconf conf varList)
-genCompCode (Table v filtName fieldName) dbconf conf varList =  "" --left axis is index, right is value name, and then value
-genCompCode (Print paction) dbconf conf varList = printGen paction dbconf
-genCompCode (Barchart v) dbconf conf varList =  "//This is a cool barchart. We will use d3"
+genCompCode::DBConfig->Config Annotation->Computation Annotation->String
+genCompCode  dbconf conf (Foreach forDef compList _)= (forEachGen forDef dbconf conf (generateDisplay compList dbconf conf ))
+genCompCode dbconf conf (Table v filtName fieldName) = ""  --left axis is index, right is value name, and then value
+genCompCode dbconf conf (List v seqLsit) = ""
+genCompCode dbconf conf (Print paction) = printGen paction dbconf
+genCompCode dbconf conf (Barchart v) =  " // This is a cool barchart. We will use d3"
 
 printGen::PrintAction Annotation->DBConfig->String
-printGen (PrintVar (Var val (Annotation an))) (DBConfig dbconf) = "\tconsole.log(" ++ (an M.! dbconf) ++");"
+printGen (PrintVar (Var val (Annotation an))) (DBConfig dbconfmap) = 
+    let dbName = (dbconfmap M.! an) in
+        "\t console.log(" ++ "rows.[i_" ++ dbName ++ "]." ++ dbName ++ "]" ++ ");"
+
 printGen (PrintTimeLine v) dbconf = "//Really cool timeline would go here"
-printGen (PrintFilters fn v) dbconf = ""
+printGen (PrintFilters fnList v) (DBConfig dbconf) = 
+    do
+        "\t console.log(" ++ (intercalate ", " (map (\fname-> 
+            do
+                let dbName = (dbconf M.! fname)
+                fname ++ ": " ++ "rows[" ++ "i_"++dbName++ "]." ++ dbName ) fnList)) ++ ");"  --Take a list of filters, and print the 
+printGen (PrintElement (Var v1 (Annotation an)) v2) (DBConfig dbconf) = 
+    do
+        let dbName = (dbconf M.! an)
+        "\t console.log(\"" ++ an ++ "\": " ++ "rows[" ++ "i_"++dbName++ "]." ++ dbName  ++ ");" 
 
-printGen (PrintElement v1 v2) dbconf = ""
+forEachGen::ForEachDef Annotation->DBConfig->Config Annotation->String->String
+forEachGen (ForEachFilter fname (Var v an)) (DBConfig dbconf) c stmts=
+    do
+        let dbName = (dbconf M.! fname)
+        let forloop = "\tfor (var i = 0; i_" ++ dbName ++ "  < rows.length; i++) {\n"++  stmts ++ "\\t}\n"
+        forloop
 
-forEachGen::ForEachDef Annotation->DBConfig->Config Annotation->[String]->String
-forEachGen (ForEachFilter fn (Var v an)) db c varList = ""
 forEachGen (ForEachTable (Var v1 an1) (Var v2 an2)) db c varList = ""
-forEachGen (ForEachSequence (Var v1 an) seqList) db c varList = ""
-forEachGen (ForEachList (Var v1 an1) (Var v2 an2)) db c varList = ""
+forEachGen (ForEachSequence (Var v1 an) seqList) db c varList = "" --print a sequence
+forEachGen (ForEachList (Var v1 an1) (Var v2 an2)) db c varList = "" -- print a list of sequences
 
 generateQueries::[Filter Annotation]->DBConfig->[String]
 generateQueries filterList (DBConfig dbconfmap) =
@@ -194,14 +195,14 @@ printTypesGroups :: [(GroupDefs Annotation)] -> String
 printTypesGroups groups =
     do
         let groupListString = map (\(Group (GroupType t) (Var v _ ) _) ->
-                                ("// Group " ++ v ++ " : " ++ t ++ "\n")) groups
+                                ("// Group " ++ v ++ ": " ++ t ++ "\n")) groups
         (intercalate "\n" groupListString)
 
 printTypesHeader :: (Header Annotation) -> String
 printTypesHeader (Header name args) =
     do
         let argsListString = map (\(Arg (GroupType t) (Var v _ )) ->
-                                ("// Header param " ++ v ++ " : " ++ t ++ "\n")) args
+                                ("// Header param " ++ v ++ ": " ++ t ++ "\n")) args
         (intercalate "\n" argsListString)
 
 printTypesFilters :: [(Filter Annotation)] -> String
@@ -278,8 +279,8 @@ instance PrettyPrint IntValue where
     prettyPrint i = show i
 
 instance PrettyPrint (RangeType Annotation) where
-    prettyPrint (Before i a) = "Before " ++ prettyPrint i
-    prettyPrint (After i a) = "After " ++ prettyPrint i
+    prettyPrint (Before i a) = "before " ++ prettyPrint i
+    prettyPrint (After i a) = "after " ++ prettyPrint i
     prettyPrint (Between i j a) = prettyPrint i ++ " to " ++ prettyPrint j
     prettyPrint (SingleInt g a) = prettyPrint g
 
@@ -294,7 +295,7 @@ instance PrettyPrint FieldName where
     prettyPrint (ffield) = ffield
 
 instance PrettyPrint (FieldDef Annotation) where
-    prettyPrint (FieldDef ffield fvals) = "\t" ++ prettyPrint ffield ++ " : " ++ (intercalate ", " (map prettyPrint fvals))
+    prettyPrint (FieldDef ffield fvals) = "\t" ++ prettyPrint ffield ++ ": " ++ (intercalate ", " (map prettyPrint fvals))
 
 instance PrettyPrint (Filter Annotation) where
     prettyPrint (Filter fname fdefs) = fname ++ " is" ++ "\n" ++
@@ -308,7 +309,7 @@ instance PrettyPrint (Docs) where
 
 instance PrettyPrint (Var Annotation) where
     prettyPrint (Var v a) = v
-    prettyAnnotated  (Var v (Annotation a))= "TYPE ("++v++" : "++a ++")"
+    prettyAnnotated  (Var v (Annotation a))= "TYPE ("++v++": "++a ++")"
 
 instance PrettyPrint  ( Parser(Var Annotation)) where
     prettyAnnotated  _ = ""
