@@ -61,14 +61,17 @@ fileNameCheck :: String -> String -> IO()
 fileNameCheck file prog  =
     do
         -- Get script name
+        let fileName = takeBaseName file
         case parse (getScriptName) "" prog of
-            Left e -> die ("ERROR for file: " ++ (takeBaseName file) ++ show e)
+            Left e -> die ("ERROR for file: " ++ (fileName) ++ show e)
             -- And die if != filename
-            Right r -> if takeBaseName file /= r
+            Right r -> if fileName /= r 
                 then do
-                    die ("ERROR: while reading " ++
+                    if r /= (takeBaseName fileName)
+                    then die ("ERROR: while reading " ++
                         file ++
                         ": Filename does not match script name") >> exitFailure
+                    else return ()
                 else return ()
 
 
@@ -86,6 +89,7 @@ codeGen prog file weedconf =
         let fname = (replaceExtension file ".js")
         writeFile fname contents
         putStrLn ("Printed to \n" ++ fname)
+
 
 removeWildcardsFilters :: [Filter Annotation] -> [Filter Annotation]
 removeWildcardsFilters filters =

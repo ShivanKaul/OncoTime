@@ -1,3 +1,4 @@
+<<<<<<< 510ddaa7969719b7b93d018f7b1849b2ecbafc4a
 var mysql = require('mysql');
 var db = mysql.createConnection({
 	host: 'localhost',
@@ -31,3 +32,5 @@ function display(rows) {
 	}
 
 }
+=======
+>>>>>>> fixed pretty printing bugs
