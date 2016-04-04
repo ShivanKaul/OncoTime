@@ -62,6 +62,8 @@ generateDisplay comps =
         forloopbegin++middlestart++c0++middleend++forloopEnd
 -}
 
+genCompCode::Comptutation Annotation -> String
+
 generateQueries::[Filter Annotation]->DBConfig->[String]
 generateQueries filterList (DBConfig dbconfmap) =
     do
