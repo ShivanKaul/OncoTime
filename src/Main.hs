@@ -27,6 +27,7 @@ import Parser
 import PrettyPrinter
 import Formatter
 import Weeder
+import CodeGen
 
 parseFile :: String -> IO ((Program Annotation),SourcePos)
 parseFile filename =
