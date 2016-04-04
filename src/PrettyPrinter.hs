@@ -24,6 +24,149 @@ class PrettyPrint a where
 pretty :: (PrettyPrint a) => a -> String
 pretty program = prettyPrint program
 
+<<<<<<< 63aa5e28c51bfc9a6a64973f8f6b54451e77077d
+=======
+generateSQL :: (Program Annotation)->(DBConfig) -> String
+generateSQL program@(Program header docs usefilelist groups filt comps) dbconf =
+    do
+        -- show filt
+        --let query = generateQuery filt dbconf
+        
+        let query = generateQueries filt dbconf
+        --let query = (intercalate " \n " (generateQueries filt dbconf))
+        --let query = concat $ generateQueries filt dbconf
+        --let query2 = generateQueries filt dbconf
+        trace ("calling generateQueries with filt and dbconf" ++ show query) (generateQueries filt dbconf)
+        let display = generateDisplay comps
+        generateScaffoldingJS query display
+
+-- TODO: make this more meaningful using comps
+generateDisplay :: [Computation Annotation] -> String
+generateDisplay comps =
+    do
+        let forloop = "\tfor (var i = 0; i < rows.length; i++) {\n\
+                \\t\tvar Patient = {\n\
+                \\t\t    id: rows[i].PatientSerNum,\n\
+                \\t\t    dob: rows[i].DateOfBirth,\n\
+                \\t\t    sex: rows[i].Sex,\n\
+                \\t\t    postalcode: rows[i].PostalCode\n\
+                \\t\t}\n\
+                \\t\tprocess.stdout.write('Patient : ');\n\
+                \\t\tconsole.log(Patient);\n\
+            \\t}\n"
+        forloop
+
+
+generateQueries::[Filter Annotation]->DBConfig->[String]
+generateQueries filterList (DBConfig dbconfmap) =
+    do
+        let queryString = "select * from "
+        --iterate through filter list
+        queryList <- map (\(Filter filtName fdefList) ->
+            do
+                --add the filtername to the query
+                let selectQuery = queryString ++ (dbconfmap M.! filtName)
+                --get list of fields
+                
+                --get list of fields without wieldcard
+                let filterFieldsWithoutWildcard = filter (\(FieldDef _ fieldvals) -> case fieldvals of
+                        [fval] -> if fval == GroupWildcard then False else True
+                        _ -> True) (fdefList)
+               
+                --form the query
+                if (length filterFieldsWithoutWildcard) == 0 then selectQuery
+                else do
+                    let whereQuery = " where " ++ (generateWhereClauses filterFieldsWithoutWildcard)
+                    -- regex to replace all AND AND by AND
+                    let regexedWhere = subRegex (mkRegex " AND  AND ") whereQuery " AND "
+                    -- Hack for getting rid of last AND
+                    selectQuery ++ (T.unpack (T.dropEnd 5 (T.pack regexedWhere)))
+                ) filterList
+
+        
+        return queryList
+        --concat queryList
+
+
+generateQuery :: [Filter Annotation]->DBConfig-> String
+generateQuery filters (DBConfig dbconfmap) =
+    do
+        let filterFields = concatMap (\(Filter _ fielddefs) -> fielddefs) filters
+        let filterFieldsWithoutWildcard = filter (\(FieldDef _ fieldvals) -> case fieldvals of
+                [fval] -> if fval == GroupWildcard then False else True
+                _ -> True) filterFields
+        -- TODO: replace Patient with filtername
+        let selectQuery = "select * from " ++ "Patient"
+        if (length filterFieldsWithoutWildcard) == 0 then selectQuery
+            else do
+            -- TODO: once field mapping works in config
+                    let whereQuery = " where " ++ (generateWhereClauses filterFieldsWithoutWildcard)
+                    -- regex to replace all AND AND by AND
+                    let regexedWhere = subRegex (mkRegex " AND  AND ") whereQuery " AND "
+            -- Hack for getting rid of last AND
+                    selectQuery ++ (T.unpack (T.dropEnd 5 (T.pack regexedWhere)))
+
+
+generateWhereClauses :: [FieldDef Annotation] -> String
+generateWhereClauses fielddefs =
+    do
+        foldl (\acc (FieldDef fname fvals) -> acc ++
+                (generateFieldValsForWhere fvals fname) ++ " AND ") "" fielddefs
+
+
+generateFieldValsForWhere :: [FieldVal Annotation] -> String -> String
+generateFieldValsForWhere fvals fname =
+    do
+        let expanded = foldl (\acc fval -> case fval of
+            -- TODO: Handle multiple for both of these by having commas
+                GroupValString str _ -> acc ++ fname ++ " = '" ++ str ++ "' AND "
+                GroupRange (SingleInt i _) -> acc ++ fname ++ " = " ++ (show i) ++ " AND "
+                GroupRange (Before i _) -> acc ++ fname ++ " < " ++ (show i) ++ " AND "
+                GroupRange (After i _) -> acc ++ fname ++ " > " ++ (show i) ++ " AND "
+                GroupRange (Between i1 i2 _) -> acc ++ fname ++ " > " ++ (show i1) ++
+                        " AND " ++ fname ++ " < " ++ (show i2) ++ " AND "
+                ) "" fvals
+        expanded
+
+
+generateScaffoldingJS :: [String] -> String -> String
+generateScaffoldingJS dbQueryList dbDisplayFunction =
+    do
+        let mysqlReq = "var mysql = require('mysql');\n"
+        let config = "var db = mysql.createConnection({\n\
+                \\thost: 'localhost',\n\
+                \\tuser: '520student',\n\
+                \\tpassword: 'comp520',\n\
+                \\tdatabase: 'oncodb',\n\
+                \\tport: 33306\n\
+            \});\n"
+        let dbConnect = "db.connect(function(err) {\n\
+                \\tif (err) console.log(err);\n\
+                \\telse {\n"
+        let dbQueryLeft = "\t\tdb.query('"
+        let dbQueryRight = "', function(err, rows, fields) {\n\
+                \\t\t\tif (err) throw err;\n"
+        let dbDisplay = "\t\t\tconsole.log(display(rows));\n\
+            \\t\t});\n\
+            \\t}\n"
+
+        let dbEnd = "\tdb.end();\n\
+            \});\n\n"
+
+        let dbDisplayFunctionStart = "function display(rows) {\n"
+
+        let dbDisplayFunctionEnd = "\n}\n"
+
+        let formatQueryList = map (\x -> dbQueryLeft ++ x ++ dbQueryRight ++ dbDisplay ++ "\n") dbQueryList
+
+        --mysqlReq ++ config ++ dbConnect ++ dbQueryLeft ++ dbQuery ++
+          --  dbQueryRight ++ dbDisplay ++ dbEnd ++ dbDisplayFunctionStart ++
+            --dbDisplayFunction ++ dbDisplayFunctionEnd
+        mysqlReq ++ config ++ dbConnect ++ (concat formatQueryList) ++dbEnd ++ dbDisplayFunctionStart ++ dbDisplayFunction ++ dbDisplayFunctionEnd
+
+
+
+>>>>>>> Revert "added some function to actually start printing computation queries"
 printTypesGroups :: [(GroupDefs Annotation)] -> String
 printTypesGroups groups =
     do
