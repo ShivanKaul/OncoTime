@@ -42,8 +42,40 @@ generateDisplay comps =
     do
 
         let compCodeList = map genCompCode comps
+        compCodeList
 
-        return compCodeList
+generateDisplayFunction :: [Computation Annotation] ->String ->DBConfig->(Config Annotation)-> Maybe [String] -> String
+generateDisplayFunction comps loopablename (DBConfig dbconfmap) (Config config) diag =
+    do
+        let
+            forloopbegin = "\tfor (var i = 0; i < rows.length; i++) {\n"
+            (Just (FieldMap fieldmap)) =  M.lookup (loopablename, True) config
+            fields = M.keys fieldmap
+            dbtablename = (dbconfmap M.! loopablename)
+            middlestart = "\t\tvar "++ dbtablename ++" = {\n"
+            -- middlestart = "\t\tvar "++ dbtablename ++" = rows[i]\n"
+            c0 = foldl' (\prev currfield -> prev ++
+                            "\t\t    "++
+                            currfield++": rows[i]."++
+                            -- GHETTO AF
+                            (if currfield == "diagnosis" then "Description" else (dbconfmap M.! currfield))
+                            ++ ",\n") "" fields
+            middleend = "\t\t}//How do you like me now?\n"
+            forloopEnd ="\t\tprocess.stdout.write('"++dbtablename++" : ');\n\
+                \\t\tconsole.log("++dbtablename++");\n\
+            \\t}\n"
+        forloopbegin++middlestart ++c0++middleend++forloopEnd
+
+
+checkIfDiagnosis :: [Filter Annotation] -> Maybe [String]
+checkIfDiagnosis filters =
+    do
+        foldl (\acc cur@(Filter _ fdefs) -> foldl (\accInner (FieldDef fname fvals) ->
+            if fname == "diagnosis" then
+                Just (map (\(GroupValString name _) -> name) fvals)
+            else
+                accInner) acc fdefs)
+                 Nothing filters
 
 
 {-
@@ -102,7 +134,8 @@ generateDisplayFunction comps loopablename (DBConfig dbconfmap) (Config config) 
         forloopbegin++middlestart++c0++middleend++forloopEnd
 -}
 
-genCompCode::Comptutation Annotation -> String
+genCompCode::Computation Annotation -> String
+genCompCode _ = ""
 
 generateQueries::[Filter Annotation]->DBConfig-> Maybe [String] -> [String]
 generateQueries filterList (DBConfig dbconfmap) diag =
@@ -172,7 +205,7 @@ generateFieldValsForWhere fvals fname =
                 GroupRange (After i _) -> acc ++ fname ++ " > " ++ (show i) ++ " OR "
                 GroupRange (Between i1 i2 _) -> acc ++ fname ++ " > " ++ (show i1) ++
                         " AND " ++ fname ++ " < " ++ (show i2) ++ " OR "
-                (GroupDate dd mm yy) -> acc ++ fname ++" " ++  dd++"-"++mm++"-"++yy++ " OR "
+                (GroupDate dd mm yy _) -> acc ++ fname ++" " ++ (show dd) ++"-"++ (show mm) ++"-"++ (show yy) ++ " OR "
                 ) "" fvals
         expanded
 
