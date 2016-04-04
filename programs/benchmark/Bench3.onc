@@ -1,0 +1,26 @@
+script Bench3()
+/*
+ *
+ */
+
+//use vikramPatientData.grp
+
+population is
+    Id: 0 to 100
+
+{
+    //table a = count Patient by Id
+    //table b = count Patient by Birthyear
+    //table c = count Patient by  Diagnosis
+    table a = count Patient by Sex
+
+   foreach element i of a
+   {
+   print a[i]
+   }
+}
+//a = tableDecleration( "PATIENT", "SEX", results)
+//for i in a: 
+//	printTableItem(a,i)
+//Male                     : 3                        
+//Female                   : 2

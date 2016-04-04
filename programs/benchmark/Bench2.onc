@@ -1,0 +1,21 @@
+script Bench2()
+/*
+ *
+ */
+
+//use vikramPatientData.grp
+
+population is
+    Id: 0 to 100
+
+{
+    table a = count Patient by Id
+    //table b = count Patient by Birthyear
+    //table c = count Patient by  Diagnosis
+    //table d = count Patient by Sex
+
+   foreach element i of a
+   {
+   print a[i]
+   }
+}
