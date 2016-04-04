@@ -34,15 +34,16 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
         --let query = concat $ generateQueries filt dbconf
         --let query2 = generateQueries filt dbconf
         trace ("calling generateQueries with filt and dbconf" ++ show query) (generateQueries filt dbconf)
-        let display = generateDisplay comps dbconf
+        let display = intercalate "\n" (generateDisplay comps dbconf weedconf [])
         --"patients" dbconf weedconf
         generateScaffoldingJS query display
 
 -- TODO: make this more meaningful using comps
-generateDisplay :: [Computation Annotation] -> [String]
-generateDisplay comps =
+generateDisplay :: [Computation Annotation]->DBConfig->Config Annotation->[String]->String
+generateDisplay comps dbconf conf varList =
     do
-        let compCodeList = map genCompCode comps []
+        let compCodeList = concat (map genCompCode comps dbconf conf varList)
+        
         return compCodeList
 {-
         let forloop = "\tfor (var i = 0; i < rows.length; i++) {\n\
@@ -58,24 +59,26 @@ generateDisplay comps =
         forloopbegin++middlestart++c0++middleend++forloopEnd
 -}
 
+
 --takes a list of variables
-genCompCode::Computation Annotation->[String] -> String
-genCompCode (Foreach forDef compList _) varList = (forEachGen forDef)  ++ ""
-genCompCode (Table v filtName fieldName) varList =  ""
-genCompCode (Print paction) varList = ""
-genCompCode (Barchart v) varList =  "//This is a cool barchart"
+genCompCode::Computation Annotation->DBConfig->Config Annotation->[String] -> String
+genCompCode (Foreach forDef compList _) dbconf conf varList = (forEachGen forDef dbconf conf varList)  ++ (generateDisplay compList dbconf conf varList)
+genCompCode (Table v filtName fieldName) dbconf conf varList =  "" --left axis is index, right is value name, and then value
+genCompCode (Print paction) dbconf conf varList = printGen paction dbconf
+genCompCode (Barchart v) dbconf conf varList =  "//This is a cool barchart. We will use d3"
 
-printGen::PrintAction Annotation->String
-printGen (PrintVar v) = ""
-printGen (PrintTimeLine v) = "//Really cool timeline would go here"
-printGen (PrintFilters fn v) = ""
-printGen (PrintElement v1 v2) = ""
+printGen::PrintAction Annotation->DBConfig->String
+printGen (PrintVar (Var val (Annotation an))) (DBConfig dbconf) = "\tconsole.log(" ++ (an M.! dbconf) ++");"
+printGen (PrintTimeLine v) dbconf = "//Really cool timeline would go here"
+printGen (PrintFilters fn v) dbconf = ""
 
-forEachGen::ForEachDef Annotation->String
-forEachGen (ForEachFilter fn v) = ""
-forEachGen (ForEachTable v1 v2) = ""
-forEachGen (ForEachSequence v1 seqList) = ""
-forEachGen (ForEachList v1 v2) = ""
+printGen (PrintElement v1 v2) dbconf = ""
+
+forEachGen::ForEachDef Annotation->DBConfig->Config Annotation->[String]->String
+forEachGen (ForEachFilter fn (Var v an)) db c varList = ""
+forEachGen (ForEachTable (Var v1 an1) (Var v2 an2)) db c varList = ""
+forEachGen (ForEachSequence (Var v1 an) seqList) db c varList = ""
+forEachGen (ForEachList (Var v1 an1) (Var v2 an2)) db c varList = ""
 
 generateQueries::[Filter Annotation]->DBConfig->[String]
 generateQueries filterList (DBConfig dbconfmap) =
