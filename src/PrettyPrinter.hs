@@ -39,15 +39,9 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf =
         generateScaffoldingJS query display
 
 -- TODO: make this more meaningful using comps
-generateDisplay :: [Computation Annotation] -> [String]
+generateDisplay :: [Computation Annotation] -> String
 generateDisplay comps =
     do
-
-        let compCodeList = map genCompCode comps 
-
-        return compCodeList
-
-
         let forloop = "\tfor (var i = 0; i < rows.length; i++) {\n\
                 \\t\tvar Patient = {\n\
                 \\t\t    id: rows[i].PatientSerNum,\n\
@@ -129,7 +123,6 @@ generateFieldValsForWhere fvals fname =
                 GroupRange (After i _) -> acc ++ fname ++ " > " ++ (show i) ++ " AND "
                 GroupRange (Between i1 i2 _) -> acc ++ fname ++ " > " ++ (show i1) ++
                         " AND " ++ fname ++ " < " ++ (show i2) ++ " AND "
-                (GroupDate dd mm yy) -> acc ++ fname ++" " ++  dd++"-"++mm++"-"++yy++ " AND "
                 ) "" fvals
         expanded
 
