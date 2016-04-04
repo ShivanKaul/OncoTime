@@ -6,7 +6,7 @@ group BirthYear z = {1971,1972, <x>}
 
 population are
 	Sex : M, F
-	BirthYear : <x>
+	BirthYear :1971,1972 
 
 
 {	

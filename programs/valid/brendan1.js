@@ -1,4 +1,3 @@
-<<<<<<< 510ddaa7969719b7b93d018f7b1849b2ecbafc4a
 var mysql = require('mysql');
 var db = mysql.createConnection({
 	host: 'localhost',
@@ -10,7 +9,7 @@ var db = mysql.createConnection({
 db.connect(function(err) {
 	if (err) console.log(err);
 	else {
-		db.query('select * from Patient where birthyear > 1986 AND birthyear < 1996 AND diagnosis = 'prostate' AND sex = 'm' AND sex = 'f'', function(err, rows, fields) {
+		db.query('select Patient.*, Diagnosis.Description from Patient, Diagnosis where (Patient.PatientSerNum = Diagnosis.PatientSerNum) AND (Diagnosis.DiagnosisCode like "C61%") AND  (Patient.DateOfBirth > 1986 AND Patient.DateOfBirth < 1996) AND  (Patient.Diagnosis like "prostate%") AND  (Patient.Sex like "m%" OR  Patient.Sex like "f%")', function(err, rows, fields) {
 			if (err) throw err;
 			console.log(display(rows));
 		});
@@ -20,17 +19,6 @@ db.connect(function(err) {
 });
 
 function display(rows) {
-	for (var i = 0; i < rows.length; i++) {
-		var Patient = {
-		    id: rows[i].PatientSerNum,
-		    dob: rows[i].DateOfBirth,
-		    sex: rows[i].Sex,
-		    postalcode: rows[i].PostalCode
-		}
-		process.stdout.write('Patient : ');
-		console.log(Patient);
-	}
+
 
 }
-=======
->>>>>>> fixed pretty printing bugs

@@ -11,6 +11,7 @@ import qualified Data.Text as T
 import qualified Data.Map as M
 import Text.Parsec.String
 import Text.Regex
+import Debug.Trace
 
 
 generateSQL :: (Program Annotation)->(DBConfig) ->(Config Annotation)-> String
@@ -18,7 +19,7 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
     do
         let diagnosis = (checkIfDiagnosis filt)
         let query = generateQueries filt dbconf diagnosis
-        let displayFunction = generateDisplayFunction comps "patients" dbconf weedconf diagnosis
+        let displayFunction = generateDisplayFunction comps  dbconf weedconf diagnosis
         generateScaffoldingJS query displayFunction
 
 generatePrettyRowFunction :: String
@@ -26,16 +27,45 @@ generatePrettyRowFunction = "function generatePrettyRow(row) {\n\
             \\treturn Object.keys(row).map(function (key) {return row[key]});\n\
         \}\n\n"
 
-generateDisplay :: [Computation Annotation] -> [String]
-generateDisplay comps =
+
+generateDisplayFunction :: [Computation Annotation] ->DBConfig->(Config Annotation)-> Maybe [String] -> String
+generateDisplayFunction comps dbconf conf diag =
     do
-        let compCodeList = map genCompCode comps
+        let compCodeList = intercalate "\n" (map (genCompCode dbconf conf diag) comps)
         compCodeList
 
-generateDisplayFunction :: [Computation Annotation] ->String ->DBConfig->(Config Annotation)-> Maybe [String] -> String
-generateDisplayFunction comps loopablename (DBConfig dbconfmap) (Config config) diag =
+
+genCompCode::DBConfig->Config Annotation->Maybe [String] ->Computation Annotation ->String
+genCompCode  dbconf conf diag (Foreach forDef compList _) = (forEachGen forDef dbconf conf diag (generateDisplayFunction compList dbconf conf diag))
+genCompCode dbconf conf diag (Table v filtName fieldName) = ""  --left axis is index, right is value name, and then value
+genCompCode dbconf conf _ (List v seqLsit) = ""
+genCompCode dbconf conf _ (Print paction) = printGen paction dbconf
+genCompCode dbconf conf _ (Barchart v) =  " // This is a cool barchart. We will use d3"
+
+printGen::PrintAction Annotation->DBConfig->String
+printGen (PrintVar (Var val (Annotation an))) (DBConfig dbconfmap) = 
+    let dbName = (dbconfmap M.! an) in
+        "\t console.log(" ++ dbName ++ ");"
+
+printGen (PrintTimeLine v) dbconf = "//Really cool timeline would go here"
+printGen (PrintFilters fnList v) (DBConfig dbconf) = 
     do
-        let
+        "\t console.log(" ++ (intercalate ", " (map (\fname-> 
+            do
+                let dbName = (dbconf M.! fname)
+                fname ++ ": " ++ "rows[" ++ "i_"++dbName++ "]." ++ dbName ) fnList)) ++ ");"  --Take a list of filters, and print the 
+printGen (PrintElement (Var v1 (Annotation an)) v2) (DBConfig dbconf) = 
+    do
+        let dbName = (dbconf M.! an)
+        "\t console.log(\"" ++ an ++ "\": " ++ "rows[" ++ "i_"++dbName++ "]." ++ dbName  ++ ");" 
+
+forEachGen::ForEachDef Annotation->DBConfig->Config Annotation->Maybe [String] ->String->String
+forEachGen (ForEachFilter fname (Var v an)) (DBConfig dbconfmap) (Config config)  diag stmts  =
+    do
+        let index_name = "i_" ++ (dbconfmap M.! fname)
+        let loopablename = fname
+        let 
+            forloopbegin = "\tfor (var "++index_name++" = 0; "++index_name ++ "  < rows.length; "++index_name++") {\n"
             (Just (FieldMap fieldmap)) =  M.lookup (loopablename, True) config
             fields = M.keys fieldmap
             tableHeaders = case diag of
@@ -48,22 +78,23 @@ generateDisplayFunction comps loopablename (DBConfig dbconfmap) (Config config) 
                     \\t});\n"
 
             tableInit = tableLeft ++ (show tableHeaders) ++ tableRight
-
-            forloopbegin = "\tfor (var i = 0; i < rows.length; i++) {\n"
-
             dbtablename = (dbconfmap M.! loopablename)
             middlestart = "\t\tvar "++ dbtablename ++" = {\n"
             c0 = foldl' (\prev currfield -> prev ++
                             "\t\t    "++
-                            currfield++": rows[i]."++
+                            currfield++": rows["++index_name++"]."++
                             -- GHETTO AF
                             (if currfield == "Diagnosis" then "Description" else currfield)
                             ++ ",\n") "" tableHeaders
             middleend = "\t\t}//How do you like me now?\n"
-            tablePush = "\t\ttable.push(generatePrettyRow(" ++ dbtablename ++ "));\n\t}\n"
-            forloopEnd ="\treturn table;\n"
+            tablePush = "\t\ttable.push(generatePrettyRow(" ++ dbtablename ++ "));"
+            forloopEnd ="\n\t}\n\treturn table;\n"
 
-        tableInit ++ forloopbegin++middlestart ++c0++middleend++tablePush++forloopEnd
+        tableInit ++ forloopbegin++middlestart ++c0++middleend++stmts++tablePush++forloopEnd
+
+forEachGen (ForEachTable (Var v1 an1) (Var v2 an2)) db c _ varList = ""
+forEachGen (ForEachSequence (Var v1 an) seqList) db c _ varList = "" --print a sequence
+forEachGen (ForEachList (Var v1 an1) (Var v2 an2)) db c _ varList = "" -- print a list of sequences
 
 
 
@@ -79,8 +110,6 @@ checkIfDiagnosis filters =
                 accInner) acc fdefs)
                  Nothing filters
 
-genCompCode::Computation Annotation -> String
-genCompCode _ = ""
 
 generateQueries::[Filter Annotation]->DBConfig-> Maybe [String] -> [String]
 generateQueries filterList (DBConfig dbconfmap) diag =
