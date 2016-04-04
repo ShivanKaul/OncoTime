@@ -21,6 +21,10 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
         let displayFunction = generateDisplayFunction comps "patients" dbconf weedconf diagnosis
         generateScaffoldingJS query displayFunction
 
+generatePrettyRowFunction :: String
+generatePrettyRowFunction = "function generatePrettyRow(row) {\n\
+            \\treturn Object.keys(row).map(function (key) {return row[key]});\n\
+        \}\n\n"
 
 generateDisplay :: [Computation Annotation] -> [String]
 generateDisplay comps =
@@ -32,23 +36,35 @@ generateDisplayFunction :: [Computation Annotation] ->String ->DBConfig->(Config
 generateDisplayFunction comps loopablename (DBConfig dbconfmap) (Config config) diag =
     do
         let
-            forloopbegin = "\tfor (var i = 0; i < rows.length; i++) {\n"
             (Just (FieldMap fieldmap)) =  M.lookup (loopablename, True) config
             fields = M.keys fieldmap
+            tableHeaders = case diag of
+                Nothing -> (delete "Diagnosis" (nub (map (\x -> dbconfmap M.! x) fields)))
+                _ -> (nub (map (\x -> dbconfmap M.! x) fields))
+
+            tableLeft = "\tvar table = new Table({\n\
+                        \\t\thead: "
+            tableRight = "\n\
+                    \\t});\n"
+
+            tableInit = tableLeft ++ (show tableHeaders) ++ tableRight
+
+            forloopbegin = "\tfor (var i = 0; i < rows.length; i++) {\n"
+
             dbtablename = (dbconfmap M.! loopablename)
             middlestart = "\t\tvar "++ dbtablename ++" = {\n"
-            -- middlestart = "\t\tvar "++ dbtablename ++" = rows[i]\n"
             c0 = foldl' (\prev currfield -> prev ++
                             "\t\t    "++
                             currfield++": rows[i]."++
                             -- GHETTO AF
-                            (if currfield == "diagnosis" then "Description" else (dbconfmap M.! currfield))
-                            ++ ",\n") "" fields
+                            (if currfield == "Diagnosis" then "Description" else currfield)
+                            ++ ",\n") "" tableHeaders
             middleend = "\t\t}//How do you like me now?\n"
-            forloopEnd ="\t\tprocess.stdout.write('"++dbtablename++" : ');\n\
-                \\t\tconsole.log("++dbtablename++");\n\
-            \\t}\n"
-        forloopbegin++middlestart ++c0++middleend++forloopEnd
+            tablePush = "\t\ttable.push(generatePrettyRow(" ++ dbtablename ++ "));\n\t}\n"
+            forloopEnd ="\treturn table;\n"
+
+        tableInit ++ forloopbegin++middlestart ++c0++middleend++tablePush++forloopEnd
+
 
 
 checkIfDiagnosis :: [Filter Annotation] -> Maybe [String]
@@ -56,7 +72,9 @@ checkIfDiagnosis filters =
     do
         foldl (\acc cur@(Filter _ fdefs) -> foldl (\accInner (FieldDef fname fvals) ->
             if fname == "diagnosis" then
-                Just (map (\(GroupValString name _) -> name) fvals)
+                case fvals of
+                    [GroupWildcard] -> accInner
+                    _ -> Just (map (\(GroupValString name _) -> name) fvals)
             else
                 accInner) acc fdefs)
                  Nothing filters
@@ -141,6 +159,7 @@ generateScaffoldingJS :: [String] -> String -> String
 generateScaffoldingJS dbQueryList dbDisplayFunction =
     do
         let mysqlReq = "var mysql = require('mysql');\n"
+        let tableReq = "var Table = require('cli-table');\n"
         let config = "var db = mysql.createConnection({\n\
                 \\thost: 'localhost',\n\
                 \\tuser: '520student',\n\
@@ -154,7 +173,7 @@ generateScaffoldingJS dbQueryList dbDisplayFunction =
         let dbQueryLeft = "\t\tdb.query('"
         let dbQueryRight = "', function(err, rows, fields) {\n\
                 \\t\t\tif (err) throw err;\n"
-        let dbDisplay = "\t\t\tconsole.log(display(rows));\n\
+        let dbDisplay = "\t\t\tconsole.log(display(rows).toString());\n\
             \\t\t});\n\
             \\t}\n"
 
@@ -163,7 +182,9 @@ generateScaffoldingJS dbQueryList dbDisplayFunction =
 
         let dbDisplayFunctionStart = "function display(rows) {\n"
 
-        let dbDisplayFunctionEnd = "\n}\n"
+        let dbDisplayFunctionEnd = "}\n"
 
-        let formatQueryList = map (\x -> dbQueryLeft ++ x ++ dbQueryRight ++ dbDisplay ++ "\n") dbQueryList
-        mysqlReq ++ config ++ dbConnect ++ (concat formatQueryList) ++dbEnd ++ dbDisplayFunctionStart ++ dbDisplayFunction ++ dbDisplayFunctionEnd
+        let formatQueryList = map (\x -> dbQueryLeft ++ x ++ dbQueryRight ++
+                dbDisplay ++ "\n") dbQueryList
+        mysqlReq ++ tableReq ++ config ++ dbConnect ++ (concat formatQueryList) ++
+            dbEnd ++ generatePrettyRowFunction ++ dbDisplayFunctionStart ++ dbDisplayFunction ++ dbDisplayFunctionEnd

@@ -7,6 +7,7 @@
     "doc": "doc"
   },
   "dependencies": {
+    "cli-table": "^0.3.1",
     "mysql": "^2.10.2"
   },
   "devDependencies": {},
