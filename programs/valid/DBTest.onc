@@ -9,6 +9,9 @@ population is
     id: 25 to 100
     diagnosis: breast, prostate
 
+doctors is
+    oncologist: true
+
 // ---- Computations ----
 {
     foreach Patient p {

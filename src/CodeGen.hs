@@ -123,7 +123,7 @@ checkIfDiagnosis filters =
 
 
 generateQueries::[Filter Annotation]->DBConfig-> Maybe [String] -> [String]
-generateQueries filterList ( dbconfmap) diag =
+generateQueries filterList ( dbconfmap@(DBConfig dbconf)) diag =
     do
         let columns = case diag of
                 Nothing -> "*"
@@ -133,8 +133,10 @@ generateQueries filterList ( dbconfmap) diag =
         queryList <- map (\(Filter filtName fdefList) ->
             do
                 if filtName /= "population" 
-                    then "/*"++filtName++" filtering hasn't been implemented yet, sorry! */"
-                    else do
+                    then "/*"++filtName++" filtering has not been implemented yet, sorry! */"
+                --then queryString ++ (dbconf M.! filtName) --THIS IS PART OF WHAT BRENDAN DID
+                else 
+                     do
                         let fromQuery = case diag of
                                 Nothing -> (dbconfmap `getNameInDatabase` filtName)
                                 _ -> (dbconfmap `getNameInDatabase` filtName) ++ ", Diagnosis"
