@@ -12,14 +12,10 @@ population is
     diagnosis: stomach, lung, breast
     postalcode: A2C
 
-doctors is
-    oncologist: true
-    id: <doctorids>
-
 {
 
-    foreach Doctors d {
-        print d
+    foreach Patient p {
+        print p
     }
 
 
