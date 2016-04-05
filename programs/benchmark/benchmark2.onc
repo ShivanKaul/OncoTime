@@ -7,10 +7,12 @@ use vikramPatientData.grp
 
 population is
     id: <patientGroupOne>
-    gender: female
+    gender: female, f
     birthyear: <patientBirthyearRange>
     diagnosis: stomach, lung, breast
-    postalcode: A2C
+    postalcode: H8N
+
+
 
 {
 
