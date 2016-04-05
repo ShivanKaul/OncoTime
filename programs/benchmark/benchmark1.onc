@@ -14,22 +14,10 @@ population is
     postalcode: <post>
     diagnosis: brain
 
-doctors is
-    oncologist: true
-    id: 1300 to 3100
 
 
 {
-    foreach Doctors d
-    {
-        foreach Patient p
-        {
-            foreach Diagnosis dg
-            {
-                print d
-                print p
-                print dg
-            }
-        }
+    foreach Patient p {
+        print p
     }
 }

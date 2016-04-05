@@ -1,4 +1,5 @@
 programs/valid/*.js
+programs/benchmark/*.js
 npm_modules
 *.pretty.onc
 *.symtab

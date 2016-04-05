@@ -35,7 +35,7 @@ generateDisplayFunction comps dbconf conf diag =
         compCodeList
 
 getNameInDatabase :: DBConfig -> String -> String
-getNameInDatabase (DBConfig dbconf) name = 
+getNameInDatabase (DBConfig dbconf) name =
     case M.lookup name dbconf of
         Just a -> a
         Nothing -> error $ name ++ " is not a valid name in " ++ show dbconf
@@ -49,33 +49,33 @@ genCompCode dbconf conf _ (Print paction) = printGen paction dbconf conf
 genCompCode dbconf conf _ (Barchart v) =  " // This is a cool barchart. We will use d3"
 
 printGen::PrintAction Annotation->DBConfig -> Config Annotation->String
-printGen (PrintVar (Var val (Annotation an))) dbconfmap (Config conf) = 
-    let 
+printGen (PrintVar (Var val (Annotation an))) dbconfmap (Config conf) =
+    let
         isLoopable = (M.member (an,True) (conf) )
-        dbName = if isLoopable 
+        dbName = if isLoopable
             then (dbconfmap `getNameInDatabase` an)
-            else "'"++an ++ " hasn't been implemented yet, sorry!'"
+            else "'"++an ++ " has not been implemented yet, sorry!'"
     in "\t console.log(" ++ dbName ++ ");"
-    
+
 printGen(PrintLength var) dbconf  _= "//tables not yet implemented sorry!"
 printGen (PrintTimeLine v) dbconf  _= "//Really cool timeline would go here"
-printGen (PrintFilters fnList v) ( dbconf) _= 
+printGen (PrintFilters fnList v) ( dbconf) _=
     do
-        "\t console.log(" ++ (intercalate ", " (map (\fname-> 
+        "\t console.log(" ++ (intercalate ", " (map (\fname->
             do
                 let dbName = (dbconf `getNameInDatabase` fname)
-                fname ++ ": " ++ "rows[" ++ "i_"++dbName++ "]." ++ dbName ) fnList)) ++ ");"  --Take a list of filters, and print the 
-printGen (PrintElement (Var v1 (Annotation an)) v2) ( dbconf) _ = 
+                fname ++ ": " ++ "rows[" ++ "i_"++dbName++ "]." ++ dbName ) fnList)) ++ ");"  --Take a list of filters, and print the
+printGen (PrintElement (Var v1 (Annotation an)) v2) ( dbconf) _ =
     do
         let dbName = (dbconf `getNameInDatabase` an)
-        "\t console.log(\"" ++ an ++ "\": " ++ "rows[" ++ "i_"++dbName++ "]." ++ dbName  ++ ");" 
+        "\t console.log(\"" ++ an ++ "\": " ++ "rows[" ++ "i_"++dbName++ "]." ++ dbName  ++ ");"
 
 forEachGen::ForEachDef Annotation->DBConfig->Config Annotation->Maybe [String] ->String->String
 forEachGen (ForEachFilter fname (Var v an)) ( dbconfmap) (Config config)  diag stmts  =
     do
         let index_name = "i_" ++ (dbconfmap `getNameInDatabase` fname)
         let loopablename = fname
-        let 
+        let
             forloopbegin = "\tfor (var "++index_name++" = 0; "++index_name ++ "  < rows.length; "++index_name++") {\n"
             (Just (FieldMap fieldmap)) =  M.lookup (loopablename, True) config
             fields = M.keys fieldmap
