@@ -1,5 +1,5 @@
 {
-  "name": "oncotime",
+  "name": "doc",
   "version": "0.0.1",
   "description": "DSL for cancer-based research",
   "main": "index.js",

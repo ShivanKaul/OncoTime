@@ -26,17 +26,20 @@ cabal sandbox init
 cabal install --only-dependencies
 cabal build
 
+# To install node dependencies
 npm install
+
+# To open SSH tunnel to remote database
 ssh -N -p 22 cs520@hig.cs.mcgill.ca -L 33306:localhost:3306
 ```
 
 The flags are supported and can be used thusly:
 ```
-./oncotime <filename> -pptype -dumpsymtab
+./doc <filename> -pptype -dumpsymtab
 ```
 
-Note that we have a `config.conf` file. This file must be at the top-level directory i.e. must be in the same directory as the `oncotime` executable.
+Note that we have a `config.conf` file. This file must be at the top-level directory i.e. must be in the same directory as the `doc` executable.
 
 ## To Run
-- The compiled compiler is compiled into the `dist/build/oncotime` directory
-- We've kept a copy of an executable at the top-level. Simply run `./oncotime <filename>`
+- The compiled compiler is compiled into the `dist/build/doc` directory
+- We've kept a copy of an executable at the top-level. Simply run `./doc <filename>`

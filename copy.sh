@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 
-cp dist/build/oncotime/oncotime .
-chmod a+x oncotime 
+cp dist/build/doc/doc .
+chmod a+x doc 
 echo "Copied executable to top-level!"

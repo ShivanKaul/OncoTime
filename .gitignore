@@ -1,3 +1,4 @@
+doc
 programs/valid/*.js
 programs/benchmark/*.js
 npm_modules
