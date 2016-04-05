@@ -30,7 +30,7 @@ import PrettyPrinter
 import Formatter
 
 --the function that does all weeding
-weed::String->(String -> IO())->(Program Annotation)->SourcePos->IO(Program Annotation)
+weed::String->(String -> IO())->(Program Annotation)->SourcePos->IO((Program Annotation),(Config Annotation))
 weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDefs filters comps) pos =
     do
         putStrLn $ "File "++file
@@ -170,7 +170,7 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
                     -- testIfSymbolTableContains symbolTable1 (Var "x")
 
                     putStrLn "Weeded successfully!"
-                    return (Program hdr docs [] (expandedGroups) filtersWithVarsReplaced (annComps))
+                    return ((Program hdr docs [] (expandedGroups) filtersWithVarsReplaced (annComps)),conf)
 
 -- get grouptypes of all groupvars for a group
 checkIfGroupTypesOfVarsBelong :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> GroupDefs Annotation -> Bool

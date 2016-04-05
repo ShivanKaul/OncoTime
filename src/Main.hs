@@ -27,6 +27,7 @@ import Parser
 import PrettyPrinter
 import Formatter
 import Weeder
+import CodeGen
 
 parseFile :: String -> IO ((Program Annotation),SourcePos)
 parseFile filename =
@@ -80,13 +81,16 @@ prettyPrintFile prog file =
         writeFile (replaceExtension file ".pretty.onc") (pretty prog)
         putStrLn "VALID\n"
 
-codeGen :: (Program Annotation) -> String -> IO()
-codeGen prog file =
+codeGen :: (Program Annotation) -> String -> (Config Annotation)-> IO()
+codeGen prog file weedconf =
     do
         dbConf <- readDBConfig file
         conf <- readConfig file
-        writeFile (replaceExtension file ".js") (generateSQL prog dbConf conf)
-        putStrLn ("Printed to \n" ++ (replaceExtension file ".js"))
+        let contents = (generateSQL prog dbConf weedconf)
+        let fname = (replaceExtension file ".js")
+        writeFile fname contents
+        putStrLn ("Printed to \n" ++ fname)
+
 
 removeWildcardsFilters :: [Filter Annotation] -> [Filter Annotation]
 removeWildcardsFilters filters =
@@ -170,9 +174,9 @@ main =
                 (\a->return ())
 
 
-        weededProg <- weed filename symTabFun parsed pos
+        (weededProg,conf) <- weed filename symTabFun parsed pos
         prettyPrintFile parsed filename
-        codeGen weededProg filename
+        codeGen weededProg filename conf
         if "-pptype" `elem` flags then
             prettyPrintTypes weededProg filename
         else
@@ -181,6 +185,6 @@ main =
 mainDebug filename = do
         (parsed,p) <- parseFile filename
 
-        weededProg <- weed filename (pure $ pure ()) parsed p
+        (weededProg,_) <- weed filename (pure $ pure ()) parsed p
         prettyPrintFile parsed filename
         prettyPrintTypes weededProg filename

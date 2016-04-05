@@ -3,19 +3,19 @@ script benchmark1()
  *
  */
 
+use vikramPatientData.grp
 group Postalcode post = {A1B, C2D, D3E}
 
-use vikramPatientData.grp
 
-population is:
+population is
     id: after 1000
-    gender: m
+    gender: male
     birthyear: before 1990
     postalcode: <post>
     diagnosis: brain
 
-doctors is:
-    oncologist: 
+doctors is
+    oncologist: true
     id: 1300 to 3100
 
 

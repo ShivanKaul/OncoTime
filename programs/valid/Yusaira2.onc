@@ -1,0 +1,24 @@
+script Yusaira2()
+/**/
+
+group BirthYear x = {1971,1972}
+group BirthYear z = {1971,1972, <x>}
+
+population are
+	Sex : M, F
+	BirthYear :1971,1972 
+
+
+{	
+	//table t = count Patients by Birthyear
+	//print t.length
+	foreach Patient p{
+	//print Sex, PostalCode of p	
+	print p
+	}
+	
+	
+	
+	
+	
+}//ohai

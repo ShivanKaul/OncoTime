@@ -5,20 +5,22 @@ script benchmark2(Id doctorids)
 
 use vikramPatientData.grp
 
-population is:
-    id: <patientGroupOne> 
-    gender: f
+population is
+    id: <patientGroupOne>
+    gender: female
     birthyear: <patientBirthyearRange>
-    diagnosis: stomach, lung, breast 
+    diagnosis: stomach, lung, breast
     postalcode: A2C
 
-doctors is:
-    oncologist: Yes
+doctors is
+    oncologist: true
     id: <doctorids>
 
 {
-    
-    table x = count patients by diagnosis
 
-    
+    foreach Doctors d {
+        print d
+    }
+
+
 }

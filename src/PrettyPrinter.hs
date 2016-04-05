@@ -24,6 +24,7 @@ class PrettyPrint a where
 pretty :: (PrettyPrint a) => a -> String
 pretty program = prettyPrint program
 
+<<<<<<< HEAD
 generateSQL :: (Program Annotation)->(DBConfig) ->(Config Annotation)-> String
 generateSQL program@(Program header docs usefilelist groups filt comps) dbconf weedconf =
     do
@@ -190,6 +191,8 @@ generateScaffoldingJS dbQueryList dbDisplayFunction =
           --  dbQueryRight ++ dbDisplay ++ dbEnd ++ dbDisplayFunctionStart ++
             --dbDisplayFunction ++ dbDisplayFunctionEnd
         mysqlReq ++ config ++ dbConnect ++ (concat formatQueryList) ++dbEnd ++ dbDisplayFunctionStart ++ dbDisplayFunction ++ dbDisplayFunctionEnd
+=======
+>>>>>>> 69233b0b1959a225dff1dde439b2bbac99fa56b7
 
 printTypesGroups :: [(GroupDefs Annotation)] -> String
 printTypesGroups groups =
