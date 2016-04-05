@@ -15,6 +15,7 @@ population is
     diagnosis: brain
 
 
+
 {
     foreach Patient p {
         print p
