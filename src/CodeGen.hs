@@ -52,23 +52,21 @@ printGen::PrintAction Annotation->DBConfig -> Config Annotation->String
 printGen (PrintVar (Var val (Annotation an))) dbconfmap (Config conf) =
     let
         isLoopable = (M.member (an,True) (conf) )
-        dbName = if isLoopable
-            then (dbconfmap `getNameInDatabase` an)
-            else "'"++an ++ " has not been implemented yet, sorry!'"
-    in ""
+        printstmt = if isLoopable
+            then "\t\ttable.push(generatePrettyRow(" ++ (dbconfmap `getNameInDatabase` an) ++ "));"
+            else "/*"++an ++ " has not been implemented yet, sorry!*/"
+    in printstmt
 
 printGen(PrintLength var) dbconf  _= "//tables not yet implemented sorry!"
 printGen (PrintTimeLine v) dbconf  _= "//Really cool timeline would go here"
-printGen (PrintFilters fnList v) ( dbconf) _=
+printGen (PrintFilters fnList (Var v1 (Annotation an))) ( dbconf) _=
     do
-        "\t console.log(" ++ (intercalate ", " (map (\fname->
+        let dbtablename = (dbconf `getNameInDatabase` an)
+        "\t table.push(generatePrettyRow({" ++ (intercalate ", " (map (\fname->
             do
-                let dbName = (dbconf `getNameInDatabase` fname)
-                fname ++ ": " ++ "rows[" ++ "i_"++dbName++ "]." ++ dbName ) fnList)) ++ ");"  --Take a list of filters, and print the
-printGen (PrintElement (Var v1 (Annotation an)) v2) ( dbconf) _ =
-    do
-        let dbName = (dbconf `getNameInDatabase` an)
-        "\t console.log(\"" ++ an ++ "\": " ++ "rows[" ++ "i_"++dbName++ "]." ++ dbName  ++ ");"
+                let fieldname_in_db = (dbconf `getNameInDatabase` fname)
+                fieldname_in_db ++ " : " ++ dbtablename++"." ++ fieldname_in_db ) fnList)) ++ "}));"  --Take a list of filters, and print the
+printGen (PrintElement (Var v1 (Annotation an)) v2) ( dbconf) _ ="/*table printing is unimplemented, sorry!*/"
 
 forEachGen::ForEachDef Annotation->DBConfig->Config Annotation->Maybe [String] ->String->String
 forEachGen (ForEachFilter fname (Var v an)) ( dbconfmap) (Config config)  diag stmts  =
@@ -101,7 +99,7 @@ forEachGen (ForEachFilter fname (Var v an)) ( dbconfmap) (Config config)  diag s
                             (if currfield == "Diagnosis" then "Description" else currfield)
                             ++ ",\n") "" tableHeaders
             middleend = "\t\t}//How do you like me now?\n"
-            tablePush = "\t\ttable.push(generatePrettyRow(" ++ dbtablename ++ "));"
+            tablePush = ""
             forloopEnd ="\n\t}\n\treturn table;\n"
 
         tableInit ++ forloopbegin++middlestart ++c0++middleend++stmts++tablePush++forloopEnd
