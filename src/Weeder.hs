@@ -586,7 +586,7 @@ compareFieldTypes::(Field Annotation)->(FieldMap Annotation)->(HashMap.HashMap (
 --field values
 compareFieldTypes (FieldValue allValList an@(Annotation fa) ) fm hm gi =
     case gi of
-        (GroupValString s sa) -> case (s `elem` allValList) of
+        (GroupValString s sa) -> case ((map toLower s) `elem` allValList) of
                 True ->  Right (GroupValString s an) --Right (GroupValString s)
                 False-> Left (AllowedValError ("Error. " ++ s ++ " is not defined in the config file list that also contains: " ++ (intercalate "," allValList)))
         --(GroupVar (Var v va)) -> case (an == va) of

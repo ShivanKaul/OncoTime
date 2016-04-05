@@ -221,8 +221,7 @@ generateScaffoldingJS dbQueryList dbDisplayFunction =
         let dbQueryRight = "', function(err, rows, fields) {\n\
                 \\t\t\tif (err) throw err;\n"
         let dbDisplay = "\t\t\tconsole.log(display(rows).toString());\n\
-            \\t\t});\n\
-            \\t}\n"
+            \\t\t});\n" -- \\t}\n"
 
         let dbEnd = "\tdb.end();\n\
             \});\n\n"
@@ -233,5 +232,6 @@ generateScaffoldingJS dbQueryList dbDisplayFunction =
 
         let formatQueryList = map (\x -> dbQueryLeft ++ x ++ dbQueryRight ++
                 dbDisplay ++ "\n") dbQueryList
-        mysqlReq ++ tableReq ++ config ++ dbConnect ++ (concat formatQueryList) ++
+        mysqlReq ++ tableReq ++ config ++ dbConnect ++ (concat formatQueryList) ++ 
+            " \t }\n" ++
             dbEnd ++ generatePrettyRowFunction ++ dbDisplayFunctionStart ++ dbDisplayFunction ++ dbDisplayFunctionEnd
