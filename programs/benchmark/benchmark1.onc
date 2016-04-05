@@ -10,12 +10,12 @@ population is
     gender: male 
     birthyear: before 1990
     diagnosis: brain, lung 
-    postalcode: J7V
+    //postalcode: J7V
 
 
 
 {
     foreach Patient p {
-        print id of p
+        print p
     }
 }

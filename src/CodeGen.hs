@@ -59,14 +59,14 @@ printGen (PrintVar (Var val (Annotation an))) dbconfmap (Config conf) =
 
 printGen(PrintLength var) dbconf  _= "//tables not yet implemented sorry!"
 printGen (PrintTimeLine v) dbconf  _= "//Really cool timeline would go here"
-printGen (PrintFilters fnList (Var v1 (Annotation an))) ( dbconf) _=
-    do
-        let dbtablename = (dbconf `getNameInDatabase` an)
-        "\t table.push(generatePrettyRow({" ++ (intercalate ", " (map (\fname->
-            do
-                let fieldname_in_db = (dbconf `getNameInDatabase` fname)
-                fieldname_in_db ++ " : " ++ dbtablename++"." ++ fieldname_in_db ) fnList)) ++ "}));"  --Take a list of filters, and print the
-printGen (PrintElement (Var v1 (Annotation an)) v2) ( dbconf) _ ="/*table printing is unimplemented, sorry!*/"
+printGen (PrintFilters fnList (Var v1 (Annotation an))) ( dbconf) _= "// printing filters has not been implemented"
+---    do
+--         let dbtablename = (dbconf `getNameInDatabase` an)
+--         "\t table.push(generatePrettyRow({" ++ (intercalate ", " (map (\fname->
+--             do
+--                 let fieldname_in_db = (dbconf `getNameInDatabase` fname)
+--                 fieldname_in_db ++ " : " ++ dbtablename++"." ++ fieldname_in_db ) fnList)) ++ "}));"  --Take a list of filters, and print the
+-- printGen (PrintElement (Var v1 (Annotation an)) v2) ( dbconf) _ ="/*table printing is unimplemented, sorry!*/"
 
 forEachGen::ForEachDef Annotation->DBConfig->Config Annotation->Maybe [String] ->String->String
 forEachGen (ForEachFilter fname (Var v an)) ( dbconfmap) (Config config)  diag stmts  =
