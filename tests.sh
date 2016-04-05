@@ -3,7 +3,7 @@
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-chmod +x oncotime
+chmod +x doc
 printf "\n${RED}Running tests...${NC}\n"
 if [ $# -eq 0 ]; then
     python regression.py
