@@ -76,7 +76,7 @@ forEachGen (ForEachFilter fname (Var v an)) ( dbconfmap) (Config config)  diag s
         let index_name = "i_" ++ (dbconfmap `getNameInDatabase` fname)
         let loopablename = fname
         let
-            forloopbegin = "\tfor (var "++index_name++" = 0; "++index_name ++ "  < rows.length; "++index_name++") {\n"
+            forloopbegin = "\tfor (var "++index_name++" = 0; "++index_name ++ "  < rows.length; "++index_name++"++) {\n"
             (Just (FieldMap fieldmap)) =  M.lookup (loopablename, True) config
             fields = M.keys fieldmap
             tableHeaders = case diag of
@@ -85,10 +85,13 @@ forEachGen (ForEachFilter fname (Var v an)) ( dbconfmap) (Config config)  diag s
 
             tableLeft = "\tvar table = new Table({\n\
                         \\t\thead: "
+            tableCols = case diag of
+                Nothing -> ""
+                _ -> "\n, colWidths: [20, 50, 10, 20, 20]\n"
             tableRight = "\n\
                     \\t});\n"
 
-            tableInit = tableLeft ++ (show tableHeaders) ++ tableRight
+            tableInit = tableLeft ++ (show tableHeaders) ++ tableCols ++ tableRight
             dbtablename = (dbconfmap `getNameInDatabase` loopablename)
             middlestart = "\t\tvar "++ dbtablename ++" = {\n"
             c0 = foldl' (\prev currfield -> prev ++

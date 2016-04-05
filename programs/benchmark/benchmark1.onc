@@ -4,15 +4,12 @@ script benchmark1()
  */
 
 use vikramPatientData.grp
-group Postalcode post = {A1B, C2D, D3E}
-
 
 population is
-    id: after 1000
-    gender: male
+    id: 1 to 999
+    gender: female
     birthyear: before 1990
-    postalcode: <post>
-    diagnosis: brain
+    diagnosis: brain, breast
 
 
 
