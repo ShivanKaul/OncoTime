@@ -16,6 +16,6 @@ population is
 
 {
     foreach Patient p {
-        print p
+        print id of p
     }
 }

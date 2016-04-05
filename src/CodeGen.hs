@@ -55,7 +55,7 @@ printGen (PrintVar (Var val (Annotation an))) dbconfmap (Config conf) =
         dbName = if isLoopable
             then (dbconfmap `getNameInDatabase` an)
             else "'"++an ++ " has not been implemented yet, sorry!'"
-    in "\t console.log(" ++ dbName ++ ");"
+    in ""
 
 printGen(PrintLength var) dbconf  _= "//tables not yet implemented sorry!"
 printGen (PrintTimeLine v) dbconf  _= "//Really cool timeline would go here"
@@ -87,7 +87,7 @@ forEachGen (ForEachFilter fname (Var v an)) ( dbconfmap) (Config config)  diag s
                         \\t\thead: "
             tableCols = case diag of
                 Nothing -> ""
-                _ -> "\n, colWidths: [20, 50, 10, 20, 20]\n"
+                _ -> "\n, colWidths: [20, 50, 10, 20, 20]"
             tableRight = "\n\
                     \\t});\n"
 
@@ -135,10 +135,10 @@ generateQueries filterList ( dbconfmap@(DBConfig dbconf)) diag =
         --iterate through filter list
         queryList <- map (\(Filter filtName fdefList) ->
             do
-                if filtName /= "population" 
+                if filtName /= "population"
                     then "/*"++filtName++" filtering has not been implemented yet, sorry! */"
                 --then queryString ++ (dbconf M.! filtName) --THIS IS PART OF WHAT BRENDAN DID
-                else 
+                else
                      do
                         let fromQuery = case diag of
                                 Nothing -> (dbconfmap `getNameInDatabase` filtName)
