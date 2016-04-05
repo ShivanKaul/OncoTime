@@ -98,7 +98,7 @@ forEachGen (ForEachFilter fname (Var v an)) ( dbconfmap) (Config config)  diag s
                             -- GHETTO AF
                             (if currfield == "Diagnosis" then "Description" else currfield)
                             ++ ",\n") "" tableHeaders
-            middleend = "\t\t}//How do you like me now?\n"
+            middleend = "\t\t}\n"
             tablePush = ""
             forloopEnd ="\n\t}\n\treturn table;\n"
 
@@ -230,6 +230,6 @@ generateScaffoldingJS dbQueryList dbDisplayFunction =
 
         let formatQueryList = map (\x -> dbQueryLeft ++ x ++ dbQueryRight ++
                 dbDisplay ++ "\n") dbQueryList
-        mysqlReq ++ tableReq ++ config ++ dbConnect ++ (concat formatQueryList) ++ 
+        mysqlReq ++ tableReq ++ config ++ dbConnect ++ (concat formatQueryList) ++
             " \t }\n" ++
             dbEnd ++ generatePrettyRowFunction ++ dbDisplayFunctionStart ++ dbDisplayFunction ++ dbDisplayFunctionEnd
