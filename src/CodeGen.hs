@@ -188,6 +188,25 @@ generateQueries filterList ( dbconfmap@(DBConfig dbconf)) diag =
                 ) filterList
         return queryList
 
+generateEventQuery :: [Filter Annotation]->DBConfig-> [String]
+generateEventQuery filterlist dbconf@(DBConfig dbconfmap) = 
+    let 
+        population = filter(\(Filter filtName fdefList)-> filtName=="population") filterlist
+        ids = filter(\(FieldDef fname fvals) = fname == "id" ) (map (\(Filter filtName fdefList)-> fdefList) population)
+        eventnamesAndQueries = [("ct_sim_booked","select Patient.PatientSerNum, \"ct_sim_booked\" as eventname, \n\
+            \Appointment.lastupdated as eventtimestamp from Patient inner join Appointement \n\
+            \on Patient.PatientSerNum=Appointment.PatientSerNum
+            inner join where Appointment.status =\"Open\" and Appointment.AliasSerNum = 3")
+        ,("ct_sim_completed","select Patient.PatientSerNum, \"ct_sim_booked\" as eventname, \n\
+            \Appointment.lastupdated as eventtimestamp from Patient inner join Appointement \n\
+            \on Patient.PatientSerNum=Appointment.PatientSerNum
+            inner join where Appointment.status =\"Manually Completed\" and Appointment.AliasSerNum = 3")]
+
+
+
+
+
+
 generateWhereClauseForDiag :: [String] -> DBConfig -> String
 generateWhereClauseForDiag diagnoses ( dbconfmap) =
     do
