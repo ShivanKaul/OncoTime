@@ -215,8 +215,8 @@ generateFieldValsForWhere fvals fname =
                 GroupRange (SingleInt i _) ->  fname ++ " = " ++ (show i) ++ " "
                 GroupRange (Before i _) -> fname ++ " < " ++ (show i) ++ "  "
                 GroupRange (After i _) ->  fname ++ " > " ++ (show i) ++ "  "
-                GroupRange (Between i1 i2 _) ->  fname ++ " > " ++ (show i1) ++
-                        " AND " ++ fname ++ " < " ++ (show i2) ++ "  "
+                GroupRange (Between i1 i2 _) ->  " ( "++fname ++ " > " ++ (show i1) ++
+                        " AND " ++ fname ++ " < " ++ (show i2) ++ ")  "
                 (GroupDate dd mm yy _) ->  fname ++" " ++ (show dd) ++"-"++ (show mm) ++"-"++ (show yy) ++ "  "
                 )  fvals)
         expanded

@@ -790,7 +790,7 @@ isNowInTopScope  symtable  = (null $ tail symtable)
 --evaluateInTopScope :: CompSymTable
 evaluateInTopScope symtable f = if isNowInTopScope symtable
     then f symtable
-    else Left $ ComputationWrongScope "Can only be in top scope"
+else Left $ ComputationWrongScope $" Can only be in top scope\nCurrent scope: "++(show symtable)
 
 
 emptyScope :: HashMap.HashMap (Var Annotation) ComputationType
@@ -924,7 +924,7 @@ weedForEach config symtable newcomp pos (ForEachSequence memberVar@(Var mname _)
                 newsym <- (addToSymTable (sym++[emptyScope]) memberVar TSequence)
                 s <- foldl' foldWeedList (Right newsym) undefSequence
                 (intSymRep,annComps) <- (weedFold config s newcomp pos)
-                Right (s,intSymRep, (Foreach((ForEachSequence  (Var mname (Annotation "sequence member"))
+                Right (symtable,intSymRep, (Foreach((ForEachSequence  (Var mname (Annotation "sequence member"))
                  undefSequence) ) annComps pos))
 
 
