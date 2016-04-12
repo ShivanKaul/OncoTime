@@ -179,12 +179,12 @@ generateQueries filterList ( dbconfmap@(DBConfig dbconf)) diag =
                         --form the query
                         if (length filterFieldsWithoutWildcard) == 0 then selectQuery
                         else do
-                            let whereQuery = " where " ++ joinClause ++
-                                    (generateWhereClauses ( dbconfmap) filterFieldsWithoutWildcard filtName)
-                            -- regex to replace all AND AND by AND
-                            let regexedWhere = subRegex (mkRegex " OR[ )]+AND ") whereQuery ") AND "
+                            let otherClause = (generateWhereClauses ( dbconfmap) filterFieldsWithoutWildcard filtName)
+                            let middle = if((not $ null otherClause) && (not $ null joinClause)) then (" AND ") else " "
+                            let whereQuery = " where " ++ joinClause ++  middle ++ otherClause
+
                             -- Hack for getting rid of last AND
-                            selectQuery ++  (T.unpack (T.dropEnd 5 (T.pack regexedWhere)))
+                            selectQuery ++ whereQuery
                 ) filterList
         return queryList
 
@@ -194,33 +194,31 @@ generateWhereClauseForDiag diagnoses ( dbconfmap) =
         let prefixDiags = "(Patient.PatientSerNum = Diagnosis.PatientSerNum) AND ("
         let whereDiags = map (\diagnosis -> "Diagnosis.DiagnosisCode like " ++
                 "\"" ++ (dbconfmap `getNameInDatabase` diagnosis) ++ "%\"") diagnoses
-        prefixDiags ++ (intercalate " OR " whereDiags) ++ ") AND "
+        prefixDiags ++ (intercalate " OR " whereDiags) ++ ") "
 
 
 generateWhereClauses :: DBConfig->[FieldDef Annotation] -> String -> String
 generateWhereClauses ( dbconfmap) fielddefs filtername =
-    do
-
-        foldl (\acc (FieldDef fname fvals) ->
+        intercalate " AND " (map (\(FieldDef fname fvals) ->
             let
                 tname = (dbconfmap `getNameInDatabase` filtername) ++ "." ++ (dbconfmap `getNameInDatabase` fname)
-            in acc ++" ("
-                ++  (generateFieldValsForWhere fvals tname) ++ ") AND ") "" fielddefs
+            in " ("
+                ++  (generateFieldValsForWhere fvals tname) ++ ")" )  fielddefs)
 
 
 generateFieldValsForWhere :: [FieldVal Annotation] -> String -> String
 generateFieldValsForWhere fvals fname =
     do
-        let expanded = foldl (\acc fval -> case fval of
+        let expanded = intercalate " OR "( map (\ fval -> case fval of
             -- TODO: Handle multiple for both of these by having commas
-                GroupValString str _ -> acc ++ (fname) ++ " like \"" ++ str ++ "%\" OR  "
-                GroupRange (SingleInt i _) -> acc ++ fname ++ " = " ++ (show i) ++ " OR "
-                GroupRange (Before i _) -> acc ++ fname ++ " < " ++ (show i) ++ " OR "
-                GroupRange (After i _) -> acc ++ fname ++ " > " ++ (show i) ++ " OR "
-                GroupRange (Between i1 i2 _) -> acc ++ fname ++ " > " ++ (show i1) ++
-                        " AND " ++ fname ++ " < " ++ (show i2) ++ " OR "
-                (GroupDate dd mm yy _) -> acc ++ fname ++" " ++ (show dd) ++"-"++ (show mm) ++"-"++ (show yy) ++ " OR "
-                ) "" fvals
+                GroupValString str _ -> (fname) ++ " like \"" ++ str ++ "%\" "
+                GroupRange (SingleInt i _) ->  fname ++ " = " ++ (show i) ++ " "
+                GroupRange (Before i _) -> fname ++ " < " ++ (show i) ++ "  "
+                GroupRange (After i _) ->  fname ++ " > " ++ (show i) ++ "  "
+                GroupRange (Between i1 i2 _) ->  fname ++ " > " ++ (show i1) ++
+                        " AND " ++ fname ++ " < " ++ (show i2) ++ "  "
+                (GroupDate dd mm yy _) ->  fname ++" " ++ (show dd) ++"-"++ (show mm) ++"-"++ (show yy) ++ "  "
+                )  fvals)
         expanded
 
 
