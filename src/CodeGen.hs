@@ -168,7 +168,7 @@ generateComps filterList ( dbconfmap@(DBConfig dbconf)) comp =
 
             let fromLocations = (intercalate "," (map (dbconf M.!) filterNameList))
             
-            let queryTotal = dbQueryLeft ++ query ++ fromLocations ++ (genWhereClause filterList dbconfmap filterNameList) ++ dbQueryRight
+            let queryTotal = dbQueryLeft ++ query ++ fromLocations ++ " where " ++ (genWhereClause filterList dbconfmap filterNameList) ++ dbQueryRight
 		-- MAYBE IF DIAG EXISTS, ADD IT TO FROM LOCATIONS???
         
             let generatedCode = case comp of
@@ -212,7 +212,7 @@ genWhereClause filterList dbconfmap filterNameList =
 				
                 if (length filterFieldsWithoutWildcard) == 0 then ""
                 else do
-                    let whereQuery = " where " ++ joinClause ++
+                    let whereQuery = joinClause ++
                                     (generateWhereClauses ( dbconfmap) filterFieldsWithoutWildcard filtName)
                             -- regex to replace all AND AND by AND
                
@@ -344,7 +344,7 @@ generateScaffoldingJS dbQueryList = --funcs=  -- dbDisplayFunction =
 -}
        -- let dbEnd = "\tdb.end();\n\" "\});\n\n"
        --
-        let dbEnd = "\tdb.end();\n"
+        let dbEnd = "\t}\tdb.end();\n \n});\n "
 
         let dbDisplayFunctionStart = "function display(rows) {\n"
         let dbDisplayFunctionEnd = "}\n"
@@ -370,7 +370,7 @@ generateForEachFunctions = "function foreach_fname(rows, fns){ \n\
       \  //call every function here \n\
        \ fns.forEach(function(func){\n\
          \ //    if(func == foreach_fname){\n\
-         \  //      func(rows,fns);\n\
+         \        func(rows);\n\
           \  //};\n\
         \ });\n\
    \ });\n\
