@@ -9,6 +9,7 @@ import Data.List
 import Parser
 import qualified Data.Text as T
 import qualified Data.Map as M
+import Data.Char
 import Text.Parsec.String
 import Text.Regex
 import Debug.Trace
@@ -17,14 +18,19 @@ import Debug.Trace
 generateSQL :: (Program Annotation)->DBConfig ->(Config Annotation)-> String
 generateSQL program@(Program header docs usefilelist groups filt comps) dbconf weedconf =
     do
-        let diagnosis = (checkIfDiagnosis filt)
-        let query = generateQueries filt dbconf diagnosis
-        let displayFunction = generateDisplayFunction comps  dbconf weedconf diagnosis
-        generateScaffoldingJS query displayFunction
+        -- let diagnosis = (checkIfDiagnosis filt)
+        -- let query = generateQueries filt dbconf diagnosis
+        let query = generateComputations filt dbconf comps
+        let st = generateScaffoldingJS query 
+        st
+        -- let displayFunction = generateDisplayFunction comps  dbconf weedconf diagnosis
+        -- generateScaffoldingJS query displayFunction
+        
+
 
 generatePrettyRowFunction :: String
 generatePrettyRowFunction = "function generatePrettyRow(row) {\n\
-            \\treturn Object.keys(row).map(function (key) {return row[key]});\n\
+            \ \treturn Object.keys(row).map(function (key) {return row[key]});\n\
         \}\n\n"
 
 
@@ -124,6 +130,118 @@ checkIfDiagnosis filters =
                  Nothing filters
 
 
+-- map over all computations
+-- fold over a list of computations, and apply this particular function, which will find the right code to gen. my responsibility is the foreach
+
+--For each, what I want to do is generate teh db query. from db.query(... to the end of the function
+
+--go overeach computatio
+----check to see what query it needs, and then generate
+
+--HOW ABOUT DIAGNOSES?
+
+generateComputations::[Filter Annotation]->DBConfig->[Computation Annotation]-> [String]
+generateComputations filterList ( dbconfmap@(DBConfig dbconf)) comps = 
+    do
+        map (generateComps filterList dbconfmap) comps
+
+
+
+
+--WHAT ABOUT DIAGNOSES?
+generateComps::[Filter Annotation]->DBConfig->Computation Annotation-> String
+generateComps filterList ( dbconfmap@(DBConfig dbconf)) comp = 
+    do
+            let dbQueryLeft = "\t\tdb.query('"
+            let dbQueryRight = "', function(err, rows, fields) {\n\
+                \\t\t\tif (err) throw err;\n"
+            let dbQueryFunctionEnd = "\n});" --This goes around each one?
+            let query = "select * from " 
+            let filterNameList = case comp of
+			    (Foreach def compList _) -> case def of
+				    (ForEachFilter filtName v) -> (map toLower filtName) : (accumulateForEach compList ) --(intercalate "," ((dbconf M.! filtName) : (accumulateForEach compList))) ++ " where "
+				    _ -> [] 
+			    (Table v filtName fieldName) -> []
+			    (List v seqFieldList) -> []
+			    (Print p) -> []
+			    (Barchart v) -> []
+
+            let fromLocations = (intercalate "," (map (dbconf M.!) filterNameList))
+            
+            let queryTotal = dbQueryLeft ++ query ++ fromLocations ++ (genWhereClause filterList dbconfmap filterNameList) ++ dbQueryRight
+		-- MAYBE IF DIAG EXISTS, ADD IT TO FROM LOCATIONS???
+        
+            let generatedCode = case comp of
+			    (Foreach def compList _) -> case def of
+				    ForEachFilter filtName v -> "fns = {\n" ++  (intercalate "," (map genForEachFilter compList)) ++"\n }\n" ++ "foreach_fname(rows, fns);" ++ "\n"
+				    _ -> ""
+			    (Table v filtName fieldName) -> ""
+			    (List v seqFieldList) -> ""
+			    (Print p) -> ""
+			    (Barchart v) -> ""
+
+            queryTotal ++ generatedCode ++ "\n});\n"
+		        
+
+genForEachFilter::Computation Annotation->String
+genForEachFilter (Foreach def compList _) = "function(rows){\n fns = {\n" ++ (intercalate "," (map genForEachFilter compList)) ++ ")\n};\n rows.forEach(function(entry){ fns.forEach(function(func){ func(rows)\n}\n}\n }" 
+genForEachFilter (Table v fil fie) = ""
+genForEachFilter (Print p) = "function(rows){console.log(row)}\n"
+genForEachFilter (Barchart v) = ""
+genForEachFilter (List v seqList) = ""
+
+			
+genWhereClause::[Filter Annotation]->DBConfig->[FilterName]-> String
+genWhereClause filterList dbconfmap filterNameList = 
+	do --generate a where clause, where if diagnoses is in it, then we include it
+        let joinClause = case "diagnosis" `elem` (filterNameList) of
+                True -> 
+                    do
+                        case checkIfDiagnosis filterList of
+                            Nothing -> ""
+                            Just diags -> (generateWhereClauseForDiag diags( dbconfmap))
+                False -> ""
+
+        whereStatement <- map (\(Filter filtName fdefList) ->
+            do
+                        --get list of fields without wildcard
+                let filterFieldsWithoutWildcard = filter (\(FieldDef fname fieldvals) ->
+					case fieldvals of
+						[fval] -> fval /= GroupWildcard
+						_ -> fname /= "diagnosis") (fdefList)
+				
+                if (length filterFieldsWithoutWildcard) == 0 then ""
+                else do
+                    let whereQuery = " where " ++ joinClause ++
+                                    (generateWhereClauses ( dbconfmap) filterFieldsWithoutWildcard filtName)
+                            -- regex to replace all AND AND by AND
+               
+                    let regexedWhere = subRegex (mkRegex " OR[ )]+AND ") whereQuery ") AND "
+                            -- Hack for getting rid of last AND
+                    (T.unpack (T.dropEnd 5 (T.pack regexedWhere)))
+                ) filterList
+        (joinClause ++ whereStatement)
+			
+
+--gets names of all the filters used
+accumulateForEach::[Computation Annotation]->[String]
+accumulateForEach compList= 
+	do
+        let filts = filter (isForEachFilter) compList
+        let filtNames = map (\(Foreach (ForEachFilter fname _) _ _)  ->	(map toLower fname)) filts
+        filtNames 
+
+
+isForEachFilter::(Computation Annotation) -> Bool
+isForEachFilter (Foreach (ForEachFilter _ _) _ _ ) =  True
+isForEachFilter _ = False
+
+
+--generateQuery::[Filter Annotation]->DBConfig->String
+--generateQuery filterList ( dbconfmap@(DBConfig dbconf)) = 
+--	do
+
+
 generateQueries::[Filter Annotation]->DBConfig-> Maybe [String] -> [String]
 generateQueries filterList ( dbconfmap@(DBConfig dbconf)) diag =
     do
@@ -201,8 +319,8 @@ generateFieldValsForWhere fvals fname =
         expanded
 
 
-generateScaffoldingJS :: [String] -> String -> String
-generateScaffoldingJS dbQueryList dbDisplayFunction =
+generateScaffoldingJS :: [String] -> String -- -> String
+generateScaffoldingJS dbQueryList = --funcs=  -- dbDisplayFunction =
     do
         let mysqlReq = "var mysql = require('mysql');\n"
         let tableReq = "var Table = require('cli-table');\n"
@@ -216,21 +334,51 @@ generateScaffoldingJS dbQueryList dbDisplayFunction =
         let dbConnect = "db.connect(function(err) {\n\
                 \\tif (err) console.log(err);\n\
                 \\telse {\n"
+        {-
         let dbQueryLeft = "\t\tdb.query('"
         let dbQueryRight = "', function(err, rows, fields) {\n\
                 \\t\t\tif (err) throw err;\n"
-        let dbDisplay = "\t\t\tconsole.log(display(rows).toString());\n\
-            \\t\t});\n" -- \\t}\n"
+        let dbDisplay = "" -- "\t\t\tconsole.log(display(rows).toString());\n\
+            -- \\t\t});\n" -- \\t}\n"
 
-        let dbEnd = "\tdb.end();\n\
-            \});\n\n"
+-}
+       -- let dbEnd = "\tdb.end();\n\" "\});\n\n"
+       --
+        let dbEnd = "\tdb.end();\n"
 
         let dbDisplayFunctionStart = "function display(rows) {\n"
-
         let dbDisplayFunctionEnd = "}\n"
 
-        let formatQueryList = map (\x -> dbQueryLeft ++ x ++ dbQueryRight ++
-                dbDisplay ++ "\n") dbQueryList
-        mysqlReq ++ tableReq ++ config ++ dbConnect ++ (concat formatQueryList) ++
-            " \t }\n" ++
-            dbEnd ++ generatePrettyRowFunction ++ dbDisplayFunctionStart ++ dbDisplayFunction ++ dbDisplayFunctionEnd
+--        let formatQueryList = map (\x -> dbQueryLeft ++ x ++ dbQueryRight ++
+  --              dbDisplay ++ "\n") dbQueryList
+
+
+        let formatQueryList = map (\x -> x ++ "\n") dbQueryList
+        
+        mysqlReq ++ tableReq ++ config ++ dbConnect ++ (concat formatQueryList) ++ 
+            --" \t }\n" ++
+            dbEnd ++ generateDisplayPrintFunction ++ "\n" ++ generateDisplayTableFunction ++ "\n" ++ generateBarchartFunction ++ "\n" ++ generateForEachFunctions ++ "\n"
+            -- generatePrettyRowFunction ++ dbDisplayFunctionStart ++ dbDisplayFunction ++ dbDisplayFunctionEnd
+            --
+generateDisplayPrintFunction::String
+generateDisplayPrintFunction = "function generatePrettyRow(row) {\n \treturn Object.keys(row).map(function (key) {return row[key]});\n\
+        \}\n\n"
+
+generateForEachFunctions::String
+generateForEachFunctions = "function foreach_fname(rows, fns){ \n\
+    \ rows.forEach(function(entry){\n\
+      \  //call every function here \n\
+       \ fns.forEach(function(func){\n\
+         \ //    if(func == foreach_fname){\n\
+         \  //      func(rows,fns);\n\
+          \  //};\n\
+        \ });\n\
+   \ });\n\
+\ }\n\n"
+--Other stuff here
+
+generateBarchartFunction::String
+generateBarchartFunction = "function barchart_display(row){}" 
+
+generateDisplayTableFunction::String
+generateDisplayTableFunction = "function table_display(row){}" 
