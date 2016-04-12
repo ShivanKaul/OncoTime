@@ -9,7 +9,6 @@ population is
     id: <patientGroupOne>
     gender: female, f
     birthyear: <patientBirthyearRange>
-    diagnosis: stomach, lung, breast
     postalcode: H8N
 
 

@@ -9,7 +9,6 @@ population is
     id: 1 to 999
     gender: male
     birthyear: before 1990
-    diagnosis: brain, lung
     postalcode: J7V
 
 

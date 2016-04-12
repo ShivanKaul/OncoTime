@@ -19,13 +19,20 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
     do
         let diagnosis = (checkIfDiagnosis filt)
         let query = generateQueries filt dbconf diagnosis
-        let displayFunction = generateDisplayFunction comps  dbconf weedconf diagnosis
+        let displayFunction = generateDisplayFunction comps dbconf weedconf diagnosis
+        -- let eventQueries = generateEventQueries filt comps
+        -- generateScaffoldingJSV2 query displayFunction
         generateScaffoldingJS query displayFunction
 
 generatePrettyRowFunction :: String
 generatePrettyRowFunction = "function generatePrettyRow(row) {\n\
             \\treturn Object.keys(row).map(function (key) {return row[key]});\n\
         \}\n\n"
+
+generateEventQueries :: [Filter Annotation] -> [Computation Annotation] -> String
+generateEventQueries filters computations =
+    do
+        ""
 
 
 generateDisplayFunction :: [Computation Annotation] ->DBConfig->(Config Annotation)-> Maybe [String] -> String
@@ -234,3 +241,38 @@ generateScaffoldingJS dbQueryList dbDisplayFunction =
         mysqlReq ++ tableReq ++ config ++ dbConnect ++ (concat formatQueryList) ++
             " \t }\n" ++
             dbEnd ++ generatePrettyRowFunction ++ dbDisplayFunctionStart ++ dbDisplayFunction ++ dbDisplayFunctionEnd
+
+
+generateScaffoldingJSV2 :: [String] -> String -> String
+generateScaffoldingJSV2 dbQueryList dbDisplayFunction =
+    do
+        let mysqlReq = "var mysql = require('mysql');\n"
+        let tableReq = "var Table = require('cli-table');\n"
+        let config = "var db = mysql.createConnection({\n\
+                \\thost: 'localhost',\n\
+                \\tuser: '520student',\n\
+                \\tpassword: 'comp520',\n\
+                \\tdatabase: 'oncodb',\n\
+                \\tport: 33306\n\
+            \});\n"
+        let dbConnect = "db.connect(function(err) {\n\
+                \\tif (err) console.log(err);\n\
+                \\telse {\n"
+
+        let dbEnd = "\t}\n\tdb.end();\n\
+            \});\n\n"
+
+        let dbDisplayFunctionStart = "function display(rows) {\n"
+        let dbDisplayFunctionEnd = "}\n"
+
+        mysqlReq ++ tableReq ++ config ++ dbConnect ++ dbEnd ++
+            generatePrettyRowFunction ++ dbDisplayFunctionStart ++ dbDisplayFunction ++
+            dbDisplayFunctionEnd
+
+
+
+        -- let formatQueryList = map (\x -> dbQueryLeft ++ x ++ dbQueryRight ++
+        --         dbDisplay ++ "\n") dbQueryList
+        -- mysqlReq ++ tableReq ++ config ++ dbConnect ++ (concat formatQueryList) ++
+        --     " \t }\n" ++
+        --     dbEnd ++ generatePrettyRowFunction ++ dbDisplayFunctionStart ++ dbDisplayFunction ++ dbDisplayFunctionEnd
