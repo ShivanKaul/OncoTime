@@ -193,7 +193,7 @@ genForEachFilter::DBConfig->Computation Annotation->String
 {-genForEachFilter (Foreach def compList _) = "function(rows){\n fns = {\n" ++ (intercalate "," (map genForEachFilter compList)) ++ ")\n};\n rows.forEach(function(entry){ fns.forEach(function(func){ func(rows)\n}\n}\n }" -}
 genForEachFilter dbconfmap (Foreach def compList _) = 
     case def of
-        ForEachFilter filtName v ->  (" function(rows){" ++ filtName++"_fns = [\n" ++  (intercalate "," (map (genForEachFilter dbconfmap) compList)) ++"\n ]\n" ++ "foreach_fname(rows," ++ filtName ++ "_fns);" ++ "\n")
+        ForEachFilter filtName v ->  (" function(rows){" ++ filtName++"_fns = [\n" ++  (intercalate "," (map (genForEachFilter dbconfmap) compList)) ++"\n ]\n" ++ "foreach_fname(rows," ++ filtName ++ "_fns);" ++ "}\n")
         _ -> "NOT SUPPORTED"
 genForEachFilter _ (Table v fil fie) = ""
 -- genForEachFilter (Print p) = "function(rows){console.log(row)}\n"
@@ -395,9 +395,9 @@ generateForEachFunctions::String
 generateForEachFunctions = "function foreach_fname(rows, fns){ \n\
     \ for(i =0; i < rows.length; i++){\n\ 
     \ \t for(j =0; j < fns.length; j++){ \n\
-    \ \t\t fns[i](rows[i]); \
-    \ \t } \n \
-    \ } \n"
+    \ \t\t fns[j](rows[i]); \
+    \ \t \n } \n \
+    \ } \n}\n"
 
 --code check for an additional argument, it being the arguments that are passed to that particular foreach?
 --ex we have a third argument foreachFns, and it is indexed by the foreachs in the list
