@@ -1,22 +1,25 @@
-script benchmark1()
+script Benchmark1()
 /*
  *
  */
 
-use vikramPatientData.grp
-
 population is
-    id: 1 to 999
-    gender: male
-    birthyear: before 1990
-    postalcode: J7V
-
-
+    Id: 1 to 20
+    Sex: male
 
 {
-    foreach Patient p {
-    	print p
-    	//this is also supporteds
-        //print id, PostalCode of p
+    //foreach Patient p {
+    //	print p
+    //	//this is also supporteds
+    //    //print id, PostalCode of p
+    //}
+
+    foreach sequence s like [patient_arrives -> patient_scheduled -> treatment_began -> end] {
+        print s
     }
+
+    //list S = sequences like []
+    //foreach member s1 in S {
+    //    print s1
+    //}
 }

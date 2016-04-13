@@ -20,20 +20,32 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
         let diagnosis = (checkIfDiagnosis filt)
         let query = generateQueries filt dbconf diagnosis
         let displayFunction = generateDisplayFunction comps dbconf weedconf diagnosis
-        -- let eventQueries = generateEventQueries filt comps
-        -- generateScaffoldingJSV2 query displayFunction
-        generateScaffoldingJS query displayFunction
+        let eventQueries = generateEventQueries filt comps
+        generateScaffoldingJSV2 eventQueries displayFunction
+        -- generateScaffoldingJS query displayFunction
 
 generatePrettyRowFunction :: String
 generatePrettyRowFunction = "function generatePrettyRow(row) {\n\
             \\treturn Object.keys(row).map(function (key) {return row[key]});\n\
         \}\n\n"
 
-generateEventQueries :: [Filter Annotation] -> [Computation Annotation] -> String
+generateEventQueries :: [Filter Annotation] -> [Computation Annotation] -> [String]
 generateEventQueries filters computations =
     do
-        ""
+        foldl (\acc cur -> case cur of
+            Foreach (ForEachSequence var seqs) comps _ -> acc ++ (dealWithSeqs seqs filters)) "" computations
+        [show computations]
 
+dealWithSeqs :: [SeqField] -> [Filter Annotation] -> String
+dealWithSeqs seqs filts =
+    do
+        -- decompose sequences into multiple seqs
+        foldl (\acc cur -> case cur of
+            Bar [Event "patient_arrived"] -> ) seqs
+
+collectWHEREs :: [Filter Annotation] -> [SeqField] -> String
+collectSELECTs :: [SeqField] -> String
+collectFROMs :: [SeqField] -> String
 
 generateDisplayFunction :: [Computation Annotation] ->DBConfig->(Config Annotation)-> Maybe [String] -> String
 generateDisplayFunction comps dbconf conf diag =
@@ -265,7 +277,7 @@ generateScaffoldingJSV2 dbQueryList dbDisplayFunction =
         let dbDisplayFunctionStart = "function display(rows) {\n"
         let dbDisplayFunctionEnd = "}\n"
 
-        mysqlReq ++ tableReq ++ config ++ dbConnect ++ dbEnd ++
+        mysqlReq ++ tableReq ++ config ++ dbConnect ++ (concat dbQueryList) ++ dbEnd ++
             generatePrettyRowFunction ++ dbDisplayFunctionStart ++ dbDisplayFunction ++
             dbDisplayFunctionEnd
 
