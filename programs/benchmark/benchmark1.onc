@@ -12,12 +12,16 @@ population is
     diagnosis: brain, lung
     postalcode: J7V
 
+doctors are
+    oncologist: true
 
 
 {
     foreach Patient p {
-    	print p
-    	//this is also supporteds
+    	foreach Doctor d{
+            print p
+    	}
+        //this is also supporteds
         //print id, PostalCode of p
     }
 }

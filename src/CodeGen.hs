@@ -152,48 +152,70 @@ generateComputations filterList ( dbconfmap@(DBConfig dbconf)) comps =
 generateComps::[Filter Annotation]->DBConfig->Computation Annotation-> String
 generateComps filterList ( dbconfmap@(DBConfig dbconf)) comp = 
     do
-            let dbQueryLeft = "\t\tdb.query('"
-            let dbQueryRight = "', function(err, rows, fields) {\n\
-                \\t\t\tif (err) throw err;\n"
-            let dbQueryFunctionEnd = "\n});" --This goes around each one?
-            let query = "select * from " 
-            let filterNameList = case comp of
-			    (Foreach def compList _) -> case def of
-				    (ForEachFilter filtName v) -> (map toLower filtName) : (accumulateForEach compList ) --(intercalate "," ((dbconf M.! filtName) : (accumulateForEach compList))) ++ " where "
-				    _ -> [] 
-			    (Table v filtName fieldName) -> []
-			    (List v seqFieldList) -> []
-			    (Print p) -> []
-			    (Barchart v) -> []
+        let dbQueryLeft = "\t\tdb.query('"
+        let dbQueryRight = "', function(err, rows, fields) {\n\
+            \\t\t\tif (err) throw err;\n"
+        let dbQueryFunctionEnd = "\n});" --This goes around each one?
+        let query = "select * from "
+        let filterNameList= case comp of
+                (Foreach def compList _)->
+                    case def of
+                        (ForEachFilter filtName v) -> (map toLower filtName):(accumulateForEach compList )
+                        _ -> []
+                (Table v filtName fieldName) -> []
+                (List v seqFieldList) -> []
+                (Print p) -> []
+                (Barchart v) -> []
 
-            let fromLocations = (intercalate "," (map (dbconf M.!) filterNameList))
+        let fromLocations = (intercalate "," (map (dbconf M.!) filterNameList))
+
+        let queryTotal = dbQueryLeft ++ query ++ fromLocations ++ " where " ++ (genWhereClause filterList dbconfmap filterNameList) ++ dbQueryRight
+        -- MAYBE IF DIAG EXISTS, ADD IT TO FROM LOCATIONS???
+
+        let generatedCode = case comp of
+                (Foreach def compList _) -> 
+                    case def of
+                        ForEachFilter filtName v -> filtName++"_fns = [\n" ++  (intercalate "," (map (genForEachFilter dbconfmap)compList )) ++"\n ]\n" ++ "foreach_fname(rows," ++ filtName ++ "_fns);" ++ "\n"
+                        _ -> ""
+                (Table v filtName fieldName) -> ""
+                (List v seqFieldList) -> ""
+                (Print p) -> ""
+                (Barchart v) -> ""
+
+        queryTotal ++ generatedCode ++ "\n});\n"
             
-            let queryTotal = dbQueryLeft ++ query ++ fromLocations ++ " where " ++ (genWhereClause filterList dbconfmap filterNameList) ++ dbQueryRight
-		-- MAYBE IF DIAG EXISTS, ADD IT TO FROM LOCATIONS???
-        
-            let generatedCode = case comp of
-			    (Foreach def compList _) -> case def of
-				    ForEachFilter filtName v -> "fns = {\n" ++  (intercalate "," (map genForEachFilter compList)) ++"\n }\n" ++ "foreach_fname(rows, fns);" ++ "\n"
-				    _ -> ""
-			    (Table v filtName fieldName) -> ""
-			    (List v seqFieldList) -> ""
-			    (Print p) -> ""
-			    (Barchart v) -> ""
 
-            queryTotal ++ generatedCode ++ "\n});\n"
-		        
+--HOW DO VARIABLES FIT INTO THIS???
 
-genForEachFilter::Computation Annotation->String
-genForEachFilter (Foreach def compList _) = "function(rows){\n fns = {\n" ++ (intercalate "," (map genForEachFilter compList)) ++ ")\n};\n rows.forEach(function(entry){ fns.forEach(function(func){ func(rows)\n}\n}\n }" 
-genForEachFilter (Table v fil fie) = ""
-genForEachFilter (Print p) = "function(rows){console.log(row)}\n"
-genForEachFilter (Barchart v) = ""
-genForEachFilter (List v seqList) = ""
+--how do I generate these foreachs? Espcially foreach within foreach
 
-			
+genForEachFilter::DBConfig->Computation Annotation->String
+{-genForEachFilter (Foreach def compList _) = "function(rows){\n fns = {\n" ++ (intercalate "," (map genForEachFilter compList)) ++ ")\n};\n rows.forEach(function(entry){ fns.forEach(function(func){ func(rows)\n}\n}\n }" -}
+genForEachFilter dbconfmap (Foreach def compList _) = 
+    case def of
+        ForEachFilter filtName v ->  (" function(rows){" ++ filtName++"_fns = [\n" ++  (intercalate "," (map (genForEachFilter dbconfmap) compList)) ++"\n ]\n" ++ "foreach_fname(rows," ++ filtName ++ "_fns);" ++ "\n")
+        _ -> "NOT SUPPORTED"
+genForEachFilter _ (Table v fil fie) = ""
+-- genForEachFilter (Print p) = "function(rows){console.log(row)}\n"
+genForEachFilter db (Print p) = genPrintInForeach p db
+genForEachFilter _ (Barchart v) = ""
+genForEachFilter _ (List v seqList) = ""
+
+
+--How do I generate all these print statements?
+--use the var given!!!
+genPrintInForeach::PrintAction Annotation ->DBConfig->String
+genPrintInForeach (PrintVar (Var v an)) _ = "function PrintVar("++ v ++"){console.log("++ v ++")}"--vanilla case
+genPrintInForeach (PrintLength v) _ = ""--count???
+genPrintInForeach (PrintFilters filts v@(Var varName an)) db = "function PrintFilters(row){" ++ (genPrintFilterString v filts db) ++ "console.log(" ++ varName ++")}"--like print id,sex of. --needs to be anonymous, otherwise I can't do it 
+genPrintInForeach (PrintElement (Var index a) (Var tab an)) _ = "function PrintElement("++ index ++ ", "++ tab ++"){console.log("++ tab ++"["++index++ "])}"
+
+genPrintFilterString::(Var Annotation)->[FilterName]->DBConfig->String
+genPrintFilterString (Var v an) filtList (DBConfig dbconf)= v ++ " = {" ++ (intercalate ",\n" (map (\filt -> filt ++ " : row." ++ (dbconf M.! filt)) filtList )) ++ "\n};"
+            
 genWhereClause::[Filter Annotation]->DBConfig->[FilterName]-> String
 genWhereClause filterList dbconfmap filterNameList = 
-	do --generate a where clause, where if diagnoses is in it, then we include it
+    do --generate a where clause, where if diagnoses is in it, then we include it
         let joinClause = case "diagnosis" `elem` (filterNameList) of
                 True -> 
                     do
@@ -206,10 +228,10 @@ genWhereClause filterList dbconfmap filterNameList =
             do
                         --get list of fields without wildcard
                 let filterFieldsWithoutWildcard = filter (\(FieldDef fname fieldvals) ->
-					case fieldvals of
-						[fval] -> fval /= GroupWildcard
-						_ -> fname /= "diagnosis") (fdefList)
-				
+                        case fieldvals of
+                            [fval] -> fval /= GroupWildcard
+                            _ -> fname /= "diagnosis") (fdefList)
+                
                 if (length filterFieldsWithoutWildcard) == 0 then ""
                 else do
                     let whereQuery = joinClause ++
@@ -221,14 +243,14 @@ genWhereClause filterList dbconfmap filterNameList =
                     (T.unpack (T.dropEnd 5 (T.pack regexedWhere)))
                 ) filterList
         (joinClause ++ whereStatement)
-			
+            
 
 --gets names of all the filters used
 accumulateForEach::[Computation Annotation]->[String]
 accumulateForEach compList= 
-	do
+    do
         let filts = filter (isForEachFilter) compList
-        let filtNames = map (\(Foreach (ForEachFilter fname _) _ _)  ->	(map toLower fname)) filts
+        let filtNames = map (\(Foreach (ForEachFilter fname _) _ _)  -> (map toLower fname)) filts
         filtNames 
 
 
@@ -239,7 +261,7 @@ isForEachFilter _ = False
 
 --generateQuery::[Filter Annotation]->DBConfig->String
 --generateQuery filterList ( dbconfmap@(DBConfig dbconf)) = 
---	do
+--  do
 
 
 generateQueries::[Filter Annotation]->DBConfig-> Maybe [String] -> [String]
@@ -340,8 +362,7 @@ generateScaffoldingJS dbQueryList = --funcs=  -- dbDisplayFunction =
                 \\t\t\tif (err) throw err;\n"
         let dbDisplay = "" -- "\t\t\tconsole.log(display(rows).toString());\n\
             -- \\t\t});\n" -- \\t}\n"
-
--}
+        -}
        -- let dbEnd = "\tdb.end();\n\" "\});\n\n"
        --
         let dbEnd = "\t}\tdb.end();\n \n});\n "
@@ -360,21 +381,28 @@ generateScaffoldingJS dbQueryList = --funcs=  -- dbDisplayFunction =
             dbEnd ++ generateDisplayPrintFunction ++ "\n" ++ generateDisplayTableFunction ++ "\n" ++ generateBarchartFunction ++ "\n" ++ generateForEachFunctions ++ "\n"
             -- generatePrettyRowFunction ++ dbDisplayFunctionStart ++ dbDisplayFunction ++ dbDisplayFunctionEnd
             --
-generateDisplayPrintFunction::String
-generateDisplayPrintFunction = "function generatePrettyRow(row) {\n \treturn Object.keys(row).map(function (key) {return row[key]});\n\
+generateDisplayPrettyFunction::String
+generateDisplayPrettyFunction = "function generatePrettyRow(row) {\n \treturn Object.keys(row).map(function (key) {return row[key]});\n\
         \}\n\n"
+
+--generates all necessary print functions
+generateDisplayPrintFunction::String
+generateDisplayPrintFunction = "function print_var(row) {\n \t console.log(row)\n\
+        \}\n\n"
+
 
 generateForEachFunctions::String
 generateForEachFunctions = "function foreach_fname(rows, fns){ \n\
-    \ rows.forEach(function(entry){\n\
-      \  //call every function here \n\
-       \ fns.forEach(function(func){\n\
-         \ //    if(func == foreach_fname){\n\
-         \        func(rows);\n\
-          \  //};\n\
-        \ });\n\
-   \ });\n\
-\ }\n\n"
+    \ for(i =0; i < rows.length; i++){\n\ 
+    \ \t for(j =0; j < fns.length; j++){ \n\
+    \ \t\t fns[i](rows[i]); \
+    \ \t } \n \
+    \ } \n"
+
+--code check for an additional argument, it being the arguments that are passed to that particular foreach?
+--ex we have a third argument foreachFns, and it is indexed by the foreachs in the list
+--if we see (fns[i].name == foreach_fname) we can see the arguments at that index and pass it in
+
 --Other stuff here
 
 generateBarchartFunction::String
