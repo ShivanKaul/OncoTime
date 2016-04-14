@@ -29,7 +29,7 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
     do
         -- let diagnosis = (checkIfDiagnosis filt)
         -- let query = generateQueries filt dbconf diagnosis
-        let query = generateComputations filt dbconf joinconf comps
+        let query = generateComputations filt weedconf dbconf joinconf comps
         let st = generateScaffoldingJS query 
         st
         -- let displayFunction = generateDisplayFunction comps  dbconf weedconf diagnosis
@@ -66,16 +66,16 @@ checkIfDiagnosis filters =
 
 --go overeach computatio
 ----check to see what query it needs, and then generate
-generateComputations::[Filter Annotation]->DBConfig->JoinConfig-> [Computation Annotation]-> [String]
-generateComputations filterList ( dbconfmap@(DBConfig dbconf)) joinconf comps = 
+generateComputations::[Filter Annotation]->Config Annotation-> DBConfig->JoinConfig-> [Computation Annotation]-> [String]
+generateComputations filterList conf ( dbconfmap@(DBConfig dbconf)) joinconf comps = 
     do
-        map (generateComps filterList dbconfmap joinconf) comps
+        map (generateComps filterList conf dbconfmap joinconf) comps
 
 --generates each individual query and computation
-generateComps::[Filter Annotation]->DBConfig->JoinConfig->Computation Annotation-> String
-generateComps filterList ( dbconfmap@(DBConfig dbconf)) joinconf comp = 
+generateComps::[Filter Annotation]->Config Annotation->DBConfig->JoinConfig->Computation Annotation-> String
+generateComps filterList conf (dbconfmap@(DBConfig dbconf)) joinconf comp = 
     do
-        let selectStatement = genFullSQLStatement filterList dbconfmap joinconf comp
+        let selectStatement = genFullSQLStatement filterList conf dbconfmap joinconf comp
 
         let query = "select * from "
         --BE CAREFUL. HERE I USUALLY MISS 
@@ -99,8 +99,8 @@ generateComps filterList ( dbconfmap@(DBConfig dbconf)) joinconf comp =
 --select Patient.*, PatientDoctor.*, Diagnosis.* from Patient JOIN PatientDoctor On PatientDoctor.PatientSerNum = Patient.PatientSerNum JOIN Diagnosis on Patient.PatientSerNum = Diagnosis.PatientSerNum limit 100;
 
 
-genFullSQLStatement::[Filter Annotation]->DBConfig->JoinConfig->Computation Annotation->String
-genFullSQLStatement filterList dbconfmap joinconf comp = 
+genFullSQLStatement::[Filter Annotation]->Config Annotation->DBConfig->JoinConfig->Computation Annotation->String
+genFullSQLStatement filterList conf dbconfmap joinconf comp = 
     do
         let filterNameList= case comp of
             (Foreach def compList _)->
@@ -147,11 +147,34 @@ genJoinStatements (DBConfig dbconf) (JoinConfig jointo joinableList) filterNameH
 
         joinStatement
         
+genWhereStatements::Config Annotation->DBConfig->JoinConfig->[String]->String
+genWhereStatements c@(Config conf) db@(DBConfig dbconf) jc@(JoinConfig jointo joinableList) filterNameList = 
+    do
+        --get 
+        --if a filter, get all
+        let filterWhere = genWhereFilter c db jc filterNameList
+        -- if a field, 
+        let fieldWhere = genWhereFilter c db jc filterNameList
+
+        case (length filterWhere > 0) of
+            True -> case (length fieldWhere > 0) of
+                True -> " where " ++ filterWhere ++ " AND " ++ fieldWhere
+                False -> " where " ++ filterWhere
+            False -> (length fieldWhere > 0) of
+                True-> " where " ++ fieldWhere
+                False-> "" 
+
+genWhereFilter::Config Annotation->DBConfig->JoinConfig->[String]->String
+genWhereFilter c@(Config conf) db@(DBConfig dbconf) jc@(JoinConfig jointo joinableList) filterNameList =  
+    do
+        --(A OR B) AND (C OR D)
+        
 
 
+genWhereField::Config Annotation->DBConfig->JoinConfig->[String]->String
+genWhereField c@(Config conf) db@(DBConfig dbconf) jc@(JoinConfig jointo joinableList) filterNameList =  
+    do
 
-
-genWhereStatements
 
 
 genCode
