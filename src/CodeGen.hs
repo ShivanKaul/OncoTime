@@ -98,12 +98,12 @@ genFullSQLStatement::[Filter Annotation]->Config Annotation->DBConfig->JoinConfi
 genFullSQLStatement filterList conf dbconfmap joinconf comp = 
     do
         let filterNameList= case comp of
-            (Foreach def compList _)->
+             (Foreach def compList _)->
                 case def of
                     (ForEachFilter filtName v) -> (map toLower filtName):(accumulateForEach compList )
                     _ -> []
-            (Table v filtName fieldName) -> filtName:[]
-            _ -> []
+             (Table v filtName fieldName) -> filtName:[]
+             _ -> []
 
         --get select from
         let selectStmt = genSelectStatements dbconfmap joinconf filterNameList 
@@ -112,58 +112,67 @@ genFullSQLStatement filterList conf dbconfmap joinconf comp =
         let joinStmt = genJoinStatements dbconfmap joinconf filterNameList 
 
         --get wheres
-        let whereStmt = genWhereStatements 
+        let whereStmt = genWhereStatements filterList dbconfmap joinconf filterNameList 
         
         --concat
         selectStmt ++ joinStmt ++ whereStmt
 
 genSelectStatements::DBConfig->JoinConfig->[String]->String
-genSelectStatements (DBConfig dbconf) joinconf filterNameList = 
+genSelectStatements db@(DBConfig dbconf) joinconf filterNameList = 
     do
         let selectStmt = case (length filterNameList) > 0 of
-            True -> "select " ++ (intercalate ", " (map (\filt-> (dbconfmap `getNameInDatabase` filt) ++ ".*") filterNameList)  ) ++ " from "
-            False -> "select * from "
+             True -> "select " ++ (intercalate ", " (map (\filt-> (db `getNameInDatabase` filt) ++ ".*") filterNameList)  ) ++ " from "
+             False -> "select * from "
        
-       selectStmt
+        selectStmt
 
 
 --JOIN PatientDoctor On PatientDoctor.PatientSerNum = Patient.PatientSerNum JOIN Diagnosis on Patient.PatientSerNum = Diagnosis.PatientSerNum limit 100;
 
 genJoinStatements::DBConfig->JoinConfig->[String]->String
-genJoinStatements (DBConfig dbconf) (JoinConfig jointo joinableList) filterNameHead:filterNameList = 
+genJoinStatements db@(DBConfig dbconf) (JoinConfig jointo joinableList) (filterNameHead:filterNameList) = 
     do
-        let dbHead = (\filt-> (dbconf `getNameInDatabase` filt) filterNameHead
-        let dbFields = map  (\filt-> (dbconfmap `getNameInDatabase` filt) filterNameList
-        let joinStatement = case (length filterNameHead:filterNameList) > 1 of
-            True -> 
-                do
-                    concat . map (\field -> "JOIN " ++ field ++ " ON " ++  field ++ "."++ jointo ++ " = " ++ dbHead ++ "."++jointo ++ " "   ) dbFields 
-            False -> ""
+        let dbHead = (\filt-> (db `getNameInDatabase` filt)) filterNameHead
+        let dbFields = map  (\filt-> (db `getNameInDatabase` filt)) filterNameList
+        let joinStatement = case (length (filterNameHead:filterNameList)) > 1 of
+             True -> 
+                 do
+                    concat ( map (\field -> "JOIN " ++ field ++ " ON " ++  field ++ "."++ jointo ++ " = " ++ dbHead ++ "."++jointo ++ " "   ) dbFields )
+             False -> ""
         joinStatement
         
 genWhereStatements::[Filter Annotation]->DBConfig->JoinConfig->[String]->String
 genWhereStatements filtList db@(DBConfig dbconf) jc@(JoinConfig jointo joinableList) filterNameList = 
     do
         --if a filter, get all
-        let filterWhere = foldl (genWhereFilter filtList db jc) [] filterNameList
+        let filterWhere = map (genWhereFilter filtList db jc) filterNameList
         -- if a field, 
-        let fieldWhere = foldl (genWhereField filtList db jc) [] filterNameList
+        let fieldWhere = map (genWhereField filtList db jc) filterNameList
 
         case (length filterWhere > 0) of
             True -> case (length fieldWhere > 0) of
                 True -> " where " ++ (intercalate " AND " filterWhere) ++ " AND " ++ (intercalate " AND " fieldWhere)
                 False -> " where " ++ (intercalate " AND " filterWhere)
-            False -> (length fieldWhere > 0) of
+            False ->case (length fieldWhere > 0) of
                 True-> " where " ++ (intercalate " AND " fieldWhere)
                 False-> "" 
 
+--TODOOOOO
+genWhereField::[Filter Annotation]->DBConfig->JoinConfig->String->String
+genWhereField filtList dbconf joinconf fieldName = 
+    do 
+        let sqlName = (dbconf `getNameInDatabase` fieldName)
+        
+        let listOfConditions = []
+        "(" ++ intercalate " OR " listOfConditions ++ ")"
+
 
 genWhereFilter::[Filter Annotation]->DBConfig->JoinConfig->String->String
-genWhereFilter filtList (DBConfig dbconf) joinconf filterName =
+genWhereFilter filtList db@(DBConfig dbconf) joinconf filterName =
     do
-        fields = <- (find (\Filter filtName fdef -> filterName == filtName ) filtList)
-        let sqlName = (dbconf `getNameInDatabase` filterName)
-        listOfConditions = filterToWhere fields (DBConfig dbconf) sqlName
+        let fields = (find (\(Filter filtName fdef) -> filterName == filtName ) filtList)
+        let sqlName = (db `getNameInDatabase` filterName)
+        let listOfConditions = filterToWhere fields db sqlName
         "(" ++ intercalate " OR " listOfConditions ++ ")"
 
 
@@ -173,23 +182,20 @@ filterToWhere (Filter filt fdef) db@(DBConfig dbconf) sqlName =
         map (fieldDefToWhere sqlName db) fdef
 
 
-fieldDefToWhere:: String->DBConfig->FieldDef->String
-fieldDefToWhere sqlName (DBConfig dbconf) (FieldDef fname fvals) = 
+fieldDefToWhere::String->DBConfig->FieldDef Annotation->String
+fieldDefToWhere sqlName db@(DBConfig dbconf) (FieldDef fname fvals) = 
     do
-        map (fieldValToWhere (sqlName ++ "." ++ (dbconf `getNameInDatabase` fname)) fvals
+        (intercalate " OR " (map (fieldValToWhere (sqlName ++ "." ++ (db `getNameInDatabase` fname))) fvals))
+        
 
 fieldValToWhere::String->FieldVal Annotation->String
 fieldValToWhere sqlName (GroupValString str an ) = sqlName  ++ "like \"" ++ str ++ "%\""
-fieldValToWhere sqlName (GroupRange (Before i a )) = sqlName ++ " <" ++ i
-fieldValToWhere sqlName (GroupRange (After i a )) = sqlName ++ "> " ++ i
-fieldValToWhere sqlName (GroupRange (Between i j a )) = sqlName ++ " > " ++ i ++ " AND " ++ sqlName ++ "< " ++ j --HOW?
-fieldValToWhere sqlName (GroupRange (SingleInt i a)) = "= " ++ i
+fieldValToWhere sqlName (GroupRange (Before i a )) = sqlName ++ " <" ++ show i
+fieldValToWhere sqlName (GroupRange (After i a )) = sqlName ++ "> " ++ show i
+fieldValToWhere sqlName (GroupRange (Between i j a )) = sqlName ++ " > " ++ show i ++ " AND " ++ sqlName ++ "< " ++ show j --HOW?
+fieldValToWhere sqlName (GroupRange (SingleInt i a)) = "= " ++ show i
 fieldValToWhere sqlName (GroupDate dd mm yy an) = "HOW?" -- HOW?
 fieldValToWhere _ _ = "" 
-
-
-genWhereField::[Filter Annotation]->DBConfig->JoinConfig->String->String
-genWhereField filtList dbconf joinconf fieldName
 
 
 
@@ -201,7 +207,7 @@ genFullDBQuery selectStatement  genCode =
         let dbQueryRight = "', function(err, rows, fields) {\n\
             \\t\t\tif (err) throw err;\n"
         let dbQueryEnd = "\n});" --This goes around each one?
-        dbQueryLeft ++ selectStatement ++ dbQueryRight ++ code ++ dbQueryEnd
+        dbQueryLeft ++ selectStatement ++ dbQueryRight ++ genCode ++ dbQueryEnd
 
 
 --HOW DO VARIABLES FIT INTO THIS???
