@@ -11,6 +11,11 @@ data Annotation = Annotation (TypeAn) deriving(Show, Eq)
 type TypeAn = String
 
 
+data JoinConfig = JoinConfig Joinable [JoinableFields] deriving(Show, Eq)
+type Joinable = String
+type JoinableFields = String 
+
+
 --TEST PROGRAM
 data TestProgram a = TestHeader (Header a) | TestDocs Docs | TestUseFileList [UseFile]
     | TestGroupList [(GroupDefs a)] | TestComputation [(Computation a)]

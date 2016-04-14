@@ -14,108 +14,37 @@ import Text.Parsec.String
 import Text.Regex
 import Debug.Trace
 
+{-TODO
+1. Get actual fucking sql queries to be generated properly
+2. WRite teh javascript code for:
+    a. For Each  - NOT SURE IF IT WORKS
+    c. barchart
 
-generateSQL :: (Program Annotation)->DBConfig ->(Config Annotation)-> String
-generateSQL program@(Program header docs usefilelist groups filt comps) dbconf weedconf =
+3. Should there be several different queries? One for each filter? That may make more sense
+
+ -}
+
+generateSQL :: (Program Annotation)->DBConfig ->(Config Annotation)->JoinConfig-> String
+generateSQL program@(Program header docs usefilelist groups filt comps) dbconf weedconf joinconf =
     do
         -- let diagnosis = (checkIfDiagnosis filt)
         -- let query = generateQueries filt dbconf diagnosis
-        let query = generateComputations filt dbconf comps
+        let query = generateComputations filt dbconf joinconf comps
         let st = generateScaffoldingJS query 
         st
         -- let displayFunction = generateDisplayFunction comps  dbconf weedconf diagnosis
         -- generateScaffoldingJS query displayFunction
         
-
-
 generatePrettyRowFunction :: String
 generatePrettyRowFunction = "function generatePrettyRow(row) {\n\
             \ \treturn Object.keys(row).map(function (key) {return row[key]});\n\
         \}\n\n"
-
-
-generateDisplayFunction :: [Computation Annotation] ->DBConfig->(Config Annotation)-> Maybe [String] -> String
-generateDisplayFunction comps dbconf conf diag =
-    do
-        let compCodeList = intercalate "\n" (map (genCompCode dbconf conf diag) comps)
-        compCodeList
 
 getNameInDatabase :: DBConfig -> String -> String
 getNameInDatabase (DBConfig dbconf) name =
     case M.lookup name dbconf of
         Just a -> a
         Nothing -> error $ name ++ " is not a valid name in " ++ show dbconf
-
-
-genCompCode::DBConfig->Config Annotation->Maybe [String] ->Computation Annotation ->String
-genCompCode  dbconf conf diag (Foreach forDef compList _) = (forEachGen forDef dbconf conf diag (generateDisplayFunction compList dbconf conf diag))
-genCompCode dbconf conf diag (Table v filtName fieldName) = ""  --left axis is index, right is value name, and then value
-genCompCode dbconf conf _ (List v seqLsit) = ""
-genCompCode dbconf conf _ (Print paction) = printGen paction dbconf conf
-genCompCode dbconf conf _ (Barchart v) =  " // This is a cool barchart. We will use d3"
-
-printGen::PrintAction Annotation->DBConfig -> Config Annotation->String
-printGen (PrintVar (Var val (Annotation an))) dbconfmap (Config conf) =
-    let
-        isLoopable = (M.member (an,True) (conf) )
-        printstmt = if isLoopable
-            then "\t\ttable.push(generatePrettyRow(" ++ (dbconfmap `getNameInDatabase` an) ++ "));"
-            else "/*"++an ++ " has not been implemented yet, sorry!*/"
-    in printstmt
-
-printGen(PrintLength var) dbconf  _= "//tables not yet implemented sorry!"
-printGen (PrintTimeLine v) dbconf  _= "//Really cool timeline would go here"
-printGen (PrintFilters fnList (Var v1 (Annotation an))) ( dbconf) conf= --"// printing filters has not been implemented"
-    do
-        let dbtablename = (dbconf `getNameInDatabase` an)
-        let temp = dbtablename++"_temp"
-        "\tvar "++temp++"={};\nfor (var attr in "++dbtablename++") "++temp++"[attr] = '';" ++
-            (intercalate "\n " (map (\fname->do
-                let fieldname_in_db = (dbconf `getNameInDatabase` fname)
-                temp++"."++fieldname_in_db ++ " = " ++ dbtablename++"." ++ fieldname_in_db ) fnList)) ++"\ntable.push(generatePrettyRow("++temp++ "));"  --Take a list of filters, and print the
-printGen (PrintElement (Var v1 (Annotation an)) v2) ( dbconf) _ ="/*table printing is unimplemented, sorry!*/"
-
-forEachGen::ForEachDef Annotation->DBConfig->Config Annotation->Maybe [String] ->String->String
-forEachGen (ForEachFilter fname (Var v an)) ( dbconfmap) (Config config)  diag stmts  =
-    do
-        let index_name = "i_" ++ (dbconfmap `getNameInDatabase` fname)
-        let loopablename = fname
-        let
-            forloopbegin = "\tfor (var "++index_name++" = 0; "++index_name ++ "  < rows.length; "++index_name++"++) {\n"
-            (Just (FieldMap fieldmap)) =  M.lookup (loopablename, True) config
-            fields = M.keys fieldmap
-            tableHeaders = case diag of
-                Nothing -> (delete "Diagnosis" (nub (map (\x -> dbconfmap `getNameInDatabase` x) fields)))
-                _ -> (nub (map (\x -> dbconfmap `getNameInDatabase` x) fields))
-
-            tableLeft = "\tvar table = new Table({\n\
-                        \\t\thead: "
-            tableCols = case diag of
-                Nothing -> ""
-                _ -> "\n, colWidths: [20, 50, 10, 20, 20]"
-            tableRight = "\n\
-                    \\t});\n"
-
-            tableInit = tableLeft ++ (show tableHeaders) ++ tableCols ++ tableRight
-            dbtablename = (dbconfmap `getNameInDatabase` loopablename)
-            middlestart = "\t\tvar "++ dbtablename ++" = {\n"
-            c0 = foldl' (\prev currfield -> prev ++
-                            "\t\t    "++
-                            currfield++": rows["++index_name++"]."++
-                            -- GHETTO AF
-                            (if currfield == "Diagnosis" then "Description" else currfield)
-                            ++ ",\n") "" tableHeaders
-            middleend = "\t\t}\n"
-            tablePush = ""
-            forloopEnd ="\n\t}\n\treturn table;\n"
-
-        tableInit ++ forloopbegin++middlestart ++c0++middleend++stmts++tablePush++forloopEnd
-
-forEachGen (ForEachTable (Var v1 an1) (Var v2 an2)) db c _ varList = ""
-forEachGen (ForEachSequence (Var v1 an) seqList) db c _ varList = "" --print a sequence
-forEachGen (ForEachList (Var v1 an1) (Var v2 an2)) db c _ varList = "" -- print a list of sequences
-
-
 
 checkIfDiagnosis :: [Filter Annotation] -> Maybe [String]
 checkIfDiagnosis filters =
@@ -137,36 +66,19 @@ checkIfDiagnosis filters =
 
 --go overeach computatio
 ----check to see what query it needs, and then generate
-
---HOW ABOUT DIAGNOSES?
-
-generateComputations::[Filter Annotation]->DBConfig->[Computation Annotation]-> [String]
-generateComputations filterList ( dbconfmap@(DBConfig dbconf)) comps = 
+generateComputations::[Filter Annotation]->DBConfig->JoinConfig-> [Computation Annotation]-> [String]
+generateComputations filterList ( dbconfmap@(DBConfig dbconf)) joinconf comps = 
     do
-        map (generateComps filterList dbconfmap) comps
+        map (generateComps filterList dbconfmap joinconf) comps
 
-
-
-
---WHAT ABOUT DIAGNOSES?
-generateComps::[Filter Annotation]->DBConfig->Computation Annotation-> String
-generateComps filterList ( dbconfmap@(DBConfig dbconf)) comp = 
+--generates each individual query and computation
+generateComps::[Filter Annotation]->DBConfig->JoinConfig->Computation Annotation-> String
+generateComps filterList ( dbconfmap@(DBConfig dbconf)) joinconf comp = 
     do
-        let dbQueryLeft = "\t\tdb.query('"
-        let dbQueryRight = "', function(err, rows, fields) {\n\
-            \\t\t\tif (err) throw err;\n"
-        let dbQueryFunctionEnd = "\n});" --This goes around each one?
+        let selectStatement = genFullSQLStatement filterList dbconfmap joinconf comp
+
         let query = "select * from "
-        let filterNameList= case comp of
-                (Foreach def compList _)->
-                    case def of
-                        (ForEachFilter filtName v) -> (map toLower filtName):(accumulateForEach compList )
-                        _ -> []
-                (Table v filtName fieldName) -> []
-                (List v seqFieldList) -> []
-                (Print p) -> []
-                (Barchart v) -> []
-
+        --BE CAREFUL. HERE I USUALLY MISS 
         let fromLocations = (intercalate "," (map (dbconf M.!) filterNameList))
 
         let queryTotal = dbQueryLeft ++ query ++ fromLocations ++ " where " ++ (genWhereClause filterList dbconfmap filterNameList) ++ dbQueryRight
@@ -175,7 +87,7 @@ generateComps filterList ( dbconfmap@(DBConfig dbconf)) comp =
         let generatedCode = case comp of
                 (Foreach def compList _) -> 
                     case def of
-                        ForEachFilter filtName v -> filtName++"_fns = [\n" ++  (intercalate "," (map (genForEachFilter dbconfmap)compList )) ++"\n ]\n" ++ "foreach_fname(rows," ++ filtName ++ "_fns);" ++ "\n"
+                        ForEachFilter filtName v -> filtName++"_fns = [\n" ++  (intercalate "," (map (genForEachFilter dbconfmap)compList )) ++"\n ]\n" ++ "foreach_fname(rows," ++ filtName ++ "_fns);" ++ "});\n }"
                         _ -> ""
                 (Table v filtName fieldName) -> ""
                 (List v seqFieldList) -> ""
@@ -183,20 +95,98 @@ generateComps filterList ( dbconfmap@(DBConfig dbconf)) comp =
                 (Barchart v) -> ""
 
         queryTotal ++ generatedCode ++ "\n});\n"
-            
+
+--select Patient.*, PatientDoctor.*, Diagnosis.* from Patient JOIN PatientDoctor On PatientDoctor.PatientSerNum = Patient.PatientSerNum JOIN Diagnosis on Patient.PatientSerNum = Diagnosis.PatientSerNum limit 100;
+
+
+genFullSQLStatement::[Filter Annotation]->DBConfig->JoinConfig->Computation Annotation->String
+genFullSQLStatement filterList dbconfmap joinconf comp = 
+    do
+        let filterNameList= case comp of
+            (Foreach def compList _)->
+                case def of
+                    (ForEachFilter filtName v) -> (map toLower filtName):(accumulateForEach compList )
+                    _ -> []
+            (Table v filtName fieldName) -> filtName:[]
+            _ -> []
+
+        --get select from
+        let selectStmt = genSelectStatements dbconfmap joinconf filterNameList 
+
+        --get Joins
+        let joinStmt = genJoinStatements dbconfmap joinconf filterNameList 
+
+        --get wheres
+        let whereStmt = ""
+        
+        --concat
+        selectStmt ++ joinStmt ++ whereStmt
+
+genSelectStatements::DBConfig->JoinConfig->[String]->String
+genSelectStatements (DBConfig dbconf) joinconf filterNameList = 
+    do
+        let selectStmt = case (length filterNameList) > 0 of
+            True -> "select " ++ (intercalate ", " (map (\filt-> (dbconfmap `getNameInDatabase` filt) ++ ".*") filterNameList)  ) ++ " from "
+            False -> "select * from "
+       
+       selectStmt
+
+
+--JOIN PatientDoctor On PatientDoctor.PatientSerNum = Patient.PatientSerNum JOIN Diagnosis on Patient.PatientSerNum = Diagnosis.PatientSerNum limit 100;
+
+genJoinStatements::DBConfig->JoinConfig->[String]->String
+genJoinStatements (DBConfig dbconf) (JoinConfig jointo joinableList) filterNameHead:filterNameList = 
+    do
+        let dbHead = (\filt-> (dbconfmap `getNameInDatabase` filt) filterNameHead
+        let dbFields = map  (\filt-> (dbconfmap `getNameInDatabase` filt) filterNameList
+        let joinStatement = case (length filterNameHead:filterNameList) > 1 of
+            True -> 
+                do
+                    concat . map (\field -> "JOIN " ++ field ++ " ON " ++  field ++ "."++ jointo ++ " = " ++ dbHead ++ "."++jointo ++ " "   ) dbFields 
+            False -> ""
+
+        joinStatement
+        
+
+
+
+
+genWhereStatements
+
+
+genCode
+
+
+genFullDBQuery::String->String->String
+genFullDBQuery selectStatement = 
+    do
+        let dbQueryLeft = "\t\tdb.query('"
+        let dbQueryRight = "', function(err, rows, fields) {\n\
+            \\t\t\tif (err) throw err;\n"
+        let dbQueryEnd = "\n});" --This goes around each one?
+        dbQueryLeft ++ selectStatement ++ dbQueryRight ++ code ++ dbQueryEnd
+
 
 --HOW DO VARIABLES FIT INTO THIS???
 
 --how do I generate these foreachs? Espcially foreach within foreach
 
+--STILL DOESN'T WORK, I DON'T THINK. IS THERE AN ALTERNATE STRATEGY?
+--SOMEHOW I NEED TO DEAL WITH THE SCOPE OF VARIABLES?
+--I GueSS USE THE VARIABLES ANNOTATION
+
 genForEachFilter::DBConfig->Computation Annotation->String
 {-genForEachFilter (Foreach def compList _) = "function(rows){\n fns = {\n" ++ (intercalate "," (map genForEachFilter compList)) ++ ")\n};\n rows.forEach(function(entry){ fns.forEach(function(func){ func(rows)\n}\n}\n }" -}
 genForEachFilter dbconfmap (Foreach def compList _) = 
     case def of
-        ForEachFilter filtName v ->  (" function(rows){" ++ filtName++"_fns = [\n" ++  (intercalate "," (map (genForEachFilter dbconfmap) compList)) ++"\n ]\n" ++ "foreach_fname(rows," ++ filtName ++ "_fns);" ++ "}\n")
+ --       ForEachFilter filtName v ->  (" function(rows){" ++ filtName++"_fns = [\n" ++  (intercalate "," (map (genForEachFilter dbconfmap) compList)) ++"\n ]\n" ++ "foreach_fname(rows," ++ filtName ++ "_fns);" ++ "}\n") 
+        ForEachFilter filtName v -> "(function(rows){\n\t" ++ filtName++"_fns = [\n" ++  (intercalate ",\n" (map (genForEachFilter dbconfmap) compList)) ++"\n ]\n" ++ " for(i =0; i < rows.length; i++){\n\ 
+    \ \t for(j =0; j < "++ filtName ++ "_fns.length; j++){ \n\
+    \ \t\t fns[j](rows[i]); \
+    \ \n \t } \n \
+    \ } \n}\n })"
         _ -> "NOT SUPPORTED"
 genForEachFilter _ (Table v fil fie) = ""
--- genForEachFilter (Print p) = "function(rows){console.log(row)}\n"
 genForEachFilter db (Print p) = genPrintInForeach p db
 genForEachFilter _ (Barchart v) = ""
 genForEachFilter _ (List v seqList) = ""
@@ -212,7 +202,15 @@ genPrintInForeach (PrintElement (Var index a) (Var tab an)) _ = "function PrintE
 
 genPrintFilterString::(Var Annotation)->[FilterName]->DBConfig->String
 genPrintFilterString (Var v an) filtList (DBConfig dbconf)= v ++ " = {" ++ (intercalate ",\n" (map (\filt -> filt ++ " : row." ++ (dbconf M.! filt)) filtList )) ++ "\n};"
-            
+
+
+--A FUNCTION HERE TO JOIN EVERYTHING THAT CAN BE LOOPED OVER???
+
+--problems: repeated stuff
+--hard coding
+--no error handlgin
+--A table of joins would be nice. 
+
 genWhereClause::[Filter Annotation]->DBConfig->[FilterName]-> String
 genWhereClause filterList dbconfmap filterNameList = 
     do --generate a where clause, where if diagnoses is in it, then we include it
@@ -223,6 +221,9 @@ genWhereClause filterList dbconfmap filterNameList =
                             Nothing -> ""
                             Just diags -> (generateWhereClauseForDiag diags( dbconfmap))
                 False -> ""
+
+        let actuallyUsed = filter (\(Filter filtName fdefList) -> filtName `elem` filterNameList)
+
 
         whereStatement <- map (\(Filter filtName fdefList) ->
             do
@@ -377,8 +378,7 @@ generateScaffoldingJS dbQueryList = --funcs=  -- dbDisplayFunction =
         let formatQueryList = map (\x -> x ++ "\n") dbQueryList
         
         mysqlReq ++ tableReq ++ config ++ dbConnect ++ (concat formatQueryList) ++ 
-            --" \t }\n" ++
-            dbEnd ++ generateDisplayPrintFunction ++ "\n" ++ generateDisplayTableFunction ++ "\n" ++ generateBarchartFunction ++ "\n" ++ generateForEachFunctions ++ "\n"
+            dbEnd ++ generateDisplayPrintFunction ++ "\n" ++ generateBarchartFunction ++ "\n" ++ generateForEachFunctions ++ "\n" ++ generateCountKeyFunction ++"\n" ++ generateDisplayTable
             -- generatePrettyRowFunction ++ dbDisplayFunctionStart ++ dbDisplayFunction ++ dbDisplayFunctionEnd
             --
 generateDisplayPrettyFunction::String
@@ -408,5 +408,38 @@ generateForEachFunctions = "function foreach_fname(rows, fns){ \n\
 generateBarchartFunction::String
 generateBarchartFunction = "function barchart_display(row){}" 
 
-generateDisplayTableFunction::String
-generateDisplayTableFunction = "function table_display(row){}" 
+--rows are all the rows, el is the element you want to count occurrences of.
+generateCountKeyFunction::String
+generateCountKeyFunction = "function countKey(rows, el){ \
+    \ count = 0; \n \
+    \ \tfor(i =0; i < rows.length; i++){\n \ 
+    \ \t\t for(key in rows[i]){ \n\
+    \ \t\t\t if(el == key){ \n\
+    \ \t\t\t\tcount++ \n\
+    \ \t\t\t} \n\
+    \ \t\t } \n\
+    \ \t} \n\
+    \ return count \n \
+    \ \n }"
+
+
+--go through and tab all unique elements of a key
+--returns an object
+generateDisplayTable::String
+generateDisplayTable = "function display_table(rows, key){ \
+    \ \n OccurrencesOfVal = new Object() \    
+    \ \n\tfor(i =0; i < rows.length; i++){ \ 
+    \ \n\t\t string = rows[i][key]\
+    \ \n\t\t el = string.split(', ') \ 
+    \ \n\t\t\t for(i =0; i < el.length; i++){ \ 
+    \ \n\t\t\t\t if(OccurrencesOfVal.hasOwnProperty(el[i])){ \ 
+    \ \n\t\t\t\t\t OccurrencesOfVal[el[i]] += 1;}  \
+    \ \n\t\t\t\t else{ \
+    \ \n\t\t\t\t\t OccurrencesOfVal[el[i]] =  1;}  \
+    \ \n\t\t\t\t }\
+    \ \n \t\t\t} \
+    \ \n return OccurrencesOfVal \
+    \ }" 
+--iterate over all rows
+---- get all values for the key in the row
+----look at each element returned from the row
