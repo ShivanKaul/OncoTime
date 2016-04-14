@@ -77,13 +77,6 @@ generateComps filterList conf (dbconfmap@(DBConfig dbconf)) joinconf comp =
     do
         let selectStatement = genFullSQLStatement filterList conf dbconfmap joinconf comp
 
-        let query = "select * from "
-        --BE CAREFUL. HERE I USUALLY MISS 
-        let fromLocations = (intercalate "," (map (dbconf M.!) filterNameList))
-
-        let queryTotal = dbQueryLeft ++ query ++ fromLocations ++ " where " ++ (genWhereClause filterList dbconfmap filterNameList) ++ dbQueryRight
-        -- MAYBE IF DIAG EXISTS, ADD IT TO FROM LOCATIONS???
-
         let generatedCode = case comp of
                 (Foreach def compList _) -> 
                     case def of
@@ -94,7 +87,9 @@ generateComps filterList conf (dbconfmap@(DBConfig dbconf)) joinconf comp =
                 (Print p) -> ""
                 (Barchart v) -> ""
 
-        queryTotal ++ generatedCode ++ "\n});\n"
+
+        let code = genFullDBQuery selectStatement generatedCode
+        code
 
 --select Patient.*, PatientDoctor.*, Diagnosis.* from Patient JOIN PatientDoctor On PatientDoctor.PatientSerNum = Patient.PatientSerNum JOIN Diagnosis on Patient.PatientSerNum = Diagnosis.PatientSerNum limit 100;
 
@@ -137,7 +132,7 @@ genSelectStatements (DBConfig dbconf) joinconf filterNameList =
 genJoinStatements::DBConfig->JoinConfig->[String]->String
 genJoinStatements (DBConfig dbconf) (JoinConfig jointo joinableList) filterNameHead:filterNameList = 
     do
-        let dbHead = (\filt-> (dbconfmap `getNameInDatabase` filt) filterNameHead
+        let dbHead = (\filt-> (dbconf `getNameInDatabase` filt) filterNameHead
         let dbFields = map  (\filt-> (dbconfmap `getNameInDatabase` filt) filterNameList
         let joinStatement = case (length filterNameHead:filterNameList) > 1 of
             True -> 
@@ -152,36 +147,57 @@ genWhereStatements c@(Config conf) db@(DBConfig dbconf) jc@(JoinConfig jointo jo
     do
         --get 
         --if a filter, get all
-        let filterWhere = genWhereFilter c db jc filterNameList
+        let filterWhere = foldl (genWhereFilter c db jc) [] filterNameList
         -- if a field, 
-        let fieldWhere = genWhereFilter c db jc filterNameList
+        let fieldWhere = foldl (genWhereFilter c db jc) [] filterNameList
 
         case (length filterWhere > 0) of
             True -> case (length fieldWhere > 0) of
-                True -> " where " ++ filterWhere ++ " AND " ++ fieldWhere
-                False -> " where " ++ filterWhere
+                True -> " where " ++ (intercalate " AND " filterWhere) ++ " AND " ++ (intercalate " AND " fieldWhere)
+                False -> " where " ++ (intercalate " AND " filterWhere)
             False -> (length fieldWhere > 0) of
-                True-> " where " ++ fieldWhere
+                True-> " where " ++ (intercalate " AND " fieldWhere)
                 False-> "" 
 
-genWhereFilter::Config Annotation->DBConfig->JoinConfig->[String]->String
-genWhereFilter c@(Config conf) db@(DBConfig dbconf) jc@(JoinConfig jointo joinableList) filterNameList =  
+genWhereFilter::Config Annotation->DBConfig->JoinConfig->String->String
+genWhereFilter c@(Config conf) db@(DBConfig dbconf) jc@(JoinConfig jointo joinableList) filterName =  
     do
+        let whereStmt = case (lookup (filterName, True) conf) of
+            Just m -> fieldMapToWhere filterName db m
+            Nothing -> case (lookup (filterName, False) conf) of
+                Just m-> fieldMapToWhere filterName db m
+                Nothing -> ""
         --(A OR B) AND (C OR D)
-        
+       whereStmt 
 
 
 genWhereField::Config Annotation->DBConfig->JoinConfig->[String]->String
-genWhereField c@(Config conf) db@(DBConfig dbconf) jc@(JoinConfig jointo joinableList) filterNameList =  
+genWhereField c@(Config conf) db@(DBConfig dbconf) jc@(JoinConfig jointo joinableList) fieldName =  
     do
+        --go through each field map. if it exists, throw the entire field map in fieldMap to where
+        let fmList = M.toList conf
+        let fm = find (\FieldMap m -> member fieldName m) fmList
+        let whereStatement = fieldMapToWhere fm db fieldName
+        whereStatement
+    
 
 
+fieldMapToWhere::String->[Filter Annotation]->DBConfig->FieldMap->String
+fieldMapToWhere (FieldMap fm) (DBConfig dbconf) name =
+    do
+        let sqlName =  (dbconf `getNameInDatabase` name)
+        let query = foldl (\(n, val)-> sqlName ++ "." ++ (dbconf `getNameInDatabase` n) ++ (valToSQL val) ) [] (toList fm)
+        "(" ++ (intercalate " OR " query) ++ ")" 
+
+
+valToSQL::Field Annotation->String
+valToSQL FieldVar s a 
 
 genCode
 
 
 genFullDBQuery::String->String->String
-genFullDBQuery selectStatement = 
+genFullDBQuery selectStatement  genCode = 
     do
         let dbQueryLeft = "\t\tdb.query('"
         let dbQueryRight = "', function(err, rows, fields) {\n\
