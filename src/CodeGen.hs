@@ -36,16 +36,20 @@ generateEventQueries filters computations =
             Foreach (ForEachSequence var seqs) comps _ -> acc ++ (dealWithSeqs seqs filters)) "" computations
         [show computations]
 
-dealWithSeqs :: [SeqField] -> [Filter Annotation] -> String
+dealWithSeqs :: [SeqField Annotation] -> [Filter Annotation] -> String
 dealWithSeqs seqs filts =
     do
         -- decompose sequences into multiple seqs
-        foldl (\acc cur -> case cur of
-            Bar [Event "patient_arrived"] -> ) seqs
+        -- foldl (\acc cur -> case cur of
+        --     Bar [Event "patient_arrived"] -> _) seqs
+        ""
 
-collectWHEREs :: [Filter Annotation] -> [SeqField] -> String
-collectSELECTs :: [SeqField] -> String
-collectFROMs :: [SeqField] -> String
+collectWHEREs :: [Filter Annotation] -> [SeqField Annotation] -> String
+collectWHEREs filters events = undefined
+collectSELECTs :: [SeqField Annotation] -> String
+collectSELECTs events = undefined
+collectFROMs :: [SeqField Annotation] -> String
+collectFROMs events = undefined
 
 generateDisplayFunction :: [Computation Annotation] ->DBConfig->(Config Annotation)-> Maybe [String] -> String
 generateDisplayFunction comps dbconf conf diag =
