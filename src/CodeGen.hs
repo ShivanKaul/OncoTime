@@ -255,6 +255,33 @@ generateEventQuery filterlist dbconf@(DBConfig dbconfmap) =
     in intercalate " ;\n " $ snd $ unzip eventnamesAndQueries
 
 eachEvent :: String -> (String,String)
+eachEvent eventyouwant = case eventyouwant of
+    "ct_sim_booked" -> ("SELECT Appointment.PatientSerNum, \"ct_sim_booked\" as eventname, Appointment.lastupdated as eventtimestamp from  Appointment  inner join "
+            ,"\non population.PatientSerNum = Appointment.PatientSerNum where Appointment.`status` =\"Open\" and Appointment.AliasSerNum = 3 ")
+    "ct_sim_completed" -> ("SELECT Appointment.PatientSerNum, Appointment.ScheduledStartTime, Appointment.ScheduledEndTime, \"ct_sim_completed\" as eventname, \n\
+            \ Appointment.scheduledendtime as eventtimestamp from  Appointment  inner join "
+            ,"\non population.PatientSerNum = Appointment.PatientSerNum\n where Appointment.`status` =\"Manually Completed\" and Appointment.AliasSerNum = 3 ")
+    "patient_arrives" -> ("SELECT Appointment.PatientSerNum, PatientLocation.ResourceSer, PatientLocation.CheckedInFlag, \"patient_arrives\" as eventname, \n\
+            \ PatientLocation.ArrivalDateTime as eventtimestamp from  PatientLocation inner join Appointment \n\
+            \on PatientLocation.AppointmentSerNum = Appointment.AppointmentSerNum inner join\n "
+            ,"\non population.PatientSerNum = Plan.PatientSerNum where Plan.`status`=\"Completed\" or Plan.`status`=\"CompletedEarly\"")
+    "patient_arrived" -> eachEvent "patient_arrives"
+    "patient_appointment" -> eachEvent "patient_arrives"
+    "treatment_completed" -> ("SELECT Plan.PatientSerNum, \"treatment_completed\" as eventname,  Plan.lastupdated as eventtimestamp from  Plan inner join\n "
+        , "\non population.PatientSerNum = Plan.PatientSerNum where Plan.`status`=\"Completed\" or Plan.`status`=\"CompletedEarly\"")
+    "end"->("SELECT \"end_of_treatment_note_finished\" as eventname, Document.PatientSerNum, Document.DateOfService as eventtimestamp,\n\
+                \Document.DateOfService, Task.CreationDate, Task.CompletionDate,  Task.DueDateTime,\n\
+                \Priority.PriorityCode FROM oncodb.Document inner join oncodb.Task on (oncodb.Document.PatientSerNum = oncodb.Task.PatientSerNum \n\
+                \ and  Document.AliasSerNum = 5 and  Task.AliasSerNum = 6) inner join  Priority on  Priority.PrioritySerNum =  Task.PrioritySerNum inner join "
+                ,"\non population.PatientSerNum = Document.PatientSerNum where (Task.`status`=\"Completed\" OR Task.`status`=\"CompletedEarly\") ")
+    "end_of_treatment_note_finished" -> eachEvent "end"
+
+getPopulation :: [Filter Annotation]->DBConfig-> String
+getPopulation filterlist dbconf@(DBConfig dbconfmap) =
+    let
+        population = filter(\(Filter filtName fdefList)-> filtName=="population") filterlist
+        populationQuery = "  ("++(head $ generateQueries population dbconf Nothing)++") as population "
+    in populationQuery
 
 
 periodF :: [Filter Annotation]->DBConfig-> String
@@ -270,6 +297,18 @@ periodF filterlist dbconf@(DBConfig dbconfmap) =
                                 [fval] -> fval /= GroupWildcard) (fdefList)
                 if (length filterFieldsWithoutWildcard) == 0 then ""
                 else "  having " ++(generateWhereClauses ( dbconf) filterFieldsWithoutWildcard "period")
+
+composeEvents :: [Filter Annotation]->DBConfig-> [String]
+composeEvents filterlist dbconf@(DBConfig dbconfmap) =
+    do
+        -- let events = filter(\(Filter filtName fdefList)-> filtName=="events" and filter (\(FieldDef fname fieldvals) -> case fieldvals of
+        --                         [fval] -> fval /= GroupWildcard) (fdefList) filterlist)
+        let availableEvents = ["patient_arrives","end","ct_sim_completed","ct_sim_booked","treatment_completed"]
+        -- let  allUSed = null events
+        let populationQuery = getPopulation filterlist dbconf
+        let periods = periodF filterlist dbconf
+        map (\ev -> let (selectClause, whereClause) = eachEvent ev  
+                    in selectClause ++ populationQuery ++ whereClause ++ periods) availableEvents
 
 
 generateWhereClauseForDiag :: [String] -> DBConfig -> String
