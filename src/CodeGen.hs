@@ -307,13 +307,12 @@ genForEachFilter::DBConfig->Computation Annotation->String
 {-genForEachFilter (Foreach def compList _) = "function(rows){\n fns = {\n" ++ (intercalate "," (map genForEachFilter compList)) ++ ")\n};\n rows.forEach(function(entry){ fns.forEach(function(func){ func(rows)\n}\n}\n }" -}
 genForEachFilter dbconfmap (Foreach def compList _) = 
     case def of
- --       ForEachFilter filtName v ->  (" function(rows){" ++ filtName++"_fns = [\n" ++  (intercalate "," (map (genForEachFilter dbconfmap) compList)) ++"\n ]\n" ++ "foreach_fname(rows," ++ filtName ++ "_fns);" ++ "}\n") 
         ForEachFilter filtName v -> "\t(function(row){\n\t" ++ filtName++"_fns = [\n" ++  (intercalate ",\t\n" (map (genForEachFilter dbconfmap) compList)) ++"\n\t ]\n" ++ "\t for(j =0; j < "++ filtName ++ "_fns.length; j++){ \n\
     \ \t\t" ++ filtName++ "_fns[j](row); \
     \ \n}\n })"
         _ -> "NOT SUPPORTED"
 genForEachFilter _ (Table v fil fie) = ""
-genForEachFilter db (Print p) = genPrintInForeach p db
+genForEachFilter db (Print p ) = genPrintInForeach p db
 genForEachFilter _ (Barchart v) = ""
 genForEachFilter _ (List v seqList) = ""
 
@@ -321,7 +320,7 @@ genForEachFilter _ (List v seqList) = ""
 --How do I generate all these print statements?
 --use the var given!!!
 genPrintInForeach::PrintAction Annotation ->DBConfig->String
-genPrintInForeach (PrintVar (Var v an)) _ = "function PrintVar("++ v ++"){console.log("++ v ++")}"--vanilla case
+genPrintInForeach (PrintVar (Var v (Annotation an))) db = "function PrintVar("++ v ++"){console.log("++ v ++"[\"" ++ (db `getNameInDatabase`((map toLower an) ++ "SQL"))++ "\"])}"--vanilla case
 genPrintInForeach (PrintLength v) _ = ""--count???
 genPrintInForeach (PrintFilters filts v@(Var varName an)) db = "function PrintFilters(row){" ++ (genPrintFilterString v filts db) ++ "console.log(" ++ varName ++")}"--like print id,sex of. --needs to be anonymous, otherwise I can't do it 
 genPrintInForeach (PrintElement (Var index a) (Var tab an)) _ = "function PrintElement("++ index ++ ", "++ tab ++"){console.log("++ tab ++"["++index++ "])}"
