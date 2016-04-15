@@ -193,15 +193,38 @@ generateEventQuery filterlist dbconf@(DBConfig dbconfmap) =
         population = filter(\(Filter filtName fdefList)-> filtName=="population") filterlist
         period = filter(\(Filter filtName fdefList)-> filtName=="period") filterlist
         populationQuery = "  ("++(head $ generateQueries population dbconf Nothing)++") as population "
-        eventnamesAndQueries = [("ct_sim_booked","select Appointment.PatientSerNum, \"ct_sim_booked\" as eventname, \n\
+        eventnamesAndQueries = [("ct_sim_booked","SELECT Appointment.PatientSerNum, \"ct_sim_booked\" as eventname, \n\
             \ Appointment.lastupdated as eventtimestamp from  Appointment  inner join "  ++ populationQuery ++
-            "on population.PatientSerNum=Appointment.PatientSerNum\
+            "\non population.PatientSerNum = Appointment.PatientSerNum\
             \\n where Appointment.`status` =\"Open\" and Appointment.AliasSerNum = 3 "++  periodF filterlist dbconf)
-            ,("ct_sim_completed","select Appointment.PatientSerNum, \"ct_sim_completed\" as eventname, \n\
+
+
+            ,("ct_sim_completed","SELECT Appointment.PatientSerNum, Appointment.ScheduledStartTime, Appointment.ScheduledEndTime, \"ct_sim_completed\" as eventname, \n\
             \ Appointment.scheduledendtime as eventtimestamp from  Appointment  inner join "  ++ populationQuery ++
-            "on population.PatientSerNum=Appointment.PatientSerNum\
-            \nwhere Appointment.`status` =\"Manually Completed\" and Appointment.AliasSerNum = 3 "++  periodF filterlist dbconf)]
-    in intercalate " union " $ snd $ unzip eventnamesAndQueries
+            "\non population.PatientSerNum = Appointment.PatientSerNum\
+            \ \n where Appointment.`status` =\"Manually Completed\" and Appointment.AliasSerNum = 3 "++  periodF filterlist dbconf)
+
+
+            ,("patient_arrives","SELECT Appointment.PatientSerNum, PatientLocation.ResourceSer, PatientLocation.CheckedInFlag, \"patient_arrives\" as eventname, \n\
+            \ PatientLocation.ArrivalDateTime as eventtimestamp from  PatientLocation inner join Appointment \n\
+            \on PatientLocation.AppointmentSerNum = Appointment.AppointmentSerNum inner join\n "  ++ populationQuery ++
+            "\non population.PatientSerNum = Appointment.PatientSerNum "++  periodF filterlist dbconf)
+
+            ,("treatment_completed","SELECT Plan.PatientSerNum, \"treatment_completed\" as eventname, \n\
+            \ Plan.lastupdated as eventtimestamp from  Plan inner join\n "  ++ populationQuery ++
+            "\non population.PatientSerNum = Plan.PatientSerNum where Plan.`status`=\"Completed\" or Plan.`status`=\"CompletedEarly\""++  periodF filterlist dbconf)
+
+            ,("end","SELECT \"end_of_treatment_note_finished\" as eventname, \n\
+                \ Document.PatientSerNum, Document.DateOfService as eventtimestamp,\n\
+                \Document.DateOfService, Task.CreationDate, \
+                \Task.CompletionDate,  Task.DueDateTime,\n\
+                \Priority.PriorityCode\n\
+                \FROM oncodb.Document inner join oncodb.Task \n\
+                \on (oncodb.Document.PatientSerNum = oncodb.Task.PatientSerNum \n\
+                \ and  Document.AliasSerNum = 5 and  Task.AliasSerNum = 6) \n\
+                \inner join  Priority on  Priority.PrioritySerNum =  Task.PrioritySerNum inner join "  ++ populationQuery ++
+            "\non population.PatientSerNum = Document.PatientSerNum where Task.`status`=\"Completed\" " ++  periodF filterlist dbconf) ]
+    in intercalate " ;\n " $ snd $ unzip eventnamesAndQueries
 periodF :: [Filter Annotation]->DBConfig-> String
 periodF filterlist dbconf@(DBConfig dbconfmap) = 
     do 
