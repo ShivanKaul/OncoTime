@@ -29,9 +29,19 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
     do
         -- let diagnosis = (checkIfDiagnosis filt)
         -- let query = generateQueries filt dbconf diagnosis
-        let query = generateComputations filt weedconf dbconf joinconf comps
-        let st = generateScaffoldingJS query (getQueryElements comps) dbconf
-        stdbconf
+        let queries = generateComputations filt weedconf dbconf joinconf comps
+        let scaff = generateScaffoldingJS
+
+        let queryElements = (getQueryElements comps)
+
+        --let st = generateScaffoldingJS query (getQueryElements comps) dbconf
+        let computationFunctions = generateForEachFunctions 
+
+        let helperFunctions = generateSortFunction
+
+        scaff ++ queries  ++ computationFunctions ++ helperFunctions 
+        
+        --stdbconf
         -- let displayFunction = generateDisplayFunction comps  dbconf weedconf diagnosis
         -- generateScaffoldingJS query displayFunction
         
@@ -73,7 +83,7 @@ generateComps filterList conf (dbconfmap@(DBConfig dbconf)) joinconf comp =
         let generatedCode = case comp of
                 (Foreach def compList _) -> 
                     case def of
-                        ForEachFilter filtName v -> filtName++"_fns = [\n" ++  (intercalate "," (map (genForEachFilter dbconfmap)compList )) ++"\n ]\n" ++ "foreach_fname(rows," ++ filtName ++ "_fns);" ++ "});\n }"
+                        ForEachFilter filtName v -> genForEachFilter ++ "foreach_filter(rows, \""++ (dbconf `getNameInDatabase` (filtName ++ "_loop")) ++"\", " ++ filtName++ "_functions, "filtName++"_args);\n" ++ "});\n }"
                         _ -> ""
                 (Table v filtName fieldName) -> "SHOULD BE SUPPORTED"
                 (List v seqFieldList) -> ""
@@ -87,7 +97,7 @@ generateComps filterList conf (dbconfmap@(DBConfig dbconf)) joinconf comp =
 --select Patient.*, PatientDoctor.*, Diagnosis.* from Patient JOIN PatientDoctor On PatientDoctor.PatientSerNum = Patient.PatientSerNum JOIN Diagnosis on Patient.PatientSerNum = Diagnosis.PatientSerNum limit 100;
 
 
-getQueryElements::[Computation Annotation]->[Sttring]
+getQueryElements::[Computation Annotation]->[String]
 getQueryElements comp = 
     do
         case comp of
@@ -121,7 +131,6 @@ genFullSQLStatement filterList conf dbconfmap joinconf comp =
         --concat
         --if(length whereStmt > 0) then selectStmt ++ joinStmt ++ whereStmt 
           --  else selectStmt ++ (intercalate " ," filterNameList )
-
         --"DIAGNOSTIC: " ++"filterList: " ++ show filterNameList ++ "\n" ++ "select Statement: " ++ selectStmt ++ "\n" ++ "Join Statement: " ++ joinStmt ++ "\n" ++ "where statement: " ++  whereStmt ++ "\n"
         selectStmt ++  joinStmt  ++  whereStmt 
 
@@ -299,6 +308,8 @@ genFullDBQuery selectStatement  genCode =
         dbQueryLeft ++ selectStatement ++ dbQueryRight ++ genCode ++ dbQueryEnd
 
 
+
+
 --HOW DO VARIABLES FIT INTO THIS???
 
 --how do I generate these foreachs? Espcially foreach within foreach
@@ -369,7 +380,7 @@ genWhereClause filterList dbconfmap filterNameList =
                 ) filterList
         (joinClause ++ whereStatement)
             
-{-
+{-functions[j].apply(this,args[j]) }
 --gets names of all the filters used
 --Doesn't support arbitrary nesting of doctors
 accumulateForEach::[Computation Annotation]->[String]
@@ -389,11 +400,9 @@ isForEachFilter::(Computation Annotation) -> Bool
 isForEachFilter (Foreach (ForEachFilter _ _) _ _ ) =  True
 isForEachFilter _ = False
 
-
 --generateQuery::[Filter Annotation]->DBConfig->String
 --generateQuery filterList ( dbconfmap@(DBConfig dbconf)) = 
 --  do
-
 
 generateQueries::[Filter Annotation]->DBConfig-> Maybe [String] -> [String]
 generateQueries filterList ( dbconfmap@(DBConfig dbconf)) diag =
@@ -472,6 +481,21 @@ generateFieldValsForWhere fvals fname =
         expanded
 
 
+generateScaffoldingJS ::String -- -> String
+generateScaffoldingJS = --funcs=  -- dbDisplayFunction =
+    do
+        let mysqlReq = "var mysql = require('mysql');\n"
+        let tableReq = "var Table = require('cli-table');\n"
+        let config = "var db = mysql.createConnection({\n\
+                \\thost: 'localhost',\n\
+                \\tuser: '520student',\n\
+                \\tpassword: 'comp520',\n\
+                \\tdatabase: 'oncodb',\n\
+                \\tport: 33306\n\
+            \});\n"
+        mysqlReq ++ tableReq ++ config
+
+{-
 generateScaffoldingJS :: [String] ->[String]->DBconfig String -- -> String
 generateScaffoldingJS dbQueryList queryElements dbconf = --funcs=  -- dbDisplayFunction =
     do
@@ -484,6 +508,7 @@ generateScaffoldingJS dbQueryList queryElements dbconf = --funcs=  -- dbDisplayF
                 \\tdatabase: 'oncodb',\n\
                 \\tport: 33306\n\
             \});\n"
+
         let dbConnect = "db.connect(function(err) {\n\
                 \\tif (err) console.log(err);\n\
                 \\telse {\n"
@@ -510,7 +535,10 @@ generateScaffoldingJS dbQueryList queryElements dbconf = --funcs=  -- dbDisplayF
         mysqlReq ++ tableReq ++ config ++ dbConnect ++ (concat formatQueryList) ++ 
             dbEnd ++ generateDisplayPrintFunction ++ "\n" ++ generateBarchartFunction ++ "\n" ++ generateForEachFunctions queryElements dbconf ++ "\n" ++ generateCountKeyFunction ++"\n" ++ generateDisplayTable
             -- generatePrettyRowFunction ++ dbDisplayFunctionStart ++ dbDisplayFunction ++ dbDisplayFunctionEnd
-            --
+--
+
+-}
+
 generateDisplayPrettyFunction::String
 generateDisplayPrettyFunction = "function generatePrettyRow(row) {\n \treturn Object.keys(row).map(function (key) {return row[key]});\n\
         \}\n\n"
@@ -535,10 +563,19 @@ generateSortFunction =  "function sortObj(list, key) {
 \     \t\t return result; \n\ 
 \   \t } \n\
 \   \t return list.sort(compare); \n\
-\  } \n"
+\  } \n "
 
-generateForEachFunctions::String->DBConfig->[String]->String
-generateForEachFunctions fName dbConf functions =  "function foreach_" ++ fName ++ "(rows, key){ \n \
+
+--TODO: THIS IS THE LAST PART. BASICALLY. JUST NEED TO DO THIS A BIT, TEST IT,
+--AND GET TERTIARY STUF WORKING
+--DO I PASS IN FUNCTIONS IN JAVASCRIPT? OR HERE?
+
+
+--ARGS IS AN ARRAY OF ARRAYS, where each subarray contains the arguments for it.
+--indexed by function
+
+generateForEachFunctions::String
+generateForEachFunctions =  "function foreach_filter(rows, key, functions, args){ \n 
 \ \t sortedRows = sortObj(rows, key) \n \
 \ \t arrOf = new Array() \n\
 \ \t prev_index = 0; \n \
@@ -548,14 +585,20 @@ generateForEachFunctions fName dbConf functions =  "function foreach_" ++ fName 
 \ \t\t\t arrOf[prev_index].push(sortedRows[doctor_i]) \n \
 \ \t\t\t  } else if(arrOf[prev_index][0][key] == sortedRows[i][key] ){ \n \
 \ \t\t\t arrOf_doctor[prev_index].push(sortedRows[i]) \n \
-\ \t\t\t } else { \n \" ++ ++"
-\       //FUNCTIONS \n \
-\ \t\t	prev_index++ \n \
+\ \t\t\t } else { \n \  
+\ \t\t\t for(j = 0; j< functions.length; j++) {
+\ \t\t\t args[j][0] = arrOf_doctor[prev_index] \n \ --THE first argument is ALWAYS the row
+\ \t\t\t  functions[j].apply(this,args[j]) } \n \
+\ \t\t  prev_index ++ \n \
 \ \t\t	arrOf[prev_index] = new Array() \n \
 \ \t\t  arrOf[prev_index].push(sortedRows[i]) \n \
 \ \t } \n \
 \ \t } \n \
-\ }"
+\ } "
+
+
+--PRev solution: In Haskell code gen.
+-- \       //FUNCTIONS \n \ "  ++ (intercalate '\n\t' functions) ++ "\t\t	prev_index++ \n \
 
 
 --code check for an additional argument, it being the arguments that are passed to that particular foreach?
