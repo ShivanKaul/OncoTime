@@ -23,7 +23,7 @@ patient is
 // a way to iterate over the specific thing in for loops e.g. when looping over patients, how to loop over their diagnoses
 
 doctors are
-    Oncologist: true
+    id: after 50
 
 //events are
 //	Events: ct_sim_booked, patient_arrives
@@ -32,10 +32,13 @@ doctors are
 {
 	foreach Patient p
 	{
-            foreach Diagnosis d
-            {
-		print p
+            foreach doctors q{
+	    print p
+                foreach Diagnosis d
+                {
+                print q
                 print d
-	    }
+	        }
+            }
         }
 }

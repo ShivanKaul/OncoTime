@@ -93,7 +93,7 @@ genFullSQLStatement filterList conf dbconfmap joinconf comp =
         let listOfQueryElements = case comp of
              (Foreach def compList _)->
                 case def of
-                    (ForEachFilter filtName v) -> (map toLower filtName):(accumulateForEach compList )
+                    (ForEachFilter filtName v) -> (map toLower filtName):(accumulateForEach compList dbconfmap)
                     _ -> []
              (Table v filtName fieldName) -> filtName:[]
              _ -> []
@@ -119,7 +119,7 @@ genFullSQLStatement filterList conf dbconfmap joinconf comp =
           --  else selectStmt ++ (intercalate " ," filterNameList )
 
         --"DIAGNOSTIC: " ++"filterList: " ++ show filterNameList ++ "\n" ++ "select Statement: " ++ selectStmt ++ "\n" ++ "Join Statement: " ++ joinStmt ++ "\n" ++ "where statement: " ++  whereStmt ++ "\n"
-        selectStmt ++  joinStmt  ++  whereStmt
+        selectStmt ++  joinStmt  ++  whereStmt 
 
 
 
@@ -174,24 +174,24 @@ genSelectStatements db@(DBConfig dbconf) joinconf filterNameList fieldNameList =
 
 genJoinStatements::DBConfig->JoinConfig->[String]->[String]->String
 genJoinStatements db joinconf [] [] = ""
-genJoinStatements db@(DBConfig dbconf) (JoinConfig jointo joinableList) [] (fieldNameHead:fieldNameList) =  --case where both exist
+genJoinStatements db@(DBConfig dbconf) (JoinConfig jointo joinableList) [] (fieldNameHead:fieldNameList) =  --case where one exist
     do
         let dbHead = (\filt-> (db `getNameInDatabase` filt)) fieldNameHead
         let dbFields = map  (\filt-> (db `getNameInDatabase` filt)) fieldNameList 
         let joinStatement = case (length (fieldNameHead:fieldNameList)) > 1 of
              True -> 
                  do
-                    concat ( map (\field -> dbHead ++ " JOIN " ++ field ++ " ON " ++  field ++ "."++ jointo ++ " = " ++ dbHead ++ "."++jointo ++ " "   ) dbFields )
+                    dbHead ++ concat ( map (\field -> " JOIN " ++ field ++ " ON " ++  field ++ "."++ jointo ++ " = " ++ dbHead ++ "."++jointo ++ " "   ) dbFields )
              False -> ""
         joinStatement
-genJoinStatements db@(DBConfig dbconf) (JoinConfig jointo joinableList) (filterNameHead:filterNameList) []  =  --case where both exist
+genJoinStatements db@(DBConfig dbconf) (JoinConfig jointo joinableList) (filterNameHead:filterNameList) []  =  --case where one exist
     do
         let dbHead = (\filt-> (db `getNameInDatabase` filt)) filterNameHead
         let dbFields = map  (\filt-> (db `getNameInDatabase` filt)) filterNameList
         let joinStatement = case (length (filterNameHead:filterNameList)) > 1 of
              True -> 
                  do
-                    concat ( map (\field -> dbHead ++" JOIN " ++ field ++ " ON " ++  field ++ "."++ jointo ++ " = " ++ dbHead ++ "."++jointo ++ " "   ) dbFields )
+                    dbHead ++ concat ( map (\field ->" JOIN " ++ field ++ " ON " ++  field ++ "."++ jointo ++ " = " ++ dbHead ++ "."++jointo ++ " "   ) dbFields )
              False -> ""
         joinStatement
 genJoinStatements db@(DBConfig dbconf) (JoinConfig jointo joinableList) filtList@(filterNameHead:filterNameList) fieldList@(fieldNameHead:fieldNameList) =  --case where both exist
@@ -201,19 +201,19 @@ genJoinStatements db@(DBConfig dbconf) (JoinConfig jointo joinableList) filtList
                  do 
                     let dbHead = (\filt-> (db `getNameInDatabase` filt)) filterNameHead
                     let dbFields = (map  (\filt-> (db `getNameInDatabase` filt)) filterNameList) ++ (map  (\fie-> (db `getNameInDatabase` fie)) fieldList )
-                    concat ( map (\field -> dbHead ++ " JOIN " ++ field ++ " ON " ++  field ++ "." ++ jointo ++ " = " ++ dbHead ++ "."++jointo ++ " "   ) dbFields )
+                    dbHead ++ concat ( map (\field -> " JOIN " ++ field ++ " ON " ++  field ++ "." ++ jointo ++ " = " ++ dbHead ++ "."++jointo ++ " "   ) dbFields )
 
              False -> case (length fieldList) > 1 of
                 True -> 
                     do
                         let dbHead = (\filt-> (db `getNameInDatabase` filt)) fieldNameHead 
                         let dbFields = (map  (\filt-> (db `getNameInDatabase` filt)) filterNameList) ++ (map  (\fie-> (db `getNameInDatabase` fie)) fieldList )
-                        concat ( map (\field -> dbHead ++ " JOIN " ++ field ++ " ON " ++  field ++ "." ++ jointo ++ " = " ++ dbHead ++ "."++jointo ++ " "   ) dbFields )
+                        dbHead ++ concat ( map (\field -> " JOIN " ++ field ++ " ON " ++  field ++ "." ++ jointo ++ " = " ++ dbHead ++ "."++jointo ++ " "   ) dbFields )
                 False -> 
                     do
                         let dbHead = (\filt-> (db `getNameInDatabase` filt)) filterNameHead
                         let dbFields = (map  (\fie-> (db `getNameInDatabase` fie)) fieldList )
-                        concat ( map (\field -> dbHead ++ " JOIN " ++ field ++ " ON " ++  field ++ "."++ jointo ++ " = " ++ dbHead ++ "."++jointo ++ " "   ) dbFields )
+                        dbHead ++ concat ( map (\field -> " JOIN " ++ field ++ " ON " ++  field ++ "."++ jointo ++ " = " ++ dbHead ++ "."++jointo ++ " "   ) dbFields )
                          
         joinStatement
 
@@ -365,15 +365,21 @@ genWhereClause filterList dbconfmap filterNameList =
                 ) filterList
         (joinClause ++ whereStatement)
             
-
+{-
 --gets names of all the filters used
+--Doesn't support arbitrary nesting of doctors
 accumulateForEach::[Computation Annotation]->[String]
 accumulateForEach compList= 
     do
         let filts = filter (isForEachFilter) compList
         let filtNames = map (\(Foreach (ForEachFilter fname _) _ _)  -> (map toLower fname)) filts
         filtNames 
-
+-}
+accumulateForEach::[Computation Annotation]->DBConfig->[String]
+accumulateForEach [] _ = []
+accumulateForEach ((Foreach (ForEachFilter fn v) compList  spos):xs) db = fn : (accumulateForEach xs db) ++ (accumulateForEach compList db) 
+accumulateForEach ((Foreach (ForEachTable (Var v1 a1) (Var v2 a2)) compList  spos):xs) db = (db `getNameInDatabase` v2) : (accumulateForEach xs db) ++ (accumulateForEach compList db) 
+accumulateForEach (x:xs) db= (accumulateForEach xs db)  
 
 isForEachFilter::(Computation Annotation) -> Bool
 isForEachFilter (Foreach (ForEachFilter _ _) _ _ ) =  True
