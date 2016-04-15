@@ -20,8 +20,8 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
         let diagnosis = (checkIfDiagnosis filt)
         let query = generateQueries filt dbconf diagnosis
         let displayFunction = generateDisplayFunction comps dbconf weedconf diagnosis
-        let eventQueries = generateEventQueries filt comps
-        generateScaffoldingJSV2 eventQueries displayFunction
+        let eventQueries =  generateEventQueries filt comps
+        trace (generateEventQuery filt dbconf) generateScaffoldingJSV2 eventQueries displayFunction
         -- generateScaffoldingJS query displayFunction
 
 generatePrettyRowFunction :: String
@@ -148,7 +148,7 @@ checkIfDiagnosis filters =
 
 
 generateQueries::[Filter Annotation]->DBConfig-> Maybe [String] -> [String]
-generateQueries filterList ( dbconfmap@(DBConfig dbconf)) diag =
+generateQueries filterList ( dbconf@(DBConfig dbconfmap)) diag =
     do
         let columns = case diag of
                 Nothing -> "*"
@@ -163,11 +163,11 @@ generateQueries filterList ( dbconfmap@(DBConfig dbconf)) diag =
                 else
                      do
                         let fromQuery = case diag of
-                                Nothing -> (dbconfmap `getNameInDatabase` filtName)
-                                _ -> (dbconfmap `getNameInDatabase` filtName) ++ ", Diagnosis"
+                                Nothing -> (dbconf `getNameInDatabase` filtName)
+                                _ -> (dbconf `getNameInDatabase` filtName) ++ ", Diagnosis"
                         let joinClause = case diag of
                                 Nothing -> ""
-                                Just diagnoses -> generateWhereClauseForDiag diagnoses ( dbconfmap)
+                                Just diagnoses -> generateWhereClauseForDiag diagnoses ( dbconf )
                         let selectQuery = queryString ++ fromQuery
                         --get list of fields
 
@@ -179,32 +179,42 @@ generateQueries filterList ( dbconfmap@(DBConfig dbconf)) diag =
                         --form the query
                         if (length filterFieldsWithoutWildcard) == 0 then selectQuery
                         else do
-                            let otherClause = (generateWhereClauses ( dbconfmap) filterFieldsWithoutWildcard filtName)
+                            let otherClause = (generateWhereClauses ( dbconf) filterFieldsWithoutWildcard filtName)
                             let middle = if((not $ null otherClause) && (not $ null joinClause)) then (" AND ") else " "
                             let whereQuery = " where " ++ joinClause ++  middle ++ otherClause
 
-                            -- Hack for getting rid of last AND
                             selectQuery ++ whereQuery
                 ) filterList
         return queryList
 
-generateEventQuery :: [Filter Annotation]->DBConfig-> [String]
+generateEventQuery :: [Filter Annotation]->DBConfig-> String
 generateEventQuery filterlist dbconf@(DBConfig dbconfmap) = 
     let 
         population = filter(\(Filter filtName fdefList)-> filtName=="population") filterlist
-        ids = filter(\(FieldDef fname fvals) = fname == "id" ) (map (\(Filter filtName fdefList)-> fdefList) population)
-        eventnamesAndQueries = [("ct_sim_booked","select Patient.PatientSerNum, \"ct_sim_booked\" as eventname, \n\
-            \Appointment.lastupdated as eventtimestamp from Patient inner join Appointement \n\
-            \on Patient.PatientSerNum=Appointment.PatientSerNum
-            inner join where Appointment.status =\"Open\" and Appointment.AliasSerNum = 3")
-        ,("ct_sim_completed","select Patient.PatientSerNum, \"ct_sim_booked\" as eventname, \n\
-            \Appointment.lastupdated as eventtimestamp from Patient inner join Appointement \n\
-            \on Patient.PatientSerNum=Appointment.PatientSerNum
-            inner join where Appointment.status =\"Manually Completed\" and Appointment.AliasSerNum = 3")]
-
-
-
-
+        period = filter(\(Filter filtName fdefList)-> filtName=="period") filterlist
+        populationQuery = "  ("++(head $ generateQueries population dbconf Nothing)++") as population "
+        eventnamesAndQueries = [("ct_sim_booked","select Appointment.PatientSerNum, \"ct_sim_booked\" as eventname, \n\
+            \ Appointment.lastupdated as eventtimestamp from  Appointment  inner join "  ++ populationQuery ++
+            "on population.PatientSerNum=Appointment.PatientSerNum\
+            \\n where Appointment.`status` =\"Open\" and Appointment.AliasSerNum = 3 "++  periodF filterlist dbconf)
+            ,("ct_sim_completed","select Appointment.PatientSerNum, \"ct_sim_completed\" as eventname, \n\
+            \ Appointment.scheduledendtime as eventtimestamp from  Appointment  inner join "  ++ populationQuery ++
+            "on population.PatientSerNum=Appointment.PatientSerNum\
+            \nwhere Appointment.`status` =\"Manually Completed\" and Appointment.AliasSerNum = 3 "++  periodF filterlist dbconf)]
+    in intercalate " union " $ snd $ unzip eventnamesAndQueries
+periodF :: [Filter Annotation]->DBConfig-> String
+periodF filterlist dbconf@(DBConfig dbconfmap) = 
+    do 
+        let period = filter(\(Filter filtName fdefList)-> filtName=="period") filterlist
+        if null period 
+        then ""
+        else 
+            do 
+                let (Filter _ fdefList) = head period
+                let filterFieldsWithoutWildcard = filter (\(FieldDef fname fieldvals) -> case fieldvals of
+                                [fval] -> fval /= GroupWildcard) (fdefList)
+                if (length filterFieldsWithoutWildcard) == 0 then ""
+                else "  having " ++(generateWhereClauses ( dbconf) filterFieldsWithoutWildcard "period")
 
 
 generateWhereClauseForDiag :: [String] -> DBConfig -> String
@@ -218,11 +228,12 @@ generateWhereClauseForDiag diagnoses ( dbconfmap) =
 
 generateWhereClauses :: DBConfig->[FieldDef Annotation] -> String -> String
 generateWhereClauses ( dbconfmap) fielddefs filtername =
-        intercalate " AND " (map (\(FieldDef fname fvals) ->
+        intercalate " AND " (map (\(FieldDef fieldname fvals) ->
             let
-                tname = (dbconfmap `getNameInDatabase` filtername) ++ "." ++ (dbconfmap `getNameInDatabase` fname)
-            in " ("
-                ++  (generateFieldValsForWhere fvals tname) ++ ")" )  fielddefs)
+                tname = if filtername == "period" then (dbconfmap `getNameInDatabase` fieldname)
+                    else (dbconfmap `getNameInDatabase` filtername) ++ "." ++ (dbconfmap `getNameInDatabase` fieldname)
+            in " ( "
+                ++  (generateFieldValsForWhere fvals tname) ++ " )" )  fielddefs)
 
 
 generateFieldValsForWhere :: [FieldVal Annotation] -> String -> String
@@ -236,7 +247,7 @@ generateFieldValsForWhere fvals fname =
                 GroupRange (After i _) ->  fname ++ " > " ++ (show i) ++ "  "
                 GroupRange (Between i1 i2 _) ->  " ( "++fname ++ " > " ++ (show i1) ++
                         " AND " ++ fname ++ " < " ++ (show i2) ++ ")  "
-                (GroupDate dd mm yy _) ->  fname ++" " ++ (show dd) ++"-"++ (show mm) ++"-"++ (show yy) ++ "  "
+                (GroupDate dd mm yy _) ->  fname ++"=\"" ++ (show dd) ++"-"++ (show mm) ++"-"++ (show yy) ++ "\"  "  
                 )  fvals)
         expanded
 

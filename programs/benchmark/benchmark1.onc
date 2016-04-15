@@ -1,4 +1,4 @@
-script Benchmark1()
+script benchmark1()
 /*
  *
  */
@@ -6,7 +6,8 @@ script Benchmark1()
 population is
     Id: 1 to 20
     Sex: male
-
+period is
+    years : 2014
 
 {
     //foreach Patient p {
@@ -15,7 +16,7 @@ population is
     //    //print id, PostalCode of p
     //}
 
-    foreach sequence s like [patient_arrives -> patient_scheduled -> treatment_began -> end] {
+    foreach sequence s like [ct_sim_booked -> ct_sim_completed -> end] {
         print s
     }
 
