@@ -22,6 +22,8 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
         let displayFunction = generateDisplayFunction comps dbconf weedconf diagnosis
         let eventQueries =  generateEventQueries filt comps
         trace (generateEventQuery filt dbconf) generateScaffoldingJSV2 eventQueries displayFunction
+
+
         -- generateScaffoldingJS query displayFunction
 
 generatePrettyRowFunction :: String
@@ -29,20 +31,46 @@ generatePrettyRowFunction = "function generatePrettyRow(row) {\n\
             \\treturn Object.keys(row).map(function (key) {return row[key]});\n\
         \}\n\n"
 
+explodeSequences :: [SeqField Annotation] -> [[SeqField Annotation]]
+explodeSequences seqs =
+    do
+        -- [ event1 -> event2 | event3 -> event4] => [[ event1 -> event2 -> event4],[event1 -> event3 -> event4]]
+
+        concat (foldl (\acc cur -> case cur of
+            seq@(Comma events) -> map (\x -> acc ++ [x]) (handleComma seq)
+            seq@(Bar events) -> map (\x -> acc ++ [x]) (handleBars seq)) [[]] seqs)
+
+        -- [ event1 -> {event2, event3} -> event4]
+        -- [ event1 -> {event2, event3}* -> event4] NOT SUPPORTED
+
+handleComma :: SeqField Annotation -> [[SeqField Annotation]]
+handleComma seq@(Comma events) =
+    do
+        map (\xs -> map (\x -> Bar [x]) xs) (filter (not . null) (subsequences events))
+
+handleBars :: SeqField Annotation -> [[SeqField Annotation]]
+handleBars seq@(Bar events) =
+    do
+        map (\x -> [Bar [x]]) (events)
+
 generateEventQueries :: [Filter Annotation] -> [Computation Annotation] -> [String]
 generateEventQueries filters computations =
     do
-        foldl (\acc cur -> case cur of
-            Foreach (ForEachSequence var seqs) comps _ -> acc ++ (dealWithSeqs seqs filters)) "" computations
-        [show computations]
+        [show (
 
-dealWithSeqs :: [SeqField Annotation] -> [Filter Annotation] -> String
-dealWithSeqs seqs filts =
-    do
-        -- decompose sequences into multiple seqs
-        -- foldl (\acc cur -> case cur of
-        --     Bar [Event "patient_arrived"] -> _) seqs
-        ""
+            concatMap (\comp -> case comp of
+                Foreach (ForEachSequence var seqs) comps a -> map (\seq -> Foreach (ForEachSequence var seq) comps a) (explodeSequences seqs)) computations
+
+            )]
+
+        -- [show (concatMap (\comp -> case comp of
+        --     Foreach (ForEachSequence var seqs) comps a ->
+        --         concatMap ( \sequences ->
+        --             map (\seq -> Foreach (ForEachSequence var seq) comps a) sequences)
+        --                 (explodeSequences seqs)
+        --     _ -> [comp]) computations)]
+
+        -- [show ""]
 
 collectWHEREs :: [Filter Annotation] -> [SeqField Annotation] -> String
 collectWHEREs filters events = undefined
@@ -188,8 +216,8 @@ generateQueries filterList ( dbconf@(DBConfig dbconfmap)) diag =
         return queryList
 
 generateEventQuery :: [Filter Annotation]->DBConfig-> String
-generateEventQuery filterlist dbconf@(DBConfig dbconfmap) = 
-    let 
+generateEventQuery filterlist dbconf@(DBConfig dbconfmap) =
+    let
         population = filter(\(Filter filtName fdefList)-> filtName=="population") filterlist
         period = filter(\(Filter filtName fdefList)-> filtName=="period") filterlist
         populationQuery = "  ("++(head $ generateQueries population dbconf Nothing)++") as population "
@@ -226,13 +254,13 @@ generateEventQuery filterlist dbconf@(DBConfig dbconfmap) =
             "\non population.PatientSerNum = Document.PatientSerNum where Task.`status`=\"Completed\" " ++  periodF filterlist dbconf) ]
     in intercalate " ;\n " $ snd $ unzip eventnamesAndQueries
 periodF :: [Filter Annotation]->DBConfig-> String
-periodF filterlist dbconf@(DBConfig dbconfmap) = 
-    do 
+periodF filterlist dbconf@(DBConfig dbconfmap) =
+    do
         let period = filter(\(Filter filtName fdefList)-> filtName=="period") filterlist
-        if null period 
+        if null period
         then ""
-        else 
-            do 
+        else
+            do
                 let (Filter _ fdefList) = head period
                 let filterFieldsWithoutWildcard = filter (\(FieldDef fname fieldvals) -> case fieldvals of
                                 [fval] -> fval /= GroupWildcard) (fdefList)
@@ -270,7 +298,7 @@ generateFieldValsForWhere fvals fname =
                 GroupRange (After i _) ->  fname ++ " > " ++ (show i) ++ "  "
                 GroupRange (Between i1 i2 _) ->  " ( "++fname ++ " > " ++ (show i1) ++
                         " AND " ++ fname ++ " < " ++ (show i2) ++ ")  "
-                (GroupDate dd mm yy _) ->  fname ++"=\"" ++ (show dd) ++"-"++ (show mm) ++"-"++ (show yy) ++ "\"  "  
+                (GroupDate dd mm yy _) ->  fname ++"=\"" ++ (show dd) ++"-"++ (show mm) ++"-"++ (show yy) ++ "\"  "
                 )  fvals)
         expanded
 
