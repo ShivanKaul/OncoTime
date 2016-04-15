@@ -75,10 +75,10 @@ generateComps filterList conf (dbconfmap@(DBConfig dbconf)) joinconf comp =
                     case def of
                         ForEachFilter filtName v -> filtName++"_fns = [\n" ++  (intercalate "," (map (genForEachFilter dbconfmap)compList )) ++"\n ]\n" ++ "foreach_fname(rows," ++ filtName ++ "_fns);" ++ "});\n }"
                         _ -> ""
-                (Table v filtName fieldName) -> ""
+                (Table v filtName fieldName) -> "SHOULD BE SUPPORTED"
                 (List v seqFieldList) -> ""
                 (Print p) -> ""
-                (Barchart v) -> ""
+                (Barchart v) -> "CAN'T EXIST WITH NO SCOPE"
 
 
         let code = genFullDBQuery selectStatement generatedCode
@@ -310,6 +310,8 @@ genForEachFilter dbconfmap (Foreach def compList _) =
         ForEachFilter filtName v -> "\t(function(row){\n\t" ++ filtName++"_fns = [\n" ++  (intercalate ",\t\n" (map (genForEachFilter dbconfmap) compList)) ++"\n\t ]\n" ++ "\t for(j =0; j < "++ filtName ++ "_fns.length; j++){ \n\
     \ \t\t" ++ filtName++ "_fns[j](row); \
     \ \n}\n })"
+        ForEachTable v v2 -> "NOT SUPPORTED"
+        ForEachSequence v seqfield ->"NOT SUPPORTED"
         _ -> "NOT SUPPORTED"
 genForEachFilter _ (Table v fil fie) = ""
 genForEachFilter db (Print p ) = genPrintInForeach p db
@@ -328,13 +330,6 @@ genPrintInForeach (PrintElement (Var index a) (Var tab an)) _ = "function PrintE
 genPrintFilterString::(Var Annotation)->[FilterName]->DBConfig->String
 genPrintFilterString (Var v an) filtList (DBConfig dbconf)= v ++ " = {" ++ (intercalate ",\n" (map (\filt -> filt ++ " : row." ++ (dbconf M.! filt)) filtList )) ++ "\n};"
 
-
---A FUNCTION HERE TO JOIN EVERYTHING THAT CAN BE LOOPED OVER???
-
---problems: repeated stuff
---hard coding
---no error handlgin
---A table of joins would be nice. 
 
 genWhereClause::[Filter Annotation]->DBConfig->[FilterName]-> String
 genWhereClause filterList dbconfmap filterNameList = 
