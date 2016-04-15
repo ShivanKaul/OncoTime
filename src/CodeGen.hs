@@ -308,10 +308,8 @@ genForEachFilter::DBConfig->Computation Annotation->String
 genForEachFilter dbconfmap (Foreach def compList _) = 
     case def of
  --       ForEachFilter filtName v ->  (" function(rows){" ++ filtName++"_fns = [\n" ++  (intercalate "," (map (genForEachFilter dbconfmap) compList)) ++"\n ]\n" ++ "foreach_fname(rows," ++ filtName ++ "_fns);" ++ "}\n") 
-        ForEachFilter filtName v -> "\t(function(rows){\n\t" ++ filtName++"_fns = [\n" ++  (intercalate ",\t\n" (map (genForEachFilter dbconfmap) compList)) ++"\n\t ]\n" ++ " for(i =0; i < rows.length; i++){\n\ 
-    \ \t for(j =0; j < "++ filtName ++ "_fns.length; j++){ \n\
-    \ \t\t fns[j](rows[i]); \
-    \ \n \t } \n \
+        ForEachFilter filtName v -> "\t(function(row){\n\t" ++ filtName++"_fns = [\n" ++  (intercalate ",\t\n" (map (genForEachFilter dbconfmap) compList)) ++"\n\t ]\n" ++ "\t for(j =0; j < "++ filtName ++ "_fns.length; j++){ \n\
+    \ \t\t" ++ filtName++ "_fns[j](row); \
     \ \n}\n })"
         _ -> "NOT SUPPORTED"
 genForEachFilter _ (Table v fil fie) = ""
