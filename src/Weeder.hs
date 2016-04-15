@@ -346,7 +346,7 @@ readJoinConfig file =
     do
         program <- readFile file
         path <- getExecutablePath
-        readData <- readFile $ (dropFileName path) ++"database.conf" 
+        readData <- readFile $ (dropFileName path) ++"join.conf" 
         let l= lines readData
         let joined =  makeJoinConfig $ concat l
         print joined

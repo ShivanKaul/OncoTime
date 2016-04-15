@@ -10,13 +10,13 @@ use myGroups.grp, ExtraGroups.grp
 group Id moreIds = {1000, 15 to 30}
 
 // ---- We can add or change Filters here ----
-population is
+patient is
 	Id: 10 to 1000
 	//Sex: F//<myGenders>
-//	Birthyear: 1960 to 1970
+        Birthyear: 1960 to 1970
 	//Diagnosis: <myDiagnosis>
 	//PostalCode: //H2X
-        Diagnosis: Breast
+        Diagnosis: Breast, Lung
 
 //Here's what I need:
 // - way to join doctor table to population and diagnosis tables
