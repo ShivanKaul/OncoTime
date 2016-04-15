@@ -30,8 +30,8 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
         -- let diagnosis = (checkIfDiagnosis filt)
         -- let query = generateQueries filt dbconf diagnosis
         let query = generateComputations filt weedconf dbconf joinconf comps
-        let st = generateScaffoldingJS query 
-        st
+        let st = generateScaffoldingJS query (getQueryElements comps) dbconf
+        stdbconf
         -- let displayFunction = generateDisplayFunction comps  dbconf weedconf diagnosis
         -- generateScaffoldingJS query displayFunction
         
@@ -87,10 +87,10 @@ generateComps filterList conf (dbconfmap@(DBConfig dbconf)) joinconf comp =
 --select Patient.*, PatientDoctor.*, Diagnosis.* from Patient JOIN PatientDoctor On PatientDoctor.PatientSerNum = Patient.PatientSerNum JOIN Diagnosis on Patient.PatientSerNum = Diagnosis.PatientSerNum limit 100;
 
 
-genFullSQLStatement::[Filter Annotation]->Config Annotation->DBConfig->JoinConfig->Computation Annotation->String
-genFullSQLStatement filterList conf dbconfmap joinconf comp = 
+getQueryElements::[Computation Annotation]->[Sttring]
+getQueryElements comp = 
     do
-        let listOfQueryElements = case comp of
+        case comp of
              (Foreach def compList _)->
                 case def of
                     (ForEachFilter filtName v) -> (map toLower filtName):(accumulateForEach compList dbconfmap)
@@ -98,6 +98,10 @@ genFullSQLStatement filterList conf dbconfmap joinconf comp =
              (Table v filtName fieldName) -> filtName:[]
              _ -> []
 
+genFullSQLStatement::[Filter Annotation]->Config Annotation->DBConfig->JoinConfig->Computation Annotation->String
+genFullSQLStatement filterList conf dbconfmap joinconf comp = 
+    do
+        let listOfQueryElements = getQueryElements comp
         --separate the fields from the filters
         let fieldNameList = getFieldNameList filterList listOfQueryElements 
 
@@ -468,8 +472,8 @@ generateFieldValsForWhere fvals fname =
         expanded
 
 
-generateScaffoldingJS :: [String] -> String -- -> String
-generateScaffoldingJS dbQueryList = --funcs=  -- dbDisplayFunction =
+generateScaffoldingJS :: [String] ->[String]->DBconfig String -- -> String
+generateScaffoldingJS dbQueryList queryElements dbconf = --funcs=  -- dbDisplayFunction =
     do
         let mysqlReq = "var mysql = require('mysql');\n"
         let tableReq = "var Table = require('cli-table');\n"
@@ -504,7 +508,7 @@ generateScaffoldingJS dbQueryList = --funcs=  -- dbDisplayFunction =
         let formatQueryList = map (\x -> x ++ "\n") dbQueryList
         
         mysqlReq ++ tableReq ++ config ++ dbConnect ++ (concat formatQueryList) ++ 
-            dbEnd ++ generateDisplayPrintFunction ++ "\n" ++ generateBarchartFunction ++ "\n" ++ generateForEachFunctions ++ "\n" ++ generateCountKeyFunction ++"\n" ++ generateDisplayTable
+            dbEnd ++ generateDisplayPrintFunction ++ "\n" ++ generateBarchartFunction ++ "\n" ++ generateForEachFunctions queryElements dbconf ++ "\n" ++ generateCountKeyFunction ++"\n" ++ generateDisplayTable
             -- generatePrettyRowFunction ++ dbDisplayFunctionStart ++ dbDisplayFunction ++ dbDisplayFunctionEnd
             --
 generateDisplayPrettyFunction::String
@@ -517,13 +521,42 @@ generateDisplayPrintFunction = "function print_var(row) {\n \t console.log(row)\
         \}\n\n"
 
 
-generateForEachFunctions::String
-generateForEachFunctions = "function foreach_fname(rows, fns){ \n\
-    \ for(i =0; i < rows.length; i++){\n\ 
-    \ \t for(j =0; j < fns.length; j++){ \n\
-    \ \t\t fns[j](rows[i]); \
-    \ \t \n } \n \
-    \ } \n}\n"
+generateSortFunction::String
+generateSortFunction =  "function sortObj(list, key) { 
+\ //Taken from http://stackoverflow.com/questions/2466356/javascript-object-list-sorting-by-object-property \n \
+\ \t   function compare(a, b) { \n\
+\  \t\t      a = a[key]; \n\
+\  \t\t     b = b[key]; \n\
+\  \t\t    var type = (typeof(a) === 'string' || \n\
+\  \t\t                typeof(b) === 'string') ? 'string' : 'number'; \n\
+\ \t\t      var result; \n\
+\   \t\t   if (type === 'string') result = a.localeCompare(b); \n\
+\    \t\t  else result = a - b; \n\
+\     \t\t return result; \n\ 
+\   \t } \n\
+\   \t return list.sort(compare); \n\
+\  } \n"
+
+generateForEachFunctions::String->DBConfig->[String]->String
+generateForEachFunctions fName dbConf functions =  "function foreach_" ++ fName ++ "(rows, key){ \n \
+\ \t sortedRows = sortObj(rows, key) \n \
+\ \t arrOf = new Array() \n\
+\ \t prev_index = 0; \n \
+\ \t for(i = 0; i < rows.length; i++){ \n \
+\ \t\t   if(arrOf.length == 0){  \n \ 
+\  \t\t\tarrOf[prev_index] = new Array() \n \
+\ \t\t\t arrOf[prev_index].push(sortedRows[doctor_i]) \n \
+\ \t\t\t  } else if(arrOf[prev_index][0][key] == sortedRows[i][key] ){ \n \
+\ \t\t\t arrOf_doctor[prev_index].push(sortedRows[i]) \n \
+\ \t\t\t } else { \n \" ++ ++"
+\       //FUNCTIONS \n \
+\ \t\t	prev_index++ \n \
+\ \t\t	arrOf[prev_index] = new Array() \n \
+\ \t\t  arrOf[prev_index].push(sortedRows[i]) \n \
+\ \t } \n \
+\ \t } \n \
+\ }"
+
 
 --code check for an additional argument, it being the arguments that are passed to that particular foreach?
 --ex we have a third argument foreachFns, and it is indexed by the foreachs in the list
