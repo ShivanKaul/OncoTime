@@ -253,6 +253,10 @@ generateEventQuery filterlist dbconf@(DBConfig dbconfmap) =
                 \inner join  Priority on  Priority.PrioritySerNum =  Task.PrioritySerNum inner join "  ++ populationQuery ++
             "\non population.PatientSerNum = Document.PatientSerNum where Task.`status`=\"Completed\" " ++  periodF filterlist dbconf) ]
     in intercalate " ;\n " $ snd $ unzip eventnamesAndQueries
+
+eachEvent :: String -> (String,String)
+
+
 periodF :: [Filter Annotation]->DBConfig-> String
 periodF filterlist dbconf@(DBConfig dbconfmap) =
     do

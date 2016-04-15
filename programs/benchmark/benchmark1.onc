@@ -8,6 +8,8 @@ population is
     Sex: male
 period is
     years : 2014
+    days : Mon
+    months : August
 
 {
     //foreach Patient p {
