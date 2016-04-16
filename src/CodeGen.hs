@@ -56,7 +56,7 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
         --let st = generateScaffoldingJS query (getQueryElements comps) dbconf
         let computationFunctions = generateForEachFunctions 
 
-        let helperFunctions = generateSortFunction ++ "\n" ++ generateCountKeyFunction ++ "\n" ++ generateDisplayTable
+        let helperFunctions = generateSortFunction ++ "\n" ++ generateCountKeyFunction ++ "\n" ++ generateDisplayTable ++ "\n" ++ generateBarchartFunction ++ "\n"
 
         scaff ++ (intercalate "\n" queries)++ "db.end(); \n" ++ computationFunctions ++ helperFunctions 
 --
@@ -364,7 +364,11 @@ generateScaffoldingJS = --funcs=  -- dbDisplayFunction =
                 \\tdatabase: 'oncodb',\n\
                 \\tport: 33306\n\
             \});\n"
-        mysqlReq ++ tableReq ++ config
+	let plotly = "var username = '' \n \
+		\ \t var api_key = '' \n \
+		\ \t require('plotly')(username, api_key);\n"
+
+        mysqlReq ++ tableReq ++ config ++ plotly
 
 
 generateDisplayPrettyFunction::String
@@ -412,7 +416,7 @@ generateForEachFunctions =  "function foreach_filter(rows, key, functions){ \n \
 \  \t\t   arrOf[prev_index].push(sortedRows[i]) \n \
 \ \t } \n \
 \ \t } \n \
-\ } "
+\ }"
 
 --code check for an additional argument, it being the arguments that are passed to that particular foreach?
 --ex we have a third argument foreachFns, and it is indexed by the foreachs in the list
@@ -421,7 +425,23 @@ generateForEachFunctions =  "function foreach_filter(rows, key, functions){ \n \
 --Other stuff here
 
 generateBarchartFunction::String
-generateBarchartFunction = "function barchart_display(row){}" 
+generateBarchartFunction = "function barchart_display(obj){ \n\
+\  //collect x data \n\
+\ var labels = Object.keys(obj) \n \
+\ //collect y data \n\
+\ var vals = Object.values(obj) \n \
+\ var data = [ \n \
+\  \t{\n \
+\  \t\t x: labels, \n \
+\  \t\t y: vals, \n \
+\  \t\t  type: 'bar'\n \
+\  \t}\n\
+\ ];\n \
+\ var graphOptions = {filename: 'basic-bar', fileopt: 'overwrite'};\n\
+\plotly.plot(data, graphOptions, function (err, msg) { \n\
+\    console.log(msg); \n\
+\}); }"
+
 
 --rows are all the rows, el is the element you want to count occurrences of.
 generateCountKeyFunction::String
