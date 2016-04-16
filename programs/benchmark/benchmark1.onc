@@ -3,13 +3,16 @@ script benchmark1()
  *
  */
 
-population is
+patient is
     Id: 1 to 60
     Sex: male
 period is
     years : 2014
     days : Mon
     //months : August
+
+doctors are
+    oncologist: true
 
 {
     //foreach Patient p {
@@ -26,8 +29,12 @@ period is
         print s
     }
 
-    //list S = sequences like []
-    //foreach member s1 in S {
-    //    print s1
-    //}
+    foreach Patient p {
+    	foreach Doctor d{
+            print p
+    	}
+
+    }
+
+
 }

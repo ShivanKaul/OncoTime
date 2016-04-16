@@ -6,9 +6,14 @@ import Text.Parsec.Pos
 
 --data Annotation = Annotation (TypeAn, SourcePos) deriving (Show, Eq)
 
-data Annotation = Annotation (TypeAn) deriving(Show, Eq)
+data Annotation = Annotation (TypeAn) deriving(Ord, Show, Eq)
 
 type TypeAn = String
+
+
+data JoinConfig = JoinConfig Joinable [JoinableFields] deriving(Show, Eq)
+type Joinable = String
+type JoinableFields = String 
 
 
 --TEST PROGRAM
@@ -27,7 +32,7 @@ data Header a = Header FileName [Arg a]
       deriving (Show, Eq)
 
 data Arg a = Arg GroupType (Var a) deriving (Show, Eq)
-data Var a = Var String a deriving (Show, Eq)
+data Var a = Var String a deriving (Ord, Show, Eq)
 
 type FileName = String
 type FileExt = String

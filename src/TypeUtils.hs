@@ -35,6 +35,12 @@ makeDBConfig str =
         Left e-> error $ show e
         Right r -> r
 
+makeJoinConfig::String->(JoinConfig)
+makeJoinConfig str = 
+    case parse (joinConfigParser <* eof) "" str of 
+        Left e-> error $ show e
+        Right r -> r
+
 
 
 
@@ -135,9 +141,20 @@ dbConfigParser = lexeme $
         semi
         return $ DBConfig (M.singleton cf db)
 
-
-
-
+joinConfigParser:: Parser (JoinConfig)
+joinConfigParser = lexeme $
+    do 
+        whiteSpace
+        reserved "ToJoinOn"
+        colon
+        joinableElement <- some alphaNum
+        semi
+        whiteSpace
+        reserved "JoinableFields"
+        colon
+        joinableList <- parents $ sepBy (some alphaNum) comma
+        semi
+        return $ JoinConfig joinableElement joinableList
 
 configListToMap::[(Config Annotation)]->(Map (FieldName, Bool) (FieldMap Annotation))
 configListToMap ((Config (x)):[]) =

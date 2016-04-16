@@ -20,8 +20,8 @@ doctors are
 	Id: 2123, 1231, 1415
 
 // Normal Period filter
-period is
-	Dates: 2013-01-01, 2015-01-01
+//period is
+//	Dates: 2013-01-01, 2015-01-01
 
 // Normal Events filter
 events are
@@ -36,6 +36,7 @@ population is
 	foreach Patient p
 	{
 		print p
+        print p
 	}
 }
 

@@ -364,6 +364,17 @@ readDBConfig file =
         let totalMap = dbConfigListToMap $ map makeDBConfig l
         return $ DBConfig  totalMap
 
+readJoinConfig::String->IO (JoinConfig)
+readJoinConfig file = 
+    do
+        program <- readFile file
+        path <- getExecutablePath
+        readData <- readFile $ (dropFileName path) ++"join.conf" 
+        let l= lines readData
+        let joined =  makeJoinConfig $ concat l
+        print joined
+        return $ joined 
+
 
 
 -- use config to populate default values for a filter
