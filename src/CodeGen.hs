@@ -53,8 +53,6 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
         let varMap = genVarTable comps (M.empty) 
         let queries = generateComputations filt weedconf dbconf joinconf comps varMap
         let scaff = generateScaffoldingJS
-        --let queryElements = map (getQueryElements dbconf) comps
-        --let st = generateScaffoldingJS query (getQueryElements comps) dbconf
         let computationFunctions = generateForEachFunctions 
 
         let helperFunctions = generateSortFunction ++ "\n" ++ generateCountKeyFunction ++ "\n" ++ generateDisplayTable ++ "\n" ++ generateBarchartFunction ++ "\n" ++ generateHTMLPage
@@ -94,11 +92,16 @@ codeGeneration comp dbconfmap varMap =
         case comp of
             (Foreach def compList _) -> case def of
                 ForEachFilter filtName v -> filtName++"_functions = ["++ (intercalate ",\n"(map (genForEachFilter dbconfmap) compList)) ++ "]\n"  ++ "foreach_filter(rows, \""++ (dbconfmap `getNameInDatabase` (filtName ++ "_loop")) ++"\", " ++ filtName++ "_functions" ++ ");\n" ++ "\n "
+		ForEachTable v1 v2 ->
+                    do
+                          let supportedOps = filter (== Print (PrintElement v1 v2)) compList
+                          let pActions = map (\(Print p) -> p) supportedOps
+                          intercalate "\n" $ map (genPrint dbconfmap varMap) pActions
                 _ -> ""
             (Table (Var v ann) filtName fieldName) -> "" 
         -- "= (countKey(rows, \" " ++ (dbconfmap `getNameInDatabase` (fieldName++ "_loop" )) ++ "\" )); \n"
             (List v seqFieldList) -> ""
-            (Print p) -> genPrint p dbconfmap varMap 
+            (Print p) -> genPrint dbconfmap varMap p
             (Barchart v@(Var va an)) -> case (M.lookup v varMap) of
                 Nothing -> ""
                 Just m -> 
@@ -123,23 +126,28 @@ getQueryElements dbconf varMap comp =
                 PrintVar v -> case M.lookup v varMap of
                     Nothing -> []
                     Just l -> l	
+		PrintElement v1 v2 -> case M.lookup v1 varMap of
+		    Nothing -> []
+                    Just l -> l
             _ -> []
 
 genFullSQLStatement::[Filter Annotation]->Config Annotation->DBConfig->JoinConfig->Computation Annotation->M.Map (Var Annotation) [String]->String
 genFullSQLStatement filterList conf dbconfmap@(DBConfig dbmap) joinconf comp varMap = 
     do
         let listOfQueryElements = getQueryElements dbconfmap varMap comp
+        --let st = generateScaffoldingJS query (getQueryElements comps) dbconf
+        --let st = generateScaffoldingJS query (getQueryElements comps) dbconf
         --separate the fields from the filters
-        let fieldNameList = getFieldNameList filterList listOfQueryElements 
+        let fieldNameList = getFieldNameList filterList listOfQueryElements dbconfmap
 
         --separate the filters from the filterList
-        let filterNameList = getFilterNameList filterList listOfQueryElements
+        let filterNameList = getFilterNameList filterList listOfQueryElements dbconfmap
 
         --get filters that are loopable
-        let usedFilterNameList = filter (\x-> M.member (x++"SQL") dbmap) filterNameList
+        let usedFilterNameList = filter (\x-> M.member (x++ "SQL") dbmap) filterNameList
         --get fields that are loopable
 
-        let usedFieldNameList = filter (\x-> M.member (x++"SQL") dbmap) fieldNameList
+        let usedFieldNameList = filter (\x-> M.member (x++ "SQL") dbmap) fieldNameList
         --get select from
         let selectStmt = genSelectStatements dbconfmap joinconf usedFilterNameList usedFieldNameList 
 
@@ -149,18 +157,23 @@ genFullSQLStatement filterList conf dbconfmap@(DBConfig dbmap) joinconf comp var
         --get wheres
         let whereStmt = genWhereStatements filterList dbconfmap joinconf filterNameList fieldNameList
 
-        selectStmt ++  joinStmt ++ whereStmt  
-
+        selectStmt ++  joinStmt ++ whereStmt 
 --FINISH THE THIS BY 9
 
 --get all the filterNames
 --go through the fitler list.
-getFilterNameList::[Filter Annotation]->[String]->[FilterName]
-getFilterNameList filtList queryElements = filter (\filtName-> filtName `elem` queryElements) (getFilterNames filtList)
+getFilterNameList::[Filter Annotation]->[String]->DBConfig->[FilterName]
+getFilterNameList filtList queryElements dbconf = 
+    do
+        let listOfRealNames  = map (getNameInDatabase dbconf) queryElements 
+        filter (\filtName-> filtName `elem` queryElements || (dbconf `getNameInDatabase` filtName) `elem` listOfRealNames ) (getFilterNames filtList)
 
 --get all the fieldnames 
-getFieldNameList::[Filter Annotation]->[String]->[FieldName]
-getFieldNameList filtList queryElements = filter (\filtName-> filtName `elem` queryElements) (getFieldNames filtList)
+getFieldNameList::[Filter Annotation]->[String]->DBConfig ->[FieldName]
+getFieldNameList filtList queryElements dbconf = 
+    do
+        let listOfRealNames  = map (getNameInDatabase dbconf) queryElements 
+        filter (\filtName-> filtName `elem` queryElements || (dbconf `getNameInDatabase` filtName) `elem` listOfRealNames ) (getFieldNames filtList)
 
 getFilterNames::[Filter Annotation]->[FilterName]
 getFilterNames filts = map (\(Filter filtName fdefs) -> filtName) filts
@@ -327,13 +340,18 @@ genForEachFilter _ (List v seqList) = ""
 
 --How do I generate all these print statements?
 --use the var given!!!
-genPrint::PrintAction Annotation ->DBConfig->M.Map (Var Annotation) [String]->String
-genPrint(PrintVar var@(Var v (Annotation an))) db varMap= case (M.lookup var varMap) of
+genPrint::DBConfig->M.Map (Var Annotation) [String]->PrintAction Annotation ->String
+genPrint db varMap (PrintVar var@(Var v (Annotation an))) = case (M.lookup var varMap) of
     Nothing -> ""
-    Just m -> v ++ "= display_table(rows, \"" ++ (db `getNameInDatabase` ((map toLower (m!!1))++"_table"))++"\"); console.log("++v++")"
-genPrint(PrintLength (Var v (Annotation an))) db _ =  "function CountVar("++v++"){console.log(countKey(v, "++ (db `getNameInDatabase` an) ++")) });"--count???
-genPrint(PrintFilters filts v@(Var varName an)) db _ = "function PrintFilters(row){" ++ (genPrintFilterString v filts db) ++ "console.log(" ++ varName ++")}"--like print id,sex of. --needs to be anonymous, otherwise I can't do it 
-genPrint(PrintElement (Var index a) (Var tab an)) _ _ = "function PrintElement("++ index ++ ", "++ tab ++"){console.log("++ tab ++"["++index++ "])}"
+    Just m -> v ++ "= display_table(rows, \"" ++ (db `getNameInDatabase` ((map toLower (m!!1))++"_table"))++"\", false); console.log("++v++")"
+genPrint db _ (PrintLength (Var v (Annotation an))) =  "function CountVar("++v++"){console.log(countKey(v, "++ (db `getNameInDatabase` an) ++")) });"--count???
+genPrint db _ (PrintFilters filts v@(Var varName an)) = "function PrintFilters(row){" ++ (genPrintFilterString v filts db) ++ "console.log(" ++ varName ++")}"--like print id,sex of. --needs to be anonymous, otherwise I can't do it 
+genPrint db varMap (PrintElement var@(Var tab a) (Var index an))= case (M.lookup var varMap) of
+    Nothing -> ""
+    Just m -> "display_table(rows, \"" ++ (db `getNameInDatabase` ((map toLower (m!!1))++"_table"))++"\", true);"
+
+
+
 
 
 genPrintInForeach::PrintAction Annotation ->DBConfig->String
@@ -488,12 +506,14 @@ generateCountKeyFunction = "function countKey(rows, el){ \
 --go through and tab all unique elements of a key
 --returns an object
 generateDisplayTable::String
-generateDisplayTable = "function display_table(rows, key){\n \
+generateDisplayTable = "function display_table(rows, key, printRow){\n \
     \ \n OccurrencesOfVal = new Object()\n \    
     \ \n\tfor(i =0; i < rows.length; i++){\n \ 
     \ \n\t\t string = rows[i][key] \n\
     \ \n\t\t\t\t if(OccurrencesOfVal.hasOwnProperty(string)){\n \ 
     \ \n\t\t\t\t\t OccurrencesOfVal[string] += 1;} \n \
+     \ if(printRow){ console.log(string) \n \
+      \} \n \
     \ \n\t\t\t\t else{\n \
     \ \n\t\t\t\t\t OccurrencesOfVal[string] =  1;} \n \
     \ \n\t\t\t\t }\n\

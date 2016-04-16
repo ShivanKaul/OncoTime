@@ -6,14 +6,14 @@ script benchmark1()
 use vikramPatientData.grp
 
 population is
-    id: 1 to 999
-    gender: male
-    birthyear: before 1990
-    diagnosis: brain, lung
-    postalcode: J7V
+    Id: 1 to 999
+    Gender: male
+    Birthyear: before 1990
+    Diagnosis: brain, lung
+    Postalcode: J7V
 
 doctors are
-    oncologist: true
+    Oncologist: true
 
 
 {
