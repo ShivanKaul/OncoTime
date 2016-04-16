@@ -40,6 +40,7 @@ genVarTable ((Print p):xs) m = case p of
     PrintLength v -> genVarTable xs m
     PrintFilters filts v -> genVarTable xs m
     PrintElement ind tab -> genVarTable xs m
+genVarTable (a:as) b = genVarTable as b
 
 
 
@@ -98,14 +99,18 @@ codeGeneration comp dbconfmap varMap =
         -- "= (countKey(rows, \" " ++ (dbconfmap `getNameInDatabase` (fieldName++ "_loop" )) ++ "\" )); \n"
             (List v seqFieldList) -> ""
             (Print p) -> genPrint p dbconfmap varMap 
-            (Barchart v) -> "CAN'T EXIST WITH NO SCOPE"
-
+            (Barchart v@(Var va an)) -> case (M.lookup v varMap) of
+                Nothing -> ""
+                Just m -> va ++ " = display_table(rows, \"" ++ (dbconfmap `getNameInDatabase` ((map toLower (m!!1))++"_table"))++"\"); barchart_display(" ++ va++ ")"
 
 
 getQueryElements::DBConfig->M.Map (Var Annotation) [String]->Computation Annotation->[String]
 getQueryElements dbconf varMap comp = 
     do
         case comp of
+            (Barchart v) -> case M.lookup v varMap of
+                    Nothing->[]
+                    Just l -> l
             (Foreach def compList _)->
                 case def of
                     (ForEachFilter filtName v) -> (map toLower filtName):(accumulateForEach compList dbconf)
@@ -114,8 +119,7 @@ getQueryElements dbconf varMap comp =
             (Print p) -> case p of
                 PrintVar v -> case M.lookup v varMap of
                     Nothing -> []
-                    Just l -> l
-             --(Table v filtName fieldName) -> filtName:fieldName:[]
+                    Just l -> l	
             _ -> []
 
 genFullSQLStatement::[Filter Annotation]->Config Annotation->DBConfig->JoinConfig->Computation Annotation->M.Map (Var Annotation) [String]->String
@@ -315,9 +319,8 @@ genForEachFilter dbconfmap (Foreach def compList _) =
         _ -> "NOT SUPPORTED"
 genForEachFilter dbconfmap (Table (Var v an) fil fie) = "" --"function("++fil++"_row){" ++ v ++ "= display_table("++fil++"_row, \"" ++ (dbconfmap `getNameInDatabase` fie)  ++ "\")}\n"
 genForEachFilter db (Print p ) = genPrintInForeach p db
-genForEachFilter _ (Barchart v) = ""
-genForEachFilter _ (List v seqList) = ""
-
+genForEachFilter _ (Barchart v) = "" 
+genForEachFilter _ (List v seqList) = "" 
 
 --How do I generate all these print statements?
 --use the var given!!!
@@ -364,9 +367,10 @@ generateScaffoldingJS = --funcs=  -- dbDisplayFunction =
                 \\tdatabase: 'oncodb',\n\
                 \\tport: 33306\n\
             \});\n"
-	let plotly = "var username = '' \n \
+        let plotly = "var username = '' \n \
 		\ \t var api_key = '' \n \
 		\ \t require('plotly')(username, api_key);\n"
+
 
         mysqlReq ++ tableReq ++ config ++ plotly
 

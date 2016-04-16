@@ -31,7 +31,7 @@ doctors are
 // --- Computations ---
 {
         table x = count Doctors by oncologist
-       
+        barchart x
         print x
 	foreach Patient p
 	{
