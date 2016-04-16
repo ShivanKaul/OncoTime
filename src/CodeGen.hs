@@ -19,15 +19,40 @@ TO DO:
 foreach table
 for each elements
 -}
+--look ahead, and gather all computations that have variables. If it is a computation that requires it, store it in this symbol table
+--This is for Tables only
+
+--ABLE TO BE ADAPTED
+genVarTable::[Computation Annotation]->(M.Map (Var Annotation) [String])-> (M.Map (Var Annotation) [String])
+genVarTable [] m = m 
+genVarTable ((Foreach fdef compList s):xs) m = case fdef of
+    ForEachFilter fn v ->  genVarTable xs m
+    ForEachTable v1 v2 -> genVarTable xs m 
+    ForEachSequence v seqField -> genVarTable xs m
+    ForEachList v1 v2 -> genVarTable xs m
+genVarTable ((List v seqField):xs) m = genVarTable xs m 
+genVarTable ((Table v filtName field):xs) m = 
+    do
+        let l = (\x y -> x:y:[]) filtName field
+        genVarTable xs (M.insert v l  m)
+genVarTable ((Print p):xs) m = case p of
+    PrintVar v -> genVarTable xs m
+    PrintLength v -> genVarTable xs m
+    PrintFilters filts v -> genVarTable xs m
+    PrintElement ind tab -> genVarTable xs m
+
+
+
 
 generateSQL :: (Program Annotation)->DBConfig ->(Config Annotation)->JoinConfig-> String
 generateSQL program@(Program header docs usefilelist groups filt comps) dbconf weedconf joinconf =
     do
         -- let diagnosis = (checkIfDiagnosis filt)
         -- let query = generateQueries filt dbconf diagnosis
-        let queries = generateComputations filt weedconf dbconf joinconf comps
+        let varMap = genVarTable comps (M.empty) 
+        let queries = generateComputations filt weedconf dbconf joinconf comps varMap
         let scaff = generateScaffoldingJS
-        let queryElements = map (getQueryElements dbconf) comps
+        --let queryElements = map (getQueryElements dbconf) comps
         --let st = generateScaffoldingJS query (getQueryElements comps) dbconf
         let computationFunctions = generateForEachFunctions 
 
@@ -47,58 +72,56 @@ getNameInDatabase (DBConfig dbconf) name =
         Just a -> a
         Nothing -> error $ name ++ " is not a valid name in " ++ show dbconf
 
-checkIfDiagnosis :: [Filter Annotation] -> Maybe [String]
-checkIfDiagnosis filters =
+generateComputations::[Filter Annotation]->Config Annotation-> DBConfig->JoinConfig-> [Computation Annotation]-> M.Map (Var Annotation) [String]->[String]
+generateComputations filterList conf ( dbconfmap@(DBConfig dbconf)) joinconf comps varMap = 
     do
-        foldl (\acc cur@(Filter _ fdefs) -> foldl (\accInner (FieldDef fname fvals) ->
-            if fname == "diagnosis" then
-                case fvals of
-                    [GroupWildcard] -> accInner
-                    _ -> Just (map (\(GroupValString name _) -> name) fvals)
-            else
-                accInner) acc fdefs)
-                 Nothing filters
-
-
-generateComputations::[Filter Annotation]->Config Annotation-> DBConfig->JoinConfig-> [Computation Annotation]-> [String]
-generateComputations filterList conf ( dbconfmap@(DBConfig dbconf)) joinconf comps = 
-    do
-        map (generateComps filterList conf dbconfmap joinconf) comps
+        map (generateComps filterList conf dbconfmap joinconf varMap) comps
 
 --generates each individual query and computation
-generateComps::[Filter Annotation]->Config Annotation->DBConfig->JoinConfig->Computation Annotation-> String
-generateComps filterList conf (dbconfmap@(DBConfig dbconf)) joinconf comp = 
+generateComps::[Filter Annotation]->Config Annotation->DBConfig->JoinConfig->M.Map (Var Annotation) [String]->Computation Annotation->String
+generateComps filterList conf (dbconfmap@(DBConfig dbconf)) joinconf  varMap comp = 
     do
-        let selectStatement = genFullSQLStatement filterList conf dbconfmap joinconf comp
+        let selectStatement = genFullSQLStatement filterList conf dbconfmap joinconf comp varMap
 
-        let generatedCode = case comp of
-                (Foreach def compList _) -> 
-                    case def of
-                        ForEachFilter filtName v -> filtName++"_functions = ["++ (intercalate ",\n"(map (genForEachFilter dbconfmap) compList)) ++ "]\n"  ++ "foreach_filter(rows, \""++ (dbconfmap `getNameInDatabase` (filtName ++ "_loop")) ++"\", " ++ filtName++ "_functions" ++ ");\n" ++ "\n "
-                        _ -> ""
-                (Table v filtName fieldName) -> "console.log(countKey(rows, \"" ++ (dbconfmap `getNameInDatabase` (fieldName++ "_loop" )) ++ "\" )); \n"
-                (List v seqFieldList) -> ""
-                (Print p) -> ""
-                (Barchart v) -> "CAN'T EXIST WITH NO SCOPE"
+        let generatedCode = (codeGeneration comp dbconfmap varMap) 
+        if(selectStatement == "select * from ") then "" 
+        else  genFullDBQuery selectStatement generatedCode
 
-        let code = genFullDBQuery selectStatement generatedCode
-        code
-
-getQueryElements::DBConfig->Computation Annotation->[String]
-getQueryElements dbconfmap comp = 
+codeGeneration::Computation Annotation->DBConfig->M.Map (Var Annotation) [String]->String
+codeGeneration comp dbconfmap varMap = 
     do
         case comp of
-             (Foreach def compList _)->
-                case def of
-                    (ForEachFilter filtName v) -> (map toLower filtName):(accumulateForEach compList dbconfmap)
-                    _ -> []
-             (Table v filtName fieldName) -> filtName:fieldName:[]
-             _ -> []
+            (Foreach def compList _) -> case def of
+                ForEachFilter filtName v -> filtName++"_functions = ["++ (intercalate ",\n"(map (genForEachFilter dbconfmap) compList)) ++ "]\n"  ++ "foreach_filter(rows, \""++ (dbconfmap `getNameInDatabase` (filtName ++ "_loop")) ++"\", " ++ filtName++ "_functions" ++ ");\n" ++ "\n "
+                _ -> ""
+            (Table (Var v ann) filtName fieldName) -> "" 
+        -- "= (countKey(rows, \" " ++ (dbconfmap `getNameInDatabase` (fieldName++ "_loop" )) ++ "\" )); \n"
+            (List v seqFieldList) -> ""
+            (Print p) -> genPrint p dbconfmap varMap 
+            (Barchart v) -> "CAN'T EXIST WITH NO SCOPE"
 
-genFullSQLStatement::[Filter Annotation]->Config Annotation->DBConfig->JoinConfig->Computation Annotation->String
-genFullSQLStatement filterList conf dbconfmap joinconf comp = 
+
+
+getQueryElements::DBConfig->M.Map (Var Annotation) [String]->Computation Annotation->[String]
+getQueryElements dbconf varMap comp = 
     do
-        let listOfQueryElements = getQueryElements dbconfmap comp
+        case comp of
+            (Foreach def compList _)->
+                case def of
+                    (ForEachFilter filtName v) -> (map toLower filtName):(accumulateForEach compList dbconf)
+                    _ -> []
+             
+            (Print p) -> case p of
+                PrintVar v -> case M.lookup v varMap of
+                    Nothing -> []
+                    Just l -> l
+             --(Table v filtName fieldName) -> filtName:fieldName:[]
+            _ -> []
+
+genFullSQLStatement::[Filter Annotation]->Config Annotation->DBConfig->JoinConfig->Computation Annotation->M.Map (Var Annotation) [String]->String
+genFullSQLStatement filterList conf dbconfmap joinconf comp varMap = 
+    do
+        let listOfQueryElements = getQueryElements dbconfmap varMap comp
         --separate the fields from the filters
         let fieldNameList = getFieldNameList filterList listOfQueryElements 
 
@@ -113,8 +136,6 @@ genFullSQLStatement filterList conf dbconfmap joinconf comp =
 
         --get wheres
         let whereStmt = genWhereStatements filterList dbconfmap joinconf filterNameList fieldNameList
-       
-        
 
         selectStmt ++  joinStmt ++ whereStmt 
 
@@ -146,14 +167,14 @@ genSelectStatements::DBConfig->JoinConfig->[String]->[String]->String
 genSelectStatements db@(DBConfig dbconf) joinconf filterNameList fieldNameList = 
     do
         let selectStmt = case (length filterNameList) > 0 of
-             True -> case (length fieldNameList) > 0of
+             True -> case (length fieldNameList) > 0 of
                  True -> (intercalate ", " (map (\filt-> (db `getNameInDatabase` filt) ++ ".*") filterNameList)  ) ++ ", " ++ (intercalate ", " (map (\fie-> (db `getNameInDatabase` fie) ++ ".*") fieldNameList))  
 
                  False -> (intercalate ", " (map (\filt-> (db `getNameInDatabase` filt) ++ ".*") filterNameList)  ) 
              False -> case (length fieldNameList) > 0 of
                  True -> (intercalate ", " (map (\fie-> (db `getNameInDatabase` fie) ++ ".*") fieldNameList)) 
                  False -> "*"
-       
+
         "select " ++ selectStmt ++ " from "
 
 --JOIN PatientDoctor On PatientDoctor.PatientSerNum = Patient.PatientSerNum JOIN Diagnosis on Patient.PatientSerNum = Diagnosis.PatientSerNum limit 100;
@@ -287,7 +308,7 @@ genForEachFilter dbconfmap (Foreach def compList _) =
         ForEachTable v v2 -> "NOT SUPPORTED"
         ForEachSequence v seqfield ->"NOT SUPPORTED"
         _ -> "NOT SUPPORTED"
-genForEachFilter _ (Table v fil fie) = ""
+genForEachFilter dbconfmap (Table (Var v an) fil fie) = "" --"function("++fil++"_row){" ++ v ++ "= display_table("++fil++"_row, \"" ++ (dbconfmap `getNameInDatabase` fie)  ++ "\")}\n"
 genForEachFilter db (Print p ) = genPrintInForeach p db
 genForEachFilter _ (Barchart v) = ""
 genForEachFilter _ (List v seqList) = ""
@@ -295,14 +316,26 @@ genForEachFilter _ (List v seqList) = ""
 
 --How do I generate all these print statements?
 --use the var given!!!
+genPrint::PrintAction Annotation ->DBConfig->M.Map (Var Annotation) [String]->String
+genPrint(PrintVar var@(Var v (Annotation an))) db varMap= case (M.lookup var varMap) of
+    Nothing -> ""
+    Just m -> v ++ "= display_table(rows, \"" ++ (db `getNameInDatabase` (m!!1))  ++ "\"); console.log("++v++")"
+genPrint(PrintLength (Var v (Annotation an))) db _ =  "function CountVar("++v++"){console.log(countKey(v, "++ (db `getNameInDatabase` an) ++")) });"--count???
+genPrint(PrintFilters filts v@(Var varName an)) db _ = "function PrintFilters(row){" ++ (genPrintFilterString v filts db) ++ "console.log(" ++ varName ++")}"--like print id,sex of. --needs to be anonymous, otherwise I can't do it 
+genPrint(PrintElement (Var index a) (Var tab an)) _ _ = "function PrintElement("++ index ++ ", "++ tab ++"){console.log("++ tab ++"["++index++ "])}"
+
+
 genPrintInForeach::PrintAction Annotation ->DBConfig->String
-genPrintInForeach (PrintVar (Var v (Annotation an))) db = "function PrintVar("++ v ++"){"++v++".forEach(function(entry){console.log(entry[\"" ++ (db `getNameInDatabase`((map toLower an) ++ "_loop"))++ "\"])}\n)}"--vanilla case
-genPrintInForeach (PrintLength (Var v (Annotation an))) db = "function CountVar("++v++"){console.log(countKey(v, "++ (db `getNameInDatabase` an) ++")) });"--count???
+genPrintInForeach (PrintVar (Var v (Annotation an))) db = "function PrintVar("++ v ++"){"++v++".forEach(function(entry){console.log(entry[\"" ++ (db `getNameInDatabase`((map toLower an) ++ "_loop"))++ "\"])}\n)}" --vanilla case
+
+genPrintInForeach (PrintLength (Var v (Annotation an))) db =  "function CountVar("++v++"){console.log(countKey(v, "++ (db `getNameInDatabase` an) ++")) });"--count???
+
 genPrintInForeach (PrintFilters filts v@(Var varName an)) db = "function PrintFilters(row){" ++ (genPrintFilterString v filts db) ++ "console.log(" ++ varName ++")}"--like print id,sex of. --needs to be anonymous, otherwise I can't do it 
+
 genPrintInForeach (PrintElement (Var index a) (Var tab an)) _ = "function PrintElement("++ index ++ ", "++ tab ++"){console.log("++ tab ++"["++index++ "])}"
 
 genPrintFilterString::(Var Annotation)->[FilterName]->DBConfig->String
-genPrintFilterString (Var v an) filtList (DBConfig dbconf)= v ++ " = {" ++ (intercalate ",\n" (map (\filt -> filt ++ " : row." ++ (dbconf M.! filt)) filtList )) ++ "\n};"
+genPrintFilterString (Var v an) filtList  dbconf= v ++ " = {" ++ (intercalate ",\n" (map (\filt -> filt ++ " : row." ++ (dbconf `getNameInDatabase` filt)) filtList )) ++ "\n};"
 
 accumulateForEach::[Computation Annotation]->DBConfig->[String]
 accumulateForEach [] _ = []

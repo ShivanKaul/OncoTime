@@ -31,7 +31,8 @@ doctors are
 // --- Computations ---
 {
         table x = count Patient by Diagnosis
-        
+       
+        print x
 	foreach Patient p
 	{
             foreach doctors q{
