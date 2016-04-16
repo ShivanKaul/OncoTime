@@ -41,49 +41,8 @@ genVarTable ((Print p):xs) m = case p of
     PrintFilters filts v -> genVarTable xs m
     PrintElement ind tab -> genVarTable xs m
 
-
-
-<<<<<<< HEAD
-generateEventQueries :: [Filter Annotation] ->DBConfig-> [Computation Annotation] -> [String]
-generateEventQueries filt dbconf computations  =
-   ["db.query('"++(intercalate " ; " (composeEvents filt dbconf))++"',function(err, rows, fields) {\
-            \if (err) throw err;\
-             \\nvar flattenedrows = rows.reduce(function(a, b){    \
-                \\nreturn a.concat(b);\
-             \});\
-            \\ndisplay(flattenedrows);\n\
-        \});"]
-
-        
-
-displaySequence:: [Computation Annotation]->String
-displaySequence computations = 
-    do
-        foldl' (\prev comp -> case comp of  
-            Foreach (ForEachSequence (Var v1 (Annotation an)) seqList) comps _ -> (trace (v1 ++ "_"++an )(prev ++ "\n\t(function(){\n\t\tvar "++v1++" = arrangeSequences(rows,"++ (show $ getEventNames seqList)++");\n"++displaySequence comps++"\n\t}());\n"))
-            Print(PrintVar (Var val (Annotation _))) -> (prev ++ "console.log("++val++");\n")
-            Print(PrintTimeLine (Var val (Annotation _))) -> (prev ++ "console.log('timelines have not been implemented yet');\n")
-            (List (Var var an) seqList ) -> (prev++ "\n\tvar "++var++" = arrangeSequences(rows,"++ (show $ getEventNames seqList)++");\n")   
-            Foreach (ForEachList (Var vmem (Annotation anmem)) (Var vlist (Annotation anlist))) comps _ -> (trace (vmem ++ "_"++anmem ++"\t"++vlist++"_"++anlist )(prev ++ "\n\t(function(){\n\t\tvar "++vmem++" = "++vlist++";\n"++displaySequence comps++"\n\t}());\n"))
-            _ -> prev) "" computations
-
-getEventNames :: [(SeqField a)] -> [String]
-getEventNames seqList =  if null seqList 
-    then availableEvents
-    else  
-        nub $ concat $ map (\seqfield -> case seqfield of 
-        Bar x -> map (\(Event eventname a) -> if eventname=="end" then "end_of_treatment_note_finished" else eventname ) x
-        Comma x -> map (\(Event eventname a) -> eventname ) x
-        _ -> []
-        ) seqList
-
-generateDisplayFunction :: [Computation Annotation] ->DBConfig->(Config Annotation)-> Maybe [String] -> String
-generateDisplayFunction comps dbconf conf diag =
-=======
-
 generateSQL :: (Program Annotation)->DBConfig ->(Config Annotation)->JoinConfig-> String
 generateSQL program@(Program header docs usefilelist groups filt comps) dbconf weedconf joinconf =
->>>>>>> Brendan
     do
         -- let diagnosis = (checkIfDiagnosis filt)
         -- let query = generateQueries filt dbconf diagnosis
@@ -110,6 +69,43 @@ getNameInDatabase (DBConfig dbconf) name =
         Just a -> a
         Nothing -> error $ name ++ " is not a valid name in " ++ show dbconf
 
+generateEventQueries :: [Filter Annotation] ->DBConfig-> String -> String
+generateEventQueries filt dbconf computationString  =
+   "db.query('"++(intercalate " ; " (composeEvents filt dbconf))++"',function(err, rows, fields) {\
+            \if (err) throw err;\
+             \\nvar flattenedrows = rows.reduce(function(a, b){    \
+                \\nreturn a.concat(b);\
+             \});\n"++  computationString++        "\n});"
+
+
+displaySequence:: [Filter Annotation] ->DBConfig-> Computation Annotation->String
+displaySequence filt dbconf comp = 
+    do 
+        let evqueryfun = generateEventQueries filt dbconf
+        case comp of  
+            Foreach (ForEachSequence (Var v1 (Annotation an)) seqList) comps _ -> evqueryfun (  "\n\t(function(){\n\t\tvar "
+                ++v1++" = arrangeSequences(rows,"++ (show $ getEventNames seqList)
+                    ++");\n"++(foldl' (\prev curr-> prev ++ (displaySequence filt dbconf curr) ) "" comps)++"\n\t}());\n")
+            Print(PrintVar (Var val (Annotation "List"))) -> ("console.log("++val++");\n")
+            Print(PrintVar (Var val (Annotation "member"))) -> ("console.log("++val++");\n")
+            Print(PrintTimeLine (Var val (Annotation _))) -> ( "console.log('timelines have not been implemented yet');\n")
+            List (Var var an) seqList  -> evqueryfun ( "\n\tvar "++var++" = arrangeSequences(rows,"++ (show $ getEventNames seqList)++");\n")   
+            Foreach (ForEachList (Var vmem (Annotation anmem)) (Var vlist (Annotation anlist))) comps _ -> 
+                ("\n\t(function(){\n\t\tvar "++vmem++" = "++vlist++";\n"++
+                (foldl' (\prev curr-> prev ++ (displaySequence filt dbconf curr) ) "" comps)
+                ++"\n\t}());\n")
+            _ -> ""
+
+getEventNames :: [(SeqField a)] -> [String]
+getEventNames seqList =  if null seqList 
+    then availableEvents
+    else  
+        nub $ concat $ map (\seqfield -> case seqfield of 
+        Bar x -> map (\(Event eventname a) -> if eventname=="end" then "end_of_treatment_note_finished" else eventname ) x
+        Comma x -> map (\(Event eventname a) -> eventname ) x
+        _ -> []
+        ) seqList
+            
 generateComputations::[Filter Annotation]->Config Annotation-> DBConfig->JoinConfig-> [Computation Annotation]-> M.Map (Var Annotation) [String]->[String]
 generateComputations filterList conf ( dbconfmap@(DBConfig dbconf)) joinconf comps varMap = 
     do
@@ -119,11 +115,15 @@ generateComputations filterList conf ( dbconfmap@(DBConfig dbconf)) joinconf com
 generateComps::[Filter Annotation]->Config Annotation->DBConfig->JoinConfig->M.Map (Var Annotation) [String]->Computation Annotation->String
 generateComps filterList conf (dbconfmap@(DBConfig dbconf)) joinconf  varMap comp = 
     do
-        let selectStatement = genFullSQLStatement filterList conf dbconfmap joinconf comp varMap
-
-        let generatedCode = (codeGeneration comp dbconfmap varMap) 
-        if(selectStatement == "select * from ") then "" 
-        else  genFullDBQuery selectStatement generatedCode
+        let sequence_statement = displaySequence filterList dbconfmap comp
+        if sequence_statement /= ""
+        then sequence_statement
+        else 
+            do 
+                let selectStatement = genFullSQLStatement filterList conf dbconfmap joinconf comp varMap
+                let generatedCode = (codeGeneration comp dbconfmap varMap) 
+                if(selectStatement == "select * from ") then "" 
+                else  genFullDBQuery selectStatement generatedCode
 
 codeGeneration::Computation Annotation->DBConfig->M.Map (Var Annotation) [String]->String
 codeGeneration comp dbconfmap varMap = 
@@ -138,75 +138,6 @@ codeGeneration comp dbconfmap varMap =
             (Print p) -> genPrint p dbconfmap varMap 
             (Barchart v) -> "CAN'T EXIST WITH NO SCOPE"
 
-
-<<<<<<< HEAD
-genCompCode::DBConfig->Config Annotation->Maybe [String] ->Computation Annotation ->String
-genCompCode  dbconf conf diag (Foreach forDef compList _) = (forEachGen forDef dbconf conf diag (generateDisplayFunction compList dbconf conf diag))
-genCompCode dbconf conf diag (Table v filtName fieldName) = ""  --left axis is index, right is value name, and then value
-genCompCode dbconf conf _ (List v seqLsit) = ""
-genCompCode dbconf conf _ (Print paction) = printGen paction dbconf conf
-genCompCode dbconf conf _ (Barchart v) =  " // This is a cool barchart. We will use d3"
-
-printGen::PrintAction Annotation->DBConfig -> Config Annotation->String
-printGen (PrintVar (Var val (Annotation an))) dbconfmap (Config conf) =
-    let
-        isLoopable = (M.member (an,True) (conf) )
-        printstmt = if isLoopable
-            then "\t\ttable.push(generatePrettyRow(" ++ (dbconfmap `getNameInDatabase` an) ++ "));"
-            else "/*"++an ++ " has not been implemented yet, sorry!*/"
-    in printstmt
-
-printGen(PrintLength var) dbconf  _= "//tables not yet implemented sorry!"
-printGen (PrintTimeLine v) dbconf  _= "//Really cool timeline would go here"
-printGen (PrintFilters fnList (Var v1 (Annotation an))) ( dbconf) conf= --"// printing filters has not been implemented"
-    do
-        let dbtablename = (dbconf `getNameInDatabase` an)
-        let temp = dbtablename++"_temp"
-        "\tvar "++temp++"={};\nfor (var attr in "++dbtablename++") "++temp++"[attr] = '';" ++
-            (intercalate "\n " (map (\fname->do
-                let fieldname_in_db = (dbconf `getNameInDatabase` fname)
-                temp++"."++fieldname_in_db ++ " = " ++ dbtablename++"." ++ fieldname_in_db ) fnList)) ++"\ntable.push(generatePrettyRow("++temp++ "));"  --Take a list of filters, and print the
-printGen (PrintElement (Var v1 (Annotation an)) v2) ( dbconf) _ ="/*table printing is unimplemented, sorry!*/"
-
-forEachGen::ForEachDef Annotation->DBConfig->Config Annotation->Maybe [String] ->String->String
-forEachGen (ForEachFilter fname (Var v an)) ( dbconfmap) (Config config)  diag stmts  =
-    do
-        let index_name = "i_" ++ (dbconfmap `getNameInDatabase` fname)
-        let loopablename = fname
-        let
-            forloopbegin = "\tfor (var "++index_name++" = 0; "++index_name ++ "  < rows.length; "++index_name++"++) {\n"
-            (Just (FieldMap fieldmap)) =  M.lookup (loopablename, True) config
-            fields = M.keys fieldmap
-            tableHeaders = case diag of
-                Nothing -> (delete "Diagnosis" (nub (map (\x -> dbconfmap `getNameInDatabase` x) fields)))
-                _ -> (nub (map (\x -> dbconfmap `getNameInDatabase` x) fields))
-
-            tableLeft = "\tvar table = new Table({\n\
-                        \\t\thead: "
-            tableCols = case diag of
-                Nothing -> ""
-                _ -> "\n, colWidths: [20, 50, 10, 20, 20]"
-            tableRight = "\n\
-                    \\t});\n"
-
-            tableInit = tableLeft ++ (show tableHeaders) ++ tableCols ++ tableRight
-            dbtablename = (dbconfmap `getNameInDatabase` loopablename)
-            middlestart = "\t\tvar "++ dbtablename ++" = {\n"
-            c0 = foldl' (\prev currfield -> prev ++
-                            "\t\t    "++
-                            currfield++": rows["++index_name++"]."++
-                            -- GHETTO AF
-                            (if currfield == "Diagnosis" then "Description" else currfield)
-                            ++ ",\n") "" tableHeaders
-            middleend = "\t\t}\n"
-            tablePush = ""
-            forloopEnd ="\n\t}\n\treturn table;\n"
-
-        tableInit ++ forloopbegin++middlestart ++c0++middleend++stmts++tablePush++forloopEnd
-
-forEachGen (ForEachTable (Var v1 an1) (Var v2 an2)) db c _ varList = ""
-forEachGen (ForEachSequence (Var v1 an) seqList) db c _ varList = "" --print a sequence
-forEachGen (ForEachList (Var v1 an1) (Var v2 an2)) db c _ varList = "" -- print a list of sequences
 
 
 
@@ -289,7 +220,7 @@ eachEvent eventyouwant = case eventyouwant of
 getPopulation :: [Filter Annotation]->DBConfig-> String
 getPopulation filterlist dbconf@(DBConfig dbconfmap) =
     let
-        population = filter(\(Filter filtName fdefList)-> filtName=="population") filterlist
+        population = filter(\(Filter filtName fdefList)-> filtName=="population" || filtName=="patient" || filtName=="patients") filterlist
         populationQuery = "  ( "++( intercalate " " $ lines(head $ generateQueries population dbconf Nothing))++" ) as population "
     in populationQuery
 
@@ -357,11 +288,6 @@ generateFieldValsForWhere fvals fname =
                 (GroupDate dd mm yy _) ->  fname ++"=\"" ++ (show dd) ++"-"++ (show mm) ++"-"++ (show yy) ++ "\"  "
                 )  fvals)
         expanded
-
-
-generateScaffoldingJS :: [String] -> String -> String
-generateScaffoldingJS dbQueryList dbDisplayFunction =
-=======
 
 getQueryElements::DBConfig->M.Map (Var Annotation) [String]->Computation Annotation->[String]
 getQueryElements dbconf varMap comp = 
@@ -615,7 +541,6 @@ isForEachFilter _ = False
 
 generateScaffoldingJS ::String -- -> String
 generateScaffoldingJS = --funcs=  -- dbDisplayFunction =
->>>>>>> Brendan
     do
         let mysqlReq = "var mysql = require('mysql');\n"
         let tableReq = "var Table = require('cli-table');\n"
@@ -624,6 +549,7 @@ generateScaffoldingJS = --funcs=  -- dbDisplayFunction =
                 \\tuser: '520student',\n\
                 \\tpassword: 'comp520',\n\
                 \\tdatabase: 'oncodb',\n\
+                \\tmultipleStatements: true,\n\
                 \\tport: 33306\n\
             \});\n"
         mysqlReq ++ tableReq ++ config
@@ -638,13 +564,6 @@ generateDisplayPrintFunction::String
 generateDisplayPrintFunction = "function print_var(row) {\n \t console.log(row)\n\
         \}\n\n"
 
-
-<<<<<<< HEAD
-        let formatQueryList = map (\x -> dbQueryLeft ++ x ++ dbQueryRight ++
-                dbDisplay ++ "\n") dbQueryList
-        mysqlReq ++ tableReq ++ config ++ dbConnect ++ (concat formatQueryList) ++
-            " \t }\n" ++
-            dbEnd ++ generatePrettyRowFunction ++ dbDisplayFunctionStart ++ dbDisplayFunction ++ dbDisplayFunctionEnd
 
 
 generateScaffoldingJSV2 :: [String] -> String -> String
@@ -734,7 +653,6 @@ sequencePrinterFunction =
 \\t    }\n\
 \\t    return to_return;\n\
 \\t}\n"
-=======
 generateSortFunction::String
 generateSortFunction =  "function sortObj(list, key) {  \n \
 \ //Taken from http://stackoverflow.com/questions/2466356/javascript-object-list-sorting-by-object-property \n \
@@ -813,4 +731,3 @@ generateDisplayTable = "function display_table(rows, key){\n \
 --iterate over all rows
 ---- get all values for the key in the row
 ----look at each element returned from the row
->>>>>>> Brendan
