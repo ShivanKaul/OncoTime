@@ -35,8 +35,10 @@ ssh -N -p 22 cs520@hig.cs.mcgill.ca -L 33306:localhost:3306
 
 The flags are supported and can be used thusly:
 ```
-./doc <filename> -pptype -dumpsymtab
+./doc <filename> --pptype --dumpsymtab
 ```
+
+We also support `-h / --help` and `-v / --version` flags.
 
 Note that we have a `config.conf` file. This file must be at the top-level directory i.e. must be in the same directory as the `doc` executable.
 

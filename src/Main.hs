@@ -105,6 +105,28 @@ removeWildcardsFieldDefs (Filter fname fieldefs) =
             _ -> (acc ++ [(FieldDef fielddefname fieldvals)]) ) [] fieldefs)
 
 
+dealWithHelpFlag :: String -> IO ()
+dealWithHelpFlag flag =
+    do
+        let helps = ["--help", "-h"]
+        if (flag `elem` helps) then
+            do
+                readme <- (readFile $ "README.md")
+                putStrLn readme
+                exitSuccess
+            else return $ ()
+
+dealWithVersionFlag :: String -> IO ()
+dealWithVersionFlag flag =
+    do
+        let versions = ["--version", "-v"]
+        if (flag `elem` versions) then
+            do
+                version <- (readFile $ "doc.cabal")
+                putStrLn (intercalate "\n" (take 2 (lines version)))
+                exitSuccess
+            else return $ ()
+
 prettyPrintTypes :: (Program Annotation)-> String -> IO()
 prettyPrintTypes (Program header docs usefilelist groups filt comps) file =
     do
@@ -161,8 +183,14 @@ main =
     do
         -- doc filename flags
         (filename:flags) <- getArgs
+        -- FLAGS TO BE RUN ON COMPILER
+        dealWithHelpFlag filename
+        dealWithVersionFlag filename
+
         (parsed,pos) <- parseFile filename
-        let symTabFun = if "-dumpsymtab" `elem` flags
+
+        -- DUMP SYMTAB FLAG
+        let symTabFun = if "--dumpsymtab" `elem` flags
             then
                 (\a ->do {
                     let {symFile = replaceExtension filename ".symtab"};
@@ -173,11 +201,12 @@ main =
             else
                 (\a->return ())
 
-
         (weededProg,conf) <- weed filename symTabFun parsed pos
         prettyPrintFile parsed filename
         codeGen weededProg filename conf
-        if "-pptype" `elem` flags then
+
+        -- PPYTYPE FLAG
+        if "--pptype" `elem` flags then
             prettyPrintTypes weededProg filename
         else
             return ()
