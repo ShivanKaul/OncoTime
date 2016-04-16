@@ -4,7 +4,7 @@ script benchmark1()
  */
 
 population is
-    Id: 1 to 6000
+    Id: 1 to 60
     Sex: male
 period is
     years : 2014
@@ -19,6 +19,10 @@ period is
     //}
 
     foreach sequence s like [end] {
+        print s
+    }
+    list l = sequences like [end]
+    foreach member s in l {
         print s
     }
 

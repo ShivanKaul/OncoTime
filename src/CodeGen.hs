@@ -54,7 +54,7 @@ displaySequence computations =
             Print(PrintVar (Var val (Annotation _))) -> (prev ++ "console.log("++val++");\n")
             Print(PrintTimeLine (Var val (Annotation _))) -> (prev ++ "console.log('timelines have not been implemented yet');\n")
             (List (Var var an) seqList ) -> (prev++ "\n\tvar "++var++" = arrangeSequences(rows,"++ (show $ getEventNames seqList)++");\n")   
-            Foreach (ForEachList (Var vmem (Annotation anmem)) (Var vlist (Annotation anlist))) comps _ -> (trace (vmem ++ "_"++anlist ++"\t"++vlist++"_"++anlist )(prev ++ "\n\t(function(){\n\t\tvar "++vmem++" = "++vlist++";\n"++displaySequence comps++"\n\t}());\n"))
+            Foreach (ForEachList (Var vmem (Annotation anmem)) (Var vlist (Annotation anlist))) comps _ -> (trace (vmem ++ "_"++anmem ++"\t"++vlist++"_"++anlist )(prev ++ "\n\t(function(){\n\t\tvar "++vmem++" = "++vlist++";\n"++displaySequence comps++"\n\t}());\n"))
             _ -> prev) "" computations
 
 getEventNames :: [(SeqField a)] -> [String]
