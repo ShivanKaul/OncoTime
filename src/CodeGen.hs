@@ -20,8 +20,17 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
         let diagnosis = (checkIfDiagnosis filt)
         let query = generateQueries filt dbconf diagnosis
         let displayFunction = generateDisplayFunction comps dbconf weedconf diagnosis
-        let eventQueries =  generateEventQueries filt comps
-        trace (generateEventQuery filt dbconf) generateScaffoldingJSV2 eventQueries displayFunction
+        let eventQueries =  ["db.query('"++(intercalate " ; " (composeEvents filt dbconf))++"',function(err, rows, fields) {\
+            \if (err) throw err;\
+             \\nvar flattenedrows = rows.reduce(function(a, b){    \
+                \\nreturn a.concat(b);\
+             \});\
+            \console.log(rows);\
+            
+            \console.log(flattenedrows);\
+        \});"]    --generateEventQueries filt comps
+        --trace (intercalate " ; " (composeEvents filt dbconf)) 
+        generateScaffoldingJSV2 eventQueries ""
 
 
         -- generateScaffoldingJS query displayFunction
@@ -32,36 +41,38 @@ generatePrettyRowFunction = "function generatePrettyRow(row) {\n\
         \}\n\n"
 
 explodeSequences :: [SeqField Annotation] -> [[SeqField Annotation]]
-explodeSequences seqs =
-    do
+explodeSequences seqs =[]
+    -- do
         -- [ event1 -> event2 | event3 -> event4] => [[ event1 -> event2 -> event4],[event1 -> event3 -> event4]]
 
-        concat (foldl (\acc cur -> case cur of
-            seq@(Comma events) -> map (\x -> acc ++ [x]) (handleComma seq)
-            seq@(Bar events) -> map (\x -> acc ++ [x]) (handleBars seq)) [[]] seqs)
+        -- concat (foldl (\acc cur -> case cur of
+        --     sequ@(Comma events) -> map (\x -> acc ++ [x]) (handleComma sequ)
+        --     sequ@(Bar events) -> map (\x -> acc ++ [x]) (handleBars sequ)) [[]] seqs)
 
         -- [ event1 -> {event2, event3} -> event4]
         -- [ event1 -> {event2, event3}* -> event4] NOT SUPPORTED
 
 handleComma :: SeqField Annotation -> [[SeqField Annotation]]
-handleComma seq@(Comma events) =
+handleComma sequ@(Comma events) =
     do
         map (\xs -> map (\x -> Bar [x]) xs) (filter (not . null) (subsequences events))
 
 handleBars :: SeqField Annotation -> [[SeqField Annotation]]
-handleBars seq@(Bar events) =
+handleBars sequ@(Bar events) =
     do
         map (\x -> [Bar [x]]) (events)
 
 generateEventQueries :: [Filter Annotation] -> [Computation Annotation] -> [String]
 generateEventQueries filters computations =
-    do
-        [show (
+    [""]--do
+        -- [show (
 
-            concatMap (\comp -> case comp of
-                Foreach (ForEachSequence var seqs) comps a -> map (\seq -> Foreach (ForEachSequence var seq) comps a) (explodeSequences seqs)) computations
+        --     concatMap (\comp -> case comp of
+        --         Foreach (ForEachSequence var seqs) comps a -> map (\seq -> Foreach (ForEachSequence var seq) comps a) (explodeSequences seqs)) computations
 
-            )]
+        --     )]
+
+
 
         -- [show (concatMap (\comp -> case comp of
         --     Foreach (ForEachSequence var seqs) comps a ->
@@ -70,7 +81,14 @@ generateEventQueries filters computations =
         --                 (explodeSequences seqs)
         --     _ -> [comp]) computations)]
 
-        -- [show ""]
+        
+
+displaySequence :: String
+displaySequence = 
+    do
+        let dbDisplayFunctionStart = "function displaySequence(rows) {\n"
+        let dbDisplayFunctionEnd = "}\n" 
+        ""
 
 collectWHEREs :: [Filter Annotation] -> [SeqField Annotation] -> String
 collectWHEREs filters events = undefined
@@ -257,30 +275,30 @@ generateEventQuery filterlist dbconf@(DBConfig dbconfmap) =
 eachEvent :: String -> (String,String)
 eachEvent eventyouwant = case eventyouwant of
     "ct_sim_booked" -> ("SELECT Appointment.PatientSerNum, \"ct_sim_booked\" as eventname, Appointment.lastupdated as eventtimestamp from  Appointment  inner join "
-            ,"\non population.PatientSerNum = Appointment.PatientSerNum where Appointment.`status` =\"Open\" and Appointment.AliasSerNum = 3 ")
-    "ct_sim_completed" -> ("SELECT Appointment.PatientSerNum, Appointment.ScheduledStartTime, Appointment.ScheduledEndTime, \"ct_sim_completed\" as eventname, \n\
+            ,"on population.PatientSerNum = Appointment.PatientSerNum where Appointment.`status` =\"Open\" and Appointment.AliasSerNum = 3 ")
+    "ct_sim_completed" -> ("SELECT Appointment.PatientSerNum, Appointment.ScheduledStartTime, Appointment.ScheduledEndTime, \"ct_sim_completed\" as eventname, \
             \ Appointment.scheduledendtime as eventtimestamp from  Appointment  inner join "
-            ,"\non population.PatientSerNum = Appointment.PatientSerNum\n where Appointment.`status` =\"Manually Completed\" and Appointment.AliasSerNum = 3 ")
-    "patient_arrives" -> ("SELECT Appointment.PatientSerNum, PatientLocation.ResourceSer, PatientLocation.CheckedInFlag, \"patient_arrives\" as eventname, \n\
-            \ PatientLocation.ArrivalDateTime as eventtimestamp from  PatientLocation inner join Appointment \n\
-            \on PatientLocation.AppointmentSerNum = Appointment.AppointmentSerNum inner join\n "
-            ,"\non population.PatientSerNum = Plan.PatientSerNum where Plan.`status`=\"Completed\" or Plan.`status`=\"CompletedEarly\"")
+            ,"on population.PatientSerNum = Appointment.PatientSerNum where Appointment.`status` =\"Manually Completed\" and Appointment.AliasSerNum = 3 ")
+    "patient_arrives" -> ("SELECT Appointment.PatientSerNum, PatientLocation.ResourceSer, PatientLocation.CheckedInFlag, \"patient_arrives\" as eventname, \
+            \ PatientLocation.ArrivalDateTime as eventtimestamp from  PatientLocation inner join Appointment \
+            \on PatientLocation.AppointmentSerNum = Appointment.AppointmentSerNum inner join "
+            ," on population.PatientSerNum = Appointment.PatientSerNum ")
     "patient_arrived" -> eachEvent "patient_arrives"
     "patient_appointment" -> eachEvent "patient_arrives"
-    "treatment_completed" -> ("SELECT Plan.PatientSerNum, \"treatment_completed\" as eventname,  Plan.lastupdated as eventtimestamp from  Plan inner join\n "
-        , "\non population.PatientSerNum = Plan.PatientSerNum where Plan.`status`=\"Completed\" or Plan.`status`=\"CompletedEarly\"")
-    "end"->("SELECT \"end_of_treatment_note_finished\" as eventname, Document.PatientSerNum, Document.DateOfService as eventtimestamp,\n\
-                \Document.DateOfService, Task.CreationDate, Task.CompletionDate,  Task.DueDateTime,\n\
-                \Priority.PriorityCode FROM oncodb.Document inner join oncodb.Task on (oncodb.Document.PatientSerNum = oncodb.Task.PatientSerNum \n\
+    "treatment_completed" -> ("SELECT Plan.PatientSerNum, \"treatment_completed\" as eventname,  Plan.lastupdated as eventtimestamp from  Plan inner join "
+        , "on population.PatientSerNum = Plan.PatientSerNum where Plan.`status`=\"Completed\" or Plan.`status`=\"CompletedEarly\"")
+    "end"->("SELECT \"end_of_treatment_note_finished\" as eventname, Document.PatientSerNum, Document.DateOfService as eventtimestamp,\
+                \Document.DateOfService, Task.CreationDate, Task.CompletionDate,  Task.DueDateTime,\
+                \Priority.PriorityCode FROM oncodb.Document inner join oncodb.Task on (oncodb.Document.PatientSerNum = oncodb.Task.PatientSerNum \
                 \ and  Document.AliasSerNum = 5 and  Task.AliasSerNum = 6) inner join  Priority on  Priority.PrioritySerNum =  Task.PrioritySerNum inner join "
-                ,"\non population.PatientSerNum = Document.PatientSerNum where (Task.`status`=\"Completed\" OR Task.`status`=\"CompletedEarly\") ")
+                ,"on population.PatientSerNum = Document.PatientSerNum where (Task.`status`=\"Completed\" OR Task.`status`=\"CompletedEarly\") ")
     "end_of_treatment_note_finished" -> eachEvent "end"
 
 getPopulation :: [Filter Annotation]->DBConfig-> String
 getPopulation filterlist dbconf@(DBConfig dbconfmap) =
     let
         population = filter(\(Filter filtName fdefList)-> filtName=="population") filterlist
-        populationQuery = "  ("++(head $ generateQueries population dbconf Nothing)++") as population "
+        populationQuery = "  ( "++( intercalate " " $ lines(head $ generateQueries population dbconf Nothing))++" ) as population "
     in populationQuery
 
 
@@ -391,6 +409,7 @@ generateScaffoldingJSV2 dbQueryList dbDisplayFunction =
                 \\tuser: '520student',\n\
                 \\tpassword: 'comp520',\n\
                 \\tdatabase: 'oncodb',\n\
+                \\tmultipleStatements: true,\n\
                 \\tport: 33306\n\
             \});\n"
         let dbConnect = "db.connect(function(err) {\n\

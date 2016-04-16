@@ -4,12 +4,12 @@ script benchmark1()
  */
 
 population is
-    Id: 1 to 20
+    Id: 1 to 6000
     Sex: male
 period is
     years : 2014
     days : Mon
-    months : August
+    //months : August
 
 {
     //foreach Patient p {
