@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeSynonymInstances #-}
+                    {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module CodeGen where
@@ -25,7 +25,7 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
              \\nvar flattenedrows = rows.reduce(function(a, b){    \
                 \\nreturn a.concat(b);\
              \});\
-            \console.log(rows);\
+            \/*console.log(rows);*/\
             
             \console.log(flattenedrows);\
         \});"]    --generateEventQueries filt comps
@@ -52,39 +52,32 @@ explodeSequences seqs =[]
         -- [ event1 -> {event2, event3} -> event4]
         -- [ event1 -> {event2, event3}* -> event4] NOT SUPPORTED
 
-handleComma :: SeqField Annotation -> [[SeqField Annotation]]
-handleComma sequ@(Comma events) =
-    do
-        map (\xs -> map (\x -> Bar [x]) xs) (filter (not . null) (subsequences events))
+-- handleComma :: SeqField Annotation -> [[SeqField Annotation]]
+-- handleComma sequ@(Comma events) =
+--     do
+--         map (\xs -> map (\x -> Bar [x]) xs) (filter (not . null) (subsequences events))
 
-handleBars :: SeqField Annotation -> [[SeqField Annotation]]
-handleBars sequ@(Bar events) =
-    do
-        map (\x -> [Bar [x]]) (events)
+-- handleBars :: SeqField Annotation -> [[SeqField Annotation]]
+-- handleBars sequ@(Bar events) =
+--     do
+--         map (\x -> [Bar [x]]) (events)
 
 generateEventQueries :: [Filter Annotation] -> [Computation Annotation] -> [String]
 generateEventQueries filters computations =
-    [""]--do
-        -- [show (
-
-        --     concatMap (\comp -> case comp of
-        --         Foreach (ForEachSequence var seqs) comps a -> map (\seq -> Foreach (ForEachSequence var seq) comps a) (explodeSequences seqs)) computations
-
-        --     )]
-
-
-
-        -- [show (concatMap (\comp -> case comp of
-        --     Foreach (ForEachSequence var seqs) comps a ->
-        --         concatMap ( \sequences ->
-        --             map (\seq -> Foreach (ForEachSequence var seq) comps a) sequences)
-        --                 (explodeSequences seqs)
-        --     _ -> [comp]) computations)]
+   ["db.query('"++(intercalate " ; " (composeEvents filt dbconf))++"',function(err, rows, fields) {\
+            \if (err) throw err;\
+             \\nvar flattenedrows = rows.reduce(function(a, b){    \
+                \\nreturn a.concat(b);\
+             \});\
+            \/*console.log(rows);*/\
+            
+            \console.log(flattenedrows);\
+        \});"]
 
         
 
-displaySequence :: String
-displaySequence = 
+displaySequence:: [Computation Annotation]->String
+displaySequence computations= 
     do
         let dbDisplayFunctionStart = "function displaySequence(rows) {\n"
         let dbDisplayFunctionEnd = "}\n" 
