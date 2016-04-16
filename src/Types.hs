@@ -27,7 +27,10 @@ data Header a = Header FileName [Arg a]
       deriving (Show, Eq)
 
 data Arg a = Arg GroupType (Var a) deriving (Show, Eq)
-data Var a = Var String a deriving (Show, Eq)
+
+instance (Eq a) => Eq (Var a) where
+    (Var a _ _) == (Var b _ _) = a == b
+data Var a = Var String a SourcePos deriving (Show)
 
 type FileName = String
 type FileExt = String

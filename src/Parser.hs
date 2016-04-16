@@ -153,7 +153,8 @@ var:: Parser (Var Annotation)
 var = lexeme $
     do
         var <- identifier--some alphaNum
-        return $ Var var (Annotation "")
+        pos <- getPosition --some alphaNum
+        return $ Var var (Annotation "") pos
 
 filename::Parser FileName
 filename = lexeme $
@@ -212,18 +213,19 @@ groups = lexeme $
     do
         reserved "group"
         grpType <- groupType
+        pos <- getPosition
         v <- var
         reserved "="
         grpItem <- curlies $ sepBy (formattedGroup (getGroupType grpType)) comma
         semi
-        return $ Group grpType (Var (getVar v) (Annotation (getGroupType grpType))) grpItem--(Annotation (getGroupType groupType))) grpItem
+        return $ Group grpType (Var (getVar v) (Annotation (getGroupType grpType)) pos) grpItem--(Annotation (getGroupType groupType))) grpItem
 
 
 getGroupType:: GroupType -> String
 getGroupType (GroupType a _) = a
 
-getVar::Var a->String
-getVar (Var v _) = v
+getVar::Var a ->String
+getVar (Var v _ _) = v
 
 
 formattedGroup::(String)->Parser (GroupItem Annotation)
@@ -252,7 +254,8 @@ groupVar ::String-> Parser (GroupItem Annotation)
 groupVar name =
     do
         gv <- angles $ var
-        return $ GroupVar (Var (getVar gv) (Annotation (map toLower name)))
+        pos <- getPosition
+        return $ GroupVar (Var (getVar gv) (Annotation (map toLower name)) pos)
 
 groupValString::String->Parser (GroupItem Annotation)
 groupValString name = lexeme $

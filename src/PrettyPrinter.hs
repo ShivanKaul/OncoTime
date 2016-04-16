@@ -27,14 +27,14 @@ pretty program = prettyPrint program
 printTypesGroups :: [(GroupDefs Annotation)] -> String
 printTypesGroups groups =
     do
-        let groupListString = map (\(Group (GroupType t pos) (Var v _ ) _) ->
+        let groupListString = map (\(Group (GroupType t pos) (Var v _ _) _) ->
                                 ("// Group " ++ v ++ " : " ++ t ++ "\n")) groups
         (intercalate "\n" groupListString)
 
 printTypesHeader :: (Header Annotation) -> String
 printTypesHeader (Header name args) =
     do
-        let argsListString = map (\(Arg (GroupType t pos) (Var v _ )) ->
+        let argsListString = map (\(Arg (GroupType t pos) (Var v _ _)) ->
                                 ("// Header param " ++ v ++ " : " ++ t ++ "\n")) args
         (intercalate "\n" argsListString)
 
@@ -141,8 +141,8 @@ instance PrettyPrint (Docs) where
     prettyPrint (Docs docs) = "\n/**" ++ docs ++ "*/\n"
 
 instance PrettyPrint (Var Annotation) where
-    prettyPrint (Var v a) = v
-    prettyAnnotated  (Var v (Annotation a))= "TYPE ("++v++" : "++a ++")"
+    prettyPrint (Var v a _) = v
+    prettyAnnotated  (Var v (Annotation a) _)= "TYPE ("++v++" : "++a ++")"
 
 instance PrettyPrint  ( Parser(Var Annotation)) where
     prettyAnnotated  _ = ""
