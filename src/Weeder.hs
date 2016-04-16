@@ -183,11 +183,13 @@ weirdForeachesExist comps =
     do
         foldl (\acc cur -> case cur of
             Foreach (ForEachFilter fname _) comps1 _ -> if (fname == "diagnosis") then (case (checkHeadForFiltername comps1 "patient") of
-                Nothing -> acc
-                Just comps2 -> case (checkHeadForFiltername comps2 "doctor") of
                     Nothing -> acc
-                    Just _ -> True)
-            else acc) False comps
+                    Just comps2 -> case (checkHeadForFiltername comps2 "doctor") of
+                        Nothing -> acc
+                        Just _ -> True)
+                else acc
+            _ -> acc
+            ) False comps
 
 checkHeadForFiltername :: [Computation Annotation] -> String -> Maybe ([Computation Annotation])
 checkHeadForFiltername comps filtername =

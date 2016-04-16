@@ -28,9 +28,9 @@ genVarTable [] m = m
 genVarTable ((Foreach fdef compList s):xs) m = case fdef of
     ForEachFilter fn v ->  genVarTable xs m
     ForEachTable v1 v2 -> genVarTable xs m 
-    ForEachSequence v seqField -> genVarTable xs m
-    ForEachList v1 v2 -> genVarTable xs m
-genVarTable ((List v seqField):xs) m = genVarTable xs m 
+    ForEachSequence v seqFieldList -> let l = getEventNames seqFieldList in  genVarTable xs (M.insert v l  m) 
+    ForEachList vmem vlist -> let l = m M.! vlist in  genVarTable xs (M.insert vmem l  m) 
+genVarTable ((List v seqFieldList):xs) m = let l = getEventNames seqFieldList in  genVarTable xs (M.insert v l  m) 
 genVarTable ((Table v filtName field):xs) m = 
     do
         let l = (\x y -> x:y:[]) filtName field
@@ -53,7 +53,7 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
         --let st = generateScaffoldingJS query (getQueryElements comps) dbconf
         let computationFunctions = generateForEachFunctions 
 
-        let helperFunctions = generateSortFunction ++ "\n" ++ generateCountKeyFunction ++ "\n" ++ generateDisplayTable
+        let helperFunctions = generateSortFunction ++ "\n" ++ generateCountKeyFunction ++ "\n" ++ generateDisplayTable++"\n" ++sequencePrinterFunction
 
         scaff ++ (intercalate "\n" queries)++ "db.end(); \n" ++ computationFunctions ++ helperFunctions 
 --
@@ -78,28 +78,25 @@ generateEventQueries filt dbconf computationString  =
              \});\n"++  computationString++        "\n});"
 
 
-displaySequence:: [Filter Annotation] ->DBConfig-> Computation Annotation->String
-displaySequence filt dbconf comp = 
+displaySequence:: [Filter Annotation] ->DBConfig-> M.Map (Var Annotation) [String]-> Computation Annotation->String
+displaySequence filt dbconf varmap comp = 
     do 
         let evqueryfun = generateEventQueries filt dbconf
         case comp of  
-            Foreach (ForEachSequence (Var v1 (Annotation an)) seqList) comps _ -> evqueryfun (  "\n\t(function(){\n\t\tvar "
-                ++v1++" = arrangeSequences(rows,"++ (show $ getEventNames seqList)
-                    ++");\n"++(foldl' (\prev curr-> prev ++ (displaySequence filt dbconf curr) ) "" comps)++"\n\t}());\n")
-            Print(PrintVar (Var val (Annotation "List"))) -> ("console.log("++val++");\n")
-            Print(PrintVar (Var val (Annotation "member"))) -> ("console.log("++val++");\n")
-            Print(PrintTimeLine (Var val (Annotation _))) -> ( "console.log('timelines have not been implemented yet');\n")
-            List (Var var an) seqList  -> evqueryfun ( "\n\tvar "++var++" = arrangeSequences(rows,"++ (show $ getEventNames seqList)++");\n")   
-            Foreach (ForEachList (Var vmem (Annotation anmem)) (Var vlist (Annotation anlist))) comps _ -> 
-                ("\n\t(function(){\n\t\tvar "++vmem++" = "++vlist++";\n"++
-                (foldl' (\prev curr-> prev ++ (displaySequence filt dbconf curr) ) "" comps)
-                ++"\n\t}());\n")
+            Foreach (ForEachSequence (Var v1 (Annotation an)) seqList)  [ (Print(PrintVar v ) )] _ -> evqueryfun(
+                "\n\tconsole.log( arrangeSequences(flattenedrows,"++ (show $ getEventNames seqList) 
+                    ++"));\n")
+            Print(PrintVar vlist@(Var val (Annotation "List"))) -> evqueryfun("console.log("++" arrangeSequences(flattenedrows,"++ (show(varmap M.!  vlist ))++"));\n")
+            Print(PrintVar vmem@(Var val (Annotation "member"))) -> evqueryfun("console.log("++" arrangeSequences(flattenedrows,"++ (show(varmap M.!  vmem ))++"));\n")
+            Print(PrintTimeLine (Var val (Annotation _))) -> ( "console.log('timelines have not been implemented yet');\n") 
+            Foreach (ForEachList vm@(Var vmem (Annotation anmem)) vlist) [(Print(PrintVar _ ))] _ -> evqueryfun(
+                "\n\tconsole.log( arrangeSequences(flattenedrows,"++ (show(varmap M.!  vlist ))++"));\n")
             _ -> ""
 
 getEventNames :: [(SeqField a)] -> [String]
-getEventNames seqList =  if null seqList 
+getEventNames seqList  =  {-if null seqList 
     then availableEvents
-    else  
+    else  -}
         nub $ concat $ map (\seqfield -> case seqfield of 
         Bar x -> map (\(Event eventname a) -> if eventname=="end" then "end_of_treatment_note_finished" else eventname ) x
         Comma x -> map (\(Event eventname a) -> eventname ) x
@@ -115,7 +112,7 @@ generateComputations filterList conf ( dbconfmap@(DBConfig dbconf)) joinconf com
 generateComps::[Filter Annotation]->Config Annotation->DBConfig->JoinConfig->M.Map (Var Annotation) [String]->Computation Annotation->String
 generateComps filterList conf (dbconfmap@(DBConfig dbconf)) joinconf  varMap comp = 
     do
-        let sequence_statement = displaySequence filterList dbconfmap comp
+        let sequence_statement = displaySequence filterList dbconfmap varMap comp
         if sequence_statement /= ""
         then sequence_statement
         else 
@@ -163,34 +160,29 @@ generateQueries filterList ( dbconf@(DBConfig dbconfmap)) diag =
         let queryString = "select " ++ columns ++ " from "
         --iterate through filter list
         queryList <- map (\(Filter filtName fdefList) ->
-            do
-                if filtName /= "population"
-                    then "/*"++filtName++" filtering has not been implemented yet, sorry! */"
-                --then queryString ++ (dbconf M.! filtName) --THIS IS PART OF WHAT BRENDAN DID
-                else
-                     do
-                        let fromQuery = case diag of
-                                Nothing -> (dbconf `getNameInDatabase` filtName)
-                                _ -> (dbconf `getNameInDatabase` filtName) ++ ", Diagnosis"
-                        let joinClause = case diag of
-                                Nothing -> ""
-                                Just diagnoses -> generateWhereClauseForDiag diagnoses ( dbconf )
-                        let selectQuery = queryString ++ fromQuery
-                        --get list of fields
+            do 
+                let fromQuery = case diag of
+                        Nothing -> (dbconf `getNameInDatabase` filtName)
+                        _ -> (dbconf `getNameInDatabase` filtName) ++ ", Diagnosis"
+                let joinClause = case diag of
+                        Nothing -> ""
+                        Just diagnoses -> generateWhereClauseForDiag diagnoses ( dbconf )
+                let selectQuery = queryString ++ fromQuery
+                --get list of fields
 
-                        --get list of fields without wildcard
-                        let filterFieldsWithoutWildcard = filter (\(FieldDef fname fieldvals) -> case fieldvals of
-                                [fval] -> fval /= GroupWildcard
-                                _ -> fname /= "diagnosis") (fdefList)
+                --get list of fields without wildcard
+                let filterFieldsWithoutWildcard = filter (\(FieldDef fname fieldvals) -> case fieldvals of
+                        [fval] -> fval /= GroupWildcard
+                        _ -> fname /= "diagnosis") (fdefList)
 
-                        --form the query
-                        if (length filterFieldsWithoutWildcard) == 0 then selectQuery
-                        else do
-                            let otherClause = (generateWhereClauses ( dbconf) filterFieldsWithoutWildcard filtName)
-                            let middle = if((not $ null otherClause) && (not $ null joinClause)) then (" AND ") else " "
-                            let whereQuery = " where " ++ joinClause ++  middle ++ otherClause
+                --form the query
+                if (length filterFieldsWithoutWildcard) == 0 then selectQuery
+                else do
+                    let otherClause = (generateWhereClauses ( dbconf) filterFieldsWithoutWildcard filtName)
+                    let middle = if((not $ null otherClause) && (not $ null joinClause)) then (" AND ") else " "
+                    let whereQuery = " where " ++ joinClause ++  middle ++ otherClause
 
-                            selectQuery ++ whereQuery
+                    selectQuery ++ whereQuery
                 ) filterList
         return queryList
 

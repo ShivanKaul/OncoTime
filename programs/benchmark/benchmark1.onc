@@ -21,10 +21,10 @@ doctors are
     //    //print id, PostalCode of p
     //}
 
-    foreach sequence s like [end] {
+    foreach sequence s like [patient_arrives] {
         print s
     }
-    list l = sequences like [end]
+    list l = sequences like [patient_arrives]
     foreach member s in l {
         print s
     }
