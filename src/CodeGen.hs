@@ -119,7 +119,7 @@ getQueryElements dbconf varMap comp =
             _ -> []
 
 genFullSQLStatement::[Filter Annotation]->Config Annotation->DBConfig->JoinConfig->Computation Annotation->M.Map (Var Annotation) [String]->String
-genFullSQLStatement filterList conf dbconfmap joinconf comp varMap = 
+genFullSQLStatement filterList conf dbconfmap@(DBConfig dbmap) joinconf comp varMap = 
     do
         let listOfQueryElements = getQueryElements dbconfmap varMap comp
         --separate the fields from the filters
@@ -128,16 +128,21 @@ genFullSQLStatement filterList conf dbconfmap joinconf comp varMap =
         --separate the filters from the filterList
         let filterNameList = getFilterNameList filterList listOfQueryElements
 
+        --get filters that are loopable
+        let usedFilterNameList = filter (\x-> M.member (x++"SQL") dbmap) filterNameList
+        --get fields that are loopable
+
+        let usedFieldNameList = filter (\x-> M.member (x++"SQL") dbmap) fieldNameList
         --get select from
-        let selectStmt = genSelectStatements dbconfmap joinconf filterNameList fieldNameList 
+        let selectStmt = genSelectStatements dbconfmap joinconf usedFilterNameList usedFieldNameList 
 
         --get Joins
-        let joinStmt = genJoinStatements dbconfmap joinconf filterNameList fieldNameList
+        let joinStmt = genJoinStatements dbconfmap joinconf usedFilterNameList usedFieldNameList
 
         --get wheres
         let whereStmt = genWhereStatements filterList dbconfmap joinconf filterNameList fieldNameList
 
-        selectStmt ++  joinStmt ++ whereStmt 
+        selectStmt ++  joinStmt ++ whereStmt  
 
 --FINISH THE THIS BY 9
 
@@ -319,7 +324,7 @@ genForEachFilter _ (List v seqList) = ""
 genPrint::PrintAction Annotation ->DBConfig->M.Map (Var Annotation) [String]->String
 genPrint(PrintVar var@(Var v (Annotation an))) db varMap= case (M.lookup var varMap) of
     Nothing -> ""
-    Just m -> v ++ "= display_table(rows, \"" ++ (db `getNameInDatabase` ((map toLower (m!!1))++"SQL"))++"\"); console.log("++v++")"
+    Just m -> v ++ "= display_table(rows, \"" ++ (db `getNameInDatabase` ((map toLower (m!!1))++"_table"))++"\"); console.log("++v++")"
 genPrint(PrintLength (Var v (Annotation an))) db _ =  "function CountVar("++v++"){console.log(countKey(v, "++ (db `getNameInDatabase` an) ++")) });"--count???
 genPrint(PrintFilters filts v@(Var varName an)) db _ = "function PrintFilters(row){" ++ (genPrintFilterString v filts db) ++ "console.log(" ++ varName ++")}"--like print id,sex of. --needs to be anonymous, otherwise I can't do it 
 genPrint(PrintElement (Var index a) (Var tab an)) _ _ = "function PrintElement("++ index ++ ", "++ tab ++"){console.log("++ tab ++"["++index++ "])}"

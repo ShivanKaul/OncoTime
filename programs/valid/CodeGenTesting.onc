@@ -30,7 +30,7 @@ doctors are
 
 // --- Computations ---
 {
-        table x = count Patient by Diagnosis
+        table x = count Doctors by oncologist
        
         print x
 	foreach Patient p
