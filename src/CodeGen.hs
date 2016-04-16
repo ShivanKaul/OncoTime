@@ -14,6 +14,12 @@ import Text.Parsec.String
 import Text.Regex
 import Debug.Trace
 
+{-
+TO DO:
+foreach table
+for each elements
+-}
+
 generateSQL :: (Program Annotation)->DBConfig ->(Config Annotation)->JoinConfig-> String
 generateSQL program@(Program header docs usefilelist groups filt comps) dbconf weedconf joinconf =
     do
@@ -67,9 +73,9 @@ generateComps filterList conf (dbconfmap@(DBConfig dbconf)) joinconf comp =
         let generatedCode = case comp of
                 (Foreach def compList _) -> 
                     case def of
-                        ForEachFilter filtName v -> filtName++"_functions = ["++ (intercalate ",\n"(map (genForEachFilter dbconfmap) compList)) ++ "]\n"  ++ "foreach_filter(rows, \""++ (dbconfmap `getNameInDatabase` (filtName ++ "_loop")) ++"\", " ++ filtName++ "_functions" ++ ");\n" ++ "\n }"
+                        ForEachFilter filtName v -> filtName++"_functions = ["++ (intercalate ",\n"(map (genForEachFilter dbconfmap) compList)) ++ "]\n"  ++ "foreach_filter(rows, \""++ (dbconfmap `getNameInDatabase` (filtName ++ "_loop")) ++"\", " ++ filtName++ "_functions" ++ ");\n" ++ "\n "
                         _ -> ""
-                (Table v filtName fieldName) -> "SHOULD BE SUPPORTED"
+                (Table v filtName fieldName) -> "console.log(count(rows, \"" ++ (dbconfmap `getNameInDatabase` (fieldName++ "_loop" )) ++ "\" )); \n"
                 (List v seqFieldList) -> ""
                 (Print p) -> ""
                 (Barchart v) -> "CAN'T EXIST WITH NO SCOPE"
@@ -85,7 +91,7 @@ getQueryElements dbconfmap comp =
                 case def of
                     (ForEachFilter filtName v) -> (map toLower filtName):(accumulateForEach compList dbconfmap)
                     _ -> []
-             (Table v filtName fieldName) -> filtName:[]
+             (Table v filtName fieldName) -> filtName:fieldName:[]
              _ -> []
 
 genFullSQLStatement::[Filter Annotation]->Config Annotation->DBConfig->JoinConfig->Computation Annotation->String
@@ -106,8 +112,10 @@ genFullSQLStatement filterList conf dbconfmap joinconf comp =
 
         --get wheres
         let whereStmt = genWhereStatements filterList dbconfmap joinconf filterNameList fieldNameList
+       
         
-        selectStmt ++  joinStmt  ++  whereStmt 
+
+        selectStmt ++  joinStmt ++ whereStmt 
 
 --FINISH THE THIS BY 9
 
@@ -161,7 +169,7 @@ genJoinStatements db@(DBConfig dbconf) (JoinConfig jointo joinableList) [] (fiel
              True -> 
                  do
                     dbHead ++ concat ( map (\field -> " JOIN " ++ field ++ " ON " ++  field ++ "."++ jointo ++ " = " ++ dbHead ++ "."++jointo ++ " "   ) dbFields )
-             False -> ""
+             False -> dbHead
         joinStatement
 genJoinStatements db@(DBConfig dbconf) (JoinConfig jointo joinableList) (filterNameHead:filterNameList) []  =  --case where one exist
     do
@@ -171,7 +179,7 @@ genJoinStatements db@(DBConfig dbconf) (JoinConfig jointo joinableList) (filterN
              True -> 
                  do
                     dbHead ++ concat ( map (\field ->" JOIN " ++ field ++ " ON " ++  field ++ "."++ jointo ++ " = " ++ dbHead ++ "."++jointo ++ " "   ) dbFields )
-             False -> ""
+             False -> dbHead
         joinStatement
 genJoinStatements db@(DBConfig dbconf) (JoinConfig jointo joinableList) filtList@(filterNameHead:filterNameList) fieldList@(fieldNameHead:fieldNameList) =  --case where both exist
     do
@@ -267,7 +275,7 @@ genFullDBQuery selectStatement  genCode =
         let dbQueryLeft = "\t\tdb.query('"
         let dbQueryRight = "', function(err, rows, fields) {\n\
             \\t\t\tif (err) throw err;\n else{"
-        let dbQueryEnd = "\n db.end() });" --});" --This goes around each one?
+        let dbQueryEnd = "\n} db.end() });" --});" --This goes around each one?
         dbQueryLeft ++ selectStatement ++ dbQueryRight ++ genCode ++ dbQueryEnd
 
 
@@ -288,7 +296,7 @@ genForEachFilter _ (List v seqList) = ""
 --use the var given!!!
 genPrintInForeach::PrintAction Annotation ->DBConfig->String
 genPrintInForeach (PrintVar (Var v (Annotation an))) db = "function PrintVar("++ v ++"){"++v++".forEach(function(entry){console.log(entry[\"" ++ (db `getNameInDatabase`((map toLower an) ++ "_loop"))++ "\"])}\n)}"--vanilla case
-genPrintInForeach (PrintLength (Var v (Annotation an))) _ = "function CountVar("++v++"){console.log(count(v, "++ (db `getNameInDatabase` an) ++")) });"--count???
+genPrintInForeach (PrintLength (Var v (Annotation an))) db = "function CountVar("++v++"){console.log(count(v, "++ (db `getNameInDatabase` an) ++")) });"--count???
 genPrintInForeach (PrintFilters filts v@(Var varName an)) db = "function PrintFilters(row){" ++ (genPrintFilterString v filts db) ++ "console.log(" ++ varName ++")}"--like print id,sex of. --needs to be anonymous, otherwise I can't do it 
 genPrintInForeach (PrintElement (Var index a) (Var tab an)) _ = "function PrintElement("++ index ++ ", "++ tab ++"){console.log("++ tab ++"["++index++ "])}"
 
@@ -397,7 +405,7 @@ generateDisplayTable::String
 generateDisplayTable = "function display_table(rows, key){\n \
     \ \n OccurrencesOfVal = new Object()\n \    
     \ \n\tfor(i =0; i < rows.length; i++){\n \ 
-    \ \n\t\t string = rows[i][key]i \n\
+    \ \n\t\t string = rows[i][key] \n\
     \ \n\t\t el = string.split(', ')\n \ 
     \ \n\t\t\t for(i =0; i < el.length; i++){ \n \ 
     \ \n\t\t\t\t if(OccurrencesOfVal.hasOwnProperty(el[i])){\n \ 
