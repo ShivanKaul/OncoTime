@@ -170,8 +170,7 @@ getFieldNameList filtList queryElements dbconf@(DBConfig db) =
     do
         let listOfRealNames  = map (getNameInDatabase dbconf) queryElements 
         let includedList = filter (\filtName-> filtName `elem` queryElements  || ((dbconf `getNameInDatabase` filtName) `elem` listOfRealNames ) || ((M.member (filtName ++ "_field")db))) (getFieldNames filtList)
-        (getFieldNames filtList) ++  "HAHAHA":includedList
-
+        includedList
 
 getFilterNames::[Filter Annotation]->[FilterName]
 getFilterNames filts = map (\(Filter filtName fdefs) -> filtName) filts
