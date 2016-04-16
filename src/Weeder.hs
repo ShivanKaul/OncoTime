@@ -924,7 +924,7 @@ weedForEach config symtable newcomp pos (ForEachSequence memberVar@(Var mname _)
                 newsym <- (addToSymTable (sym++[emptyScope]) memberVar TSequence)
                 s <- foldl' foldWeedList (Right newsym) undefSequence
                 (intSymRep,annComps) <- (weedFold config s newcomp pos)
-                Right (symtable,intSymRep, (Foreach((ForEachSequence  (Var mname (Annotation "sequence member"))
+                Right (symtable,intSymRep, (Foreach((ForEachSequence  (Var mname (Annotation "member"))
                  undefSequence) ) annComps pos))
 
 
@@ -937,7 +937,7 @@ weedForEach config symtable newcomp pos (ForEachList memberVar@(Var mname _) lis
                 Just TList -> do
                     newsym <-(addToSymTable (sym++[emptyScope])   memberVar TSequence)
                     (intSymRep,annComps) <- (weedFold config newsym newcomp pos)
-                    Right (sym,intSymRep,Foreach (ForEachList (Var mname  (Annotation"sequence member"))
+                    Right (sym,intSymRep,Foreach (ForEachList (Var mname  (Annotation"member"))
                                  (Var lname (Annotation"List"))) annComps pos)
                 Just t-> Left ( ComputationTypeMismatch $
                         "CAnnot Go through loop for "++ (prettyPrint listVar)++

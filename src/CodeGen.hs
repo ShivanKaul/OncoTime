@@ -33,27 +33,6 @@ generatePrettyRowFunction = "function generatePrettyRow(row) {\n\
             \\treturn Object.keys(row).map(function (key) {return row[key]});\n\
         \}\n\n"
 
-explodeSequences :: [SeqField Annotation] -> [[SeqField Annotation]]
-explodeSequences seqs =[]
-    -- do
-        -- [ event1 -> event2 | event3 -> event4] => [[ event1 -> event2 -> event4],[event1 -> event3 -> event4]]
-
-        -- concat (foldl (\acc cur -> case cur of
-        --     sequ@(Comma events) -> map (\x -> acc ++ [x]) (handleComma sequ)
-        --     sequ@(Bar events) -> map (\x -> acc ++ [x]) (handleBars sequ)) [[]] seqs)
-
-        -- [ event1 -> {event2, event3} -> event4]
-        -- [ event1 -> {event2, event3}* -> event4] NOT SUPPORTED
-
--- handleComma :: SeqField Annotation -> [[SeqField Annotation]]
--- handleComma sequ@(Comma events) =
---     do
---         map (\xs -> map (\x -> Bar [x]) xs) (filter (not . null) (subsequences events))
-
--- handleBars :: SeqField Annotation -> [[SeqField Annotation]]
--- handleBars sequ@(Bar events) =
---     do
---         map (\x -> [Bar [x]]) (events)
 
 generateEventQueries :: [Filter Annotation] ->DBConfig-> [Computation Annotation] -> [String]
 generateEventQueries filt dbconf computations  =
@@ -71,22 +50,22 @@ displaySequence:: [Computation Annotation]->String
 displaySequence computations = 
     do
         foldl' (\prev comp -> case comp of  
-            Foreach (ForEachSequence (Var v1 an) seqList) comps _ -> (prev ++ "\nvar "++v1++" = arrangeSequences(rows,"++ (show $ getEventNames seqList)++");\n"++displaySequence comps)
-            Print(PrintVar (Var val (Annotation _))) -> (prev ++ "console.log("++val++");")
+            Foreach (ForEachSequence (Var v1 (Annotation an)) seqList) comps _ -> (trace (v1 ++ "_"++an )(prev ++ "\n\t(function(){\n\t\tvar "++v1++" = arrangeSequences(rows,"++ (show $ getEventNames seqList)++");\n"++displaySequence comps++"\n\t}());\n"))
+            Print(PrintVar (Var val (Annotation _))) -> (prev ++ "console.log("++val++");\n")
+            Print(PrintTimeLine (Var val (Annotation _))) -> (prev ++ "console.log('timelines have not been implemented yet');\n")
+            (List (Var var an) seqList ) -> (prev++ "\n\tvar "++var++" = arrangeSequences(rows,"++ (show $ getEventNames seqList)++");\n")   
+            Foreach (ForEachList (Var vmem (Annotation anmem)) (Var vlist (Annotation anlist))) comps _ -> (trace (vmem ++ "_"++anlist ++"\t"++vlist++"_"++anlist )(prev ++ "\n\t(function(){\n\t\tvar "++vmem++" = "++vlist++";\n"++displaySequence comps++"\n\t}());\n"))
             _ -> prev) "" computations
-getEventNames :: [(SeqField a)] -> [String]
-getEventNames seqList =  nub $ concat $ map (\seqfield -> case seqfield of 
-    Bar x -> map (\(Event eventname a) -> if eventname=="end" then "end_of_treatment_note_finished" else eventname ) x
-    Comma x -> map (\(Event eventname a) -> eventname ) x
-    _ -> []
-    ) seqList
 
-collectWHEREs :: [Filter Annotation] -> [SeqField Annotation] -> String
-collectWHEREs filters events = undefined
-collectSELECTs :: [SeqField Annotation] -> String
-collectSELECTs events = undefined
-collectFROMs :: [SeqField Annotation] -> String
-collectFROMs events = undefined
+getEventNames :: [(SeqField a)] -> [String]
+getEventNames seqList =  if null seqList 
+    then availableEvents
+    else  
+        nub $ concat $ map (\seqfield -> case seqfield of 
+        Bar x -> map (\(Event eventname a) -> if eventname=="end" then "end_of_treatment_note_finished" else eventname ) x
+        Comma x -> map (\(Event eventname a) -> eventname ) x
+        _ -> []
+        ) seqList
 
 generateDisplayFunction :: [Computation Annotation] ->DBConfig->(Config Annotation)-> Maybe [String] -> String
 generateDisplayFunction comps dbconf conf diag =
@@ -224,44 +203,6 @@ generateQueries filterList ( dbconf@(DBConfig dbconfmap)) diag =
                 ) filterList
         return queryList
 
-generateEventQuery :: [Filter Annotation]->DBConfig-> String
-generateEventQuery filterlist dbconf@(DBConfig dbconfmap) =
-    let
-        population = filter(\(Filter filtName fdefList)-> filtName=="population") filterlist
-        period = filter(\(Filter filtName fdefList)-> filtName=="period") filterlist
-        populationQuery = "  ("++(head $ generateQueries population dbconf Nothing)++") as population "
-        eventnamesAndQueries = [("ct_sim_booked","SELECT Appointment.PatientSerNum, \"ct_sim_booked\" as eventname, \n\
-            \ Appointment.lastupdated as eventtimestamp from  Appointment  inner join "  ++ populationQuery ++
-            "\non population.PatientSerNum = Appointment.PatientSerNum\
-            \\n where Appointment.`status` =\"Open\" and Appointment.AliasSerNum = 3 "++  periodF filterlist dbconf)
-
-
-            ,("ct_sim_completed","SELECT Appointment.PatientSerNum, Appointment.ScheduledStartTime, Appointment.ScheduledEndTime, \"ct_sim_completed\" as eventname, \n\
-            \ Appointment.scheduledendtime as eventtimestamp from  Appointment  inner join "  ++ populationQuery ++
-            "\non population.PatientSerNum = Appointment.PatientSerNum\
-            \ \n where Appointment.`status` =\"Manually Completed\" and Appointment.AliasSerNum = 3 "++  periodF filterlist dbconf)
-
-
-            ,("patient_arrives","SELECT Appointment.PatientSerNum, PatientLocation.ResourceSer, PatientLocation.CheckedInFlag, \"patient_arrives\" as eventname, \n\
-            \ PatientLocation.ArrivalDateTime as eventtimestamp from  PatientLocation inner join Appointment \n\
-            \on PatientLocation.AppointmentSerNum = Appointment.AppointmentSerNum inner join\n "  ++ populationQuery ++
-            "\non population.PatientSerNum = Appointment.PatientSerNum "++  periodF filterlist dbconf)
-
-            ,("treatment_completed","SELECT Plan.PatientSerNum, \"treatment_completed\" as eventname, \n\
-            \ Plan.lastupdated as eventtimestamp from  Plan inner join\n "  ++ populationQuery ++
-            "\non population.PatientSerNum = Plan.PatientSerNum where Plan.`status`=\"Completed\" or Plan.`status`=\"CompletedEarly\""++  periodF filterlist dbconf)
-
-            ,("end","SELECT \"end_of_treatment_note_finished\" as eventname, \n\
-                \ Document.PatientSerNum, Document.DateOfService as eventtimestamp,\n\
-                \Document.DateOfService, Task.CreationDate, \
-                \Task.CompletionDate,  Task.DueDateTime,\n\
-                \Priority.PriorityCode\n\
-                \FROM oncodb.Document inner join oncodb.Task \n\
-                \on (oncodb.Document.PatientSerNum = oncodb.Task.PatientSerNum \n\
-                \ and  Document.AliasSerNum = 5 and  Task.AliasSerNum = 6) \n\
-                \inner join  Priority on  Priority.PrioritySerNum =  Task.PrioritySerNum inner join "  ++ populationQuery ++
-            "\non population.PatientSerNum = Document.PatientSerNum where Task.`status`=\"Completed\" " ++  periodF filterlist dbconf) ]
-    in intercalate " ;\n " $ snd $ unzip eventnamesAndQueries
 
 eachEvent :: String -> (String,String)
 eachEvent eventyouwant = case eventyouwant of
@@ -307,12 +248,15 @@ periodF filterlist dbconf@(DBConfig dbconfmap) =
                 if (length filterFieldsWithoutWildcard) == 0 then ""
                 else "  having " ++(generateWhereClauses ( dbconf) filterFieldsWithoutWildcard "period")
 
+
+availableEvents = ["patient_arrives","end","ct_sim_completed","ct_sim_booked","treatment_completed"]
+
+
 composeEvents :: [Filter Annotation]->DBConfig-> [String]
 composeEvents filterlist dbconf@(DBConfig dbconfmap) =
     do
         -- let events = filter(\(Filter filtName fdefList)-> filtName=="events" and filter (\(FieldDef fname fieldvals) -> case fieldvals of
         --                         [fval] -> fval /= GroupWildcard) (fdefList) filterlist)
-        let availableEvents = ["patient_arrives","end","ct_sim_completed","ct_sim_booked","treatment_completed"]
         -- let  allUSed = null events
         let populationQuery = getPopulation filterlist dbconf
         let periods = periodF filterlist dbconf
