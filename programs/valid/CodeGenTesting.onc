@@ -40,12 +40,9 @@ doctors are
 
 	foreach Patient p
 	{
-            foreach doctors q{
+            foreach doctors q
+            {
 	    print p
-                foreach Diagnosis d
-                {
-                print d
-	        }
             }
         }
 }

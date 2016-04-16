@@ -5,7 +5,7 @@ script benchmark1()
 
 use vikramPatientData.grp
 
-population is
+Patient is
     Id: 1 to 999
     Gender: male
     Birthyear: before 1990

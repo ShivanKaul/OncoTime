@@ -139,25 +139,21 @@ genFullSQLStatement filterList conf dbconfmap@(DBConfig dbmap) joinconf comp var
         --let st = generateScaffoldingJS query (getQueryElements comps) dbconf
         --separate the fields from the filters
         let fieldNameList = getFieldNameList filterList listOfQueryElements dbconfmap
-
         --separate the filters from the filterList
         let filterNameList = getFilterNameList filterList listOfQueryElements dbconfmap
-
         --get filters that are loopable
         let usedFilterNameList = filter (\x-> M.member (x++ "SQL") dbmap) filterNameList
         --get fields that are loopable
-
         let usedFieldNameList = filter (\x-> M.member (x++ "SQL") dbmap) fieldNameList
         --get select from
         let selectStmt = genSelectStatements dbconfmap joinconf usedFilterNameList usedFieldNameList 
-
         --get Joins
         let joinStmt = genJoinStatements dbconfmap joinconf usedFilterNameList usedFieldNameList
-
         --get wheres
-        let whereStmt = genWhereStatements filterList dbconfmap joinconf filterNameList fieldNameList
+        let whereStmt = genWhereStatements filterList dbconfmap joinconf usedFilterNameList usedFieldNameList
 
-        selectStmt ++  joinStmt ++ whereStmt 
+        selectStmt ++  joinStmt ++ whereStmt
+        --show listOfQueryElements ++ show fieldNameList ++ show usedFieldNameList ++ show usedFilterNameList
 --FINISH THE THIS BY 9
 
 --get all the filterNames
@@ -166,14 +162,16 @@ getFilterNameList::[Filter Annotation]->[String]->DBConfig->[FilterName]
 getFilterNameList filtList queryElements dbconf = 
     do
         let listOfRealNames  = map (getNameInDatabase dbconf) queryElements 
-        filter (\filtName-> filtName `elem` queryElements || (dbconf `getNameInDatabase` filtName) `elem` listOfRealNames ) (getFilterNames filtList)
+        filter (\filtName-> filtName `elem` queryElements  || (dbconf `getNameInDatabase` filtName) `elem` listOfRealNames ) (getFilterNames filtList)
 
 --get all the fieldnames 
 getFieldNameList::[Filter Annotation]->[String]->DBConfig ->[FieldName]
-getFieldNameList filtList queryElements dbconf = 
+getFieldNameList filtList queryElements dbconf@(DBConfig db) = 
     do
         let listOfRealNames  = map (getNameInDatabase dbconf) queryElements 
-        filter (\filtName-> filtName `elem` queryElements || (dbconf `getNameInDatabase` filtName) `elem` listOfRealNames ) (getFieldNames filtList)
+        let includedList = filter (\filtName-> filtName `elem` queryElements  || ((dbconf `getNameInDatabase` filtName) `elem` listOfRealNames ) || ((M.member (filtName ++ "_field")db))) (getFieldNames filtList)
+        (getFieldNames filtList) ++  "HAHAHA":includedList
+
 
 getFilterNames::[Filter Annotation]->[FilterName]
 getFilterNames filts = map (\(Filter filtName fdefs) -> filtName) filts
