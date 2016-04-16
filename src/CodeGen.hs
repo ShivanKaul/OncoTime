@@ -319,7 +319,7 @@ genForEachFilter _ (List v seqList) = ""
 genPrint::PrintAction Annotation ->DBConfig->M.Map (Var Annotation) [String]->String
 genPrint(PrintVar var@(Var v (Annotation an))) db varMap= case (M.lookup var varMap) of
     Nothing -> ""
-    Just m -> v ++ "= display_table(rows, \"" ++ (db `getNameInDatabase` (m!!1))  ++ "\"); console.log("++v++")"
+    Just m -> v ++ "= display_table(rows, \"" ++ (db `getNameInDatabase` ((map toLower (m!!1))++"SQL"))++"\"); console.log("++v++")"
 genPrint(PrintLength (Var v (Annotation an))) db _ =  "function CountVar("++v++"){console.log(countKey(v, "++ (db `getNameInDatabase` an) ++")) });"--count???
 genPrint(PrintFilters filts v@(Var varName an)) db _ = "function PrintFilters(row){" ++ (genPrintFilterString v filts db) ++ "console.log(" ++ varName ++")}"--like print id,sex of. --needs to be anonymous, otherwise I can't do it 
 genPrint(PrintElement (Var index a) (Var tab an)) _ _ = "function PrintElement("++ index ++ ", "++ tab ++"){console.log("++ tab ++"["++index++ "])}"
@@ -440,14 +440,11 @@ generateDisplayTable = "function display_table(rows, key){\n \
     \ \n OccurrencesOfVal = new Object()\n \    
     \ \n\tfor(i =0; i < rows.length; i++){\n \ 
     \ \n\t\t string = rows[i][key] \n\
-    \ \n\t\t el = string.split(', ')\n \ 
-    \ \n\t\t\t for(i =0; i < el.length; i++){ \n \ 
-    \ \n\t\t\t\t if(OccurrencesOfVal.hasOwnProperty(el[i])){\n \ 
-    \ \n\t\t\t\t\t OccurrencesOfVal[el[i]] += 1;} \n \
+    \ \n\t\t\t\t if(OccurrencesOfVal.hasOwnProperty(string)){\n \ 
+    \ \n\t\t\t\t\t OccurrencesOfVal[string] += 1;} \n \
     \ \n\t\t\t\t else{\n \
-    \ \n\t\t\t\t\t OccurrencesOfVal[el[i]] =  1;} \n \
+    \ \n\t\t\t\t\t OccurrencesOfVal[string] =  1;} \n \
     \ \n\t\t\t\t }\n\
-    \ \n \t\t\t}\n \
     \ \n return OccurrencesOfVal\n \
     \ }" 
 --iterate over all rows
