@@ -18,7 +18,7 @@ period is
     //    //print id, PostalCode of p
     //}
 
-    foreach sequence s like [ct_sim_booked -> ct_sim_completed -> end] {
+    foreach sequence s like [end] {
         print s
     }
 

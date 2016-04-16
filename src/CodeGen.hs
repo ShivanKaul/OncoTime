@@ -20,21 +20,13 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
         let diagnosis = (checkIfDiagnosis filt)
         let query = generateQueries filt dbconf diagnosis
         let displayFunction = generateDisplayFunction comps dbconf weedconf diagnosis
-        let eventQueries =  ["db.query('"++(intercalate " ; " (composeEvents filt dbconf))++"',function(err, rows, fields) {\
-            \if (err) throw err;\
-             \\nvar flattenedrows = rows.reduce(function(a, b){\
-                \\nreturn a.concat(b);\
-             \});\
-            \/*console.log(rows);*/\
-            
-            \console.log(flattenedrows);\
-        \});"]    --generateEventQueries filt comps
+        let eventQueries = generateEventQueries  filt dbconf comps
         --trace (intercalate " ; " (composeEvents filt dbconf)) 
+        let toprint = displaySequence comps
+        generateScaffoldingJSV2 eventQueries toprint
 
-        generateScaffoldingJSV2 eventQueries ""
 
-
-        -- generateScaffoldingJS query displayFunction
+        -- generateScaffoldingJS query dbDisplayFunction
 
 generatePrettyRowFunction :: String
 generatePrettyRowFunction = "function generatePrettyRow(row) {\n\
@@ -70,23 +62,21 @@ generateEventQueries filt dbconf computations  =
              \\nvar flattenedrows = rows.reduce(function(a, b){    \
                 \\nreturn a.concat(b);\
              \});\
-            \/*console.log(rows);*/\
-            
-            \/*console.log(flattenedrows);*/\
+            \\ndisplay(flattenedrows);\n\
         \});"]
 
         
 
 displaySequence:: [Computation Annotation]->String
-displaySequence computations= 
+displaySequence computations = 
     do
         foldl' (\prev comp -> case comp of  
-            Foreach (ForEachSequence (Var v1 an) seqList) comps _ -> (prev ++ "\nvar "++v1++" = arrangeSequences(flattenedrows,"++ (show $ getEventNames seqList)++");\n")
-            Print(PrintVar (Var val (Annotation "Member"))) -> (prev ++ "console.log("++val++");")
+            Foreach (ForEachSequence (Var v1 an) seqList) comps _ -> (prev ++ "\nvar "++v1++" = arrangeSequences(rows,"++ (show $ getEventNames seqList)++");\n"++displaySequence comps)
+            Print(PrintVar (Var val (Annotation _))) -> (prev ++ "console.log("++val++");")
             _ -> prev) "" computations
 getEventNames :: [(SeqField a)] -> [String]
 getEventNames seqList =  nub $ concat $ map (\seqfield -> case seqfield of 
-    Bar x -> map (\(Event eventname a) -> eventname ) x
+    Bar x -> map (\(Event eventname a) -> if eventname=="end" then "end_of_treatment_note_finished" else eventname ) x
     Comma x -> map (\(Event eventname a) -> eventname ) x
     _ -> []
     ) seqList
@@ -464,7 +454,7 @@ sequencePrinterFunction =
     \\t        }\n\
     \\t    }\n\
     \\t}\n\
-    \\treturn filterSequences(events_by_patient);\n\
+    \\treturn filterSequences(events_by_patient,current_sequence);\n\
 \\t}\n\n\
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
 \\tfunction filterSequences(events_by_patient,current_sequence){\n\
