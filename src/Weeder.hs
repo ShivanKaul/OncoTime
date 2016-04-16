@@ -12,6 +12,7 @@ import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as M
 import Data.Hashable
 import Data.List
+-- import qualified Text.Parsec.Pos as Pos
 import Data.Char
 import Control.Monad
 import Control.Applicative
@@ -33,23 +34,26 @@ import Formatter
 weed::String->(String -> IO())->(Program Annotation)->SourcePos->IO((Program Annotation),(Config Annotation))
 weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDefs filters comps) pos =
     do
+        let dummySrcPos = (newPos "test" 1 1)
         putStrLn $ "File "++file
-        let validTypes = [GroupType "sex", GroupType "id", GroupType "birthyear",
-                GroupType "diagnosis", GroupType "gender",
-                GroupType "postalcode", GroupType "years", GroupType "date",
-                GroupType "days", GroupType "months", GroupType "oncologist", GroupType "events", GroupType "eventfkjahfanf" ]
+        let validTypes = [GroupType "sex" dummySrcPos, GroupType "id" dummySrcPos, GroupType "birthyear" dummySrcPos,
+                GroupType "diagnosis" dummySrcPos, GroupType "gender" dummySrcPos,
+                GroupType "postalcode" dummySrcPos, GroupType "years" dummySrcPos, GroupType "date" dummySrcPos,
+                GroupType "days" dummySrcPos, GroupType "months" dummySrcPos, GroupType "oncologist" dummySrcPos, GroupType "events" dummySrcPos]
         -- get params from header
         let headerParams = case hdr of
                 (Header fname args) -> args
         -- get types of params
         let paramTypesList = map (\(Arg gtype _) -> gtype) headerParams
+        -- Print out line number where error encountered
+        -- Print out TypeError
         case (checkIfValidGroupTypes paramTypesList validTypes) of
-            True -> putStrLn $ "Header params have valid types!"
-            False -> hPutStrLn stderr "Header params have invalid types!" >> exitFailure
+            Nothing -> putStrLn $ "Header params have valid types!"
+            Just grp@(GroupType name srcpos) -> hPrint stderr (InvalidTypesParams
+                ("Header params have invalid types: " ++ (show name) ++ " on " ++ (show srcpos))) >> exitFailure
+
         --get Config file
         conf <- readConfig file
-
-
 
        --grpFile weeding
         case dupesExist (map (\x -> (Var x (Annotation ""))) (flattenUseFile useList)) of
@@ -96,12 +100,15 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
         -- get list of all valid types
 
         case (checkIfValidGroupTypes groupTypesList validTypes) of
-            True -> putStrLn $ "Group types valid!"
-            False -> hPrint stderr "Group Type invalid!" >> exitFailure
+            Nothing -> putStrLn $ "Group types valid!"
+            Just grp@(GroupType name srcpos) -> hPrint stderr (GroupTypesInvalid
+                ("Group types invalid on " ++ (show name) ++ " on " ++ (show srcpos))) >> exitFailure
+
 
         case (weirdForeachesExist comps) of
             False -> putStrLn $ "Weird foreaches don't exist!"
-            True -> hPrint stderr (NonsensicalForeach "Foreach doesn't exist: Diagnosis -> Patient -> Doctor") >> exitFailure
+            True -> hPrint stderr (NonsensicalForeach
+                "Foreach doesn't exist: Diagnosis -> Patient -> Doctor") >> exitFailure
 
 
         let symbolTableHeaders = buildHeadSymbolTable hdr
@@ -143,7 +150,7 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
             Right r -> putStrLn "All groups contain valid values!"
 
 
-        let groupsymstring = HashMap.foldrWithKey  (\(Var s _) ((GroupType t),_) p ->
+        let groupsymstring = HashMap.foldrWithKey  (\(Var s _) ((GroupType t _),_) p ->
                 p++ "\t" ++s ++ "\t" ++ t
                     ++"\t0(group)\n" )  "" symbolTableH
         --check erroneous subfields i.e. whether all fields exist
@@ -213,10 +220,17 @@ expandGroups symbolTableH =
     do
         map (\(gname, (gtype, gdefs)) -> Group gtype gname gdefs) (HashMap.toList symbolTableH)
 
-checkIfValidGroupTypes :: [GroupType] -> [GroupType] -> Bool
+checkIfValidGroupTypes :: [GroupType] -> [GroupType] -> Maybe (GroupType)
 checkIfValidGroupTypes groupTypes validTypes =
     do
-        foldl (\bool grp -> if grp `elem` validTypes then bool else False) True groupTypes
+        let dummySrcPos = (newPos "test" 1 1)
+        let checkValidity = foldl (\bool grp@(GroupType _ _) ->
+                if grp `elem` validTypes then bool else (False, grp))
+                (True, GroupType "test"  dummySrcPos) groupTypes
+
+        case checkValidity of
+            (False, grp) -> Just grp
+            (True, _) -> Nothing
 
 checkForRecursiveGroups :: [GroupDefs Annotation] -> [Var Annotation]
 checkForRecursiveGroups groups =
@@ -563,7 +577,7 @@ getAllFields (Config conf) =  M.unions $ map (\(_,(FieldMap b )) -> b) (M.toList
     --M.unions (map (FieldMap . snd) (M.toList conf))
 
 checkValidGroups::(Config Annotation)->(HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))->(GroupDefs Annotation)->Either LexError (GroupDefs Annotation)
-checkValidGroups c@(Config conf) symTab (Group gt@(GroupType gtype) (Var v an) (gitem )) =
+checkValidGroups c@(Config conf) symTab (Group gt@(GroupType gtype _) (Var v an) (gitem )) =
     do
         let listWithVal = getAllFields c
         --let fieldList = getAllFields c
@@ -583,7 +597,7 @@ checkValidParams
     -> (HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]))
     -> (Arg Annotation)
     -> Either LexError (Arg Annotation)
-checkValidParams c@(Config conf) symTab (Arg gt@(GroupType gtype) var@(Var v an@(Annotation a))) =
+checkValidParams c@(Config conf) symTab (Arg gt@(GroupType gtype srcpos) var@(Var v an@(Annotation a))) =
     do
         --get list of all fields
         let listWithVal = getAllFields c
@@ -702,7 +716,7 @@ varsToStr :: [Var Annotation] -> String
 varsToStr vars = intercalate ", " (map (varToStr) vars)
 
 groupTypeToStr::GroupType->String
-groupTypeToStr (GroupType s) = s
+groupTypeToStr (GroupType s _) = s
 
 
 events :: [String]

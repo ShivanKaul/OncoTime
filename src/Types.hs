@@ -41,7 +41,10 @@ type GroupList a = [(GroupDefs a)]
 data GroupDefs a = Group GroupType (Var a) [(GroupItem a)] -- different params?
     deriving (Show, Eq)
 
-data GroupType = GroupType String deriving (Show, Eq)
+instance Eq (GroupType) where
+    (GroupType name1 _) == (GroupType name2 _) = name1 == name2
+
+data GroupType = GroupType String SourcePos deriving (Show)
 
 data GroupItem a = GroupValString String a | GroupVar (Var a) | GroupRange (RangeType a) | GroupDate IntValue IntValue IntValue a | GroupWildcard deriving (Show, Eq)
 
@@ -108,8 +111,10 @@ data LexError   = FieldNameError String | FilterNameError String | AllowedTypeEr
                 | RedecError String | MissingConfigField String
                 | TypeError String | IncorrectEvent String
                 | NotFoundInSymbolTable String
+                | GroupTypesInvalid String
                 | RecursiveGroups String
                 | NonsensicalForeach String
+                | InvalidTypesParams String
                 | ComputationTypeMismatch String | ComputationWrongScope String deriving (Show, Eq)
 
 --we should also define a list of aliases perhaps that we pass

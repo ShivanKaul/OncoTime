@@ -47,7 +47,7 @@ testParser =
 
 --testProgram::Parser TestProgram -}
 testParserCheck ::(Config Annotation)-> Parser (TestProgram Annotation)
-testParserCheck c = 
+testParserCheck c =
     do
         whiteSpace
         --try testHeader <|>testUse <|> testGroups <|> try testComputation <|>  try testDocs
@@ -219,8 +219,8 @@ groups = lexeme $
         return $ Group grpType (Var (getVar v) (Annotation (getGroupType grpType))) grpItem--(Annotation (getGroupType groupType))) grpItem
 
 
-getGroupType::GroupType ->String
-getGroupType (GroupType a) =a
+getGroupType:: GroupType -> String
+getGroupType (GroupType a _) = a
 
 getVar::Var a->String
 getVar (Var v _) = v
@@ -237,8 +237,10 @@ formattedGroup name =
 groupType::Parser (GroupType)
 groupType = lexeme $
     do
+        pos <- getPosition
         gt <- some alphaNum
-        return $ GroupType (map toLower gt)
+        return $ GroupType (map toLower gt) pos
+
 
 groupItem::(String)->Parser (GroupItem Annotation)
 groupItem name = try  (groupValDate name )
@@ -422,7 +424,7 @@ barchart =  lexeme (
 
 foreach::Parser (ForEachDef Annotation)
 foreach =lexeme(
-    do{  f<-try(forEachFilter) <|> try(forEachTable) <|> 
+    do{  f<-try(forEachFilter) <|> try(forEachTable) <|>
         try(forEachSequence) <|> try(forEachList);
         optional semi;
         return f;
@@ -434,7 +436,7 @@ forEachFilter =
         reserved "foreach"
         f <- lexeme filterName
         v <- var
-        return $ ForEachFilter f v 
+        return $ ForEachFilter f v
 
 
 forEachTable::Parser (ForEachDef Annotation)
@@ -446,7 +448,7 @@ forEachTable =
         reserved "of"
         v2 <- var
         p <- getPosition
-        return $ ForEachTable v1 v2 
+        return $ ForEachTable v1 v2
 
 forEachSequence::Parser (ForEachDef Annotation)
 forEachSequence =
@@ -479,7 +481,7 @@ printvar =
 prints:: Parser (PrintAction Annotation)
 prints = lexeme (
     do{
-   x<-(try printvar <|> try printTimeLine <|> 
+   x<-(try printvar <|> try printTimeLine <|>
     try printLength <|> try printFilters <|> try printElement);
 
    return x;
