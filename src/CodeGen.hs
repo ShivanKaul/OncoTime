@@ -57,7 +57,7 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
         --let st = generateScaffoldingJS query (getQueryElements comps) dbconf
         let computationFunctions = generateForEachFunctions 
 
-        let helperFunctions = generateSortFunction ++ "\n" ++ generateCountKeyFunction ++ "\n" ++ generateDisplayTable ++ "\n" ++ generateBarchartFunction ++ "\n"
+        let helperFunctions = generateSortFunction ++ "\n" ++ generateCountKeyFunction ++ "\n" ++ generateDisplayTable ++ "\n" ++ generateBarchartFunction ++ "\n" ++ generateHTMLPage
 
         scaff ++ (intercalate "\n" queries)++ "db.end(); \n" ++ computationFunctions ++ helperFunctions 
 --
@@ -101,7 +101,10 @@ codeGeneration comp dbconfmap varMap =
             (Print p) -> genPrint p dbconfmap varMap 
             (Barchart v@(Var va an)) -> case (M.lookup v varMap) of
                 Nothing -> ""
-                Just m -> va ++ " = display_table(rows, \"" ++ (dbconfmap `getNameInDatabase` ((map toLower (m!!1))++"_table"))++"\"); barchart_display(" ++ va++ ")"
+                Just m -> 
+			do
+				let fname = (dbconfmap `getNameInDatabase` ((map toLower (m!!1))))
+				va ++ " = display_table(rows, \"" ++ fname ++"\"); barchart_display(" ++ va++ ", \"" ++ fname ++ "\");"
 
 
 getQueryElements::DBConfig->M.Map (Var Annotation) [String]->Computation Annotation->[String]
@@ -367,10 +370,10 @@ generateScaffoldingJS = --funcs=  -- dbDisplayFunction =
                 \\tdatabase: 'oncodb',\n\
                 \\tport: 33306\n\
             \});\n"
-        let plotly = "var username = '' \n \
-		\ \t var api_key = '' \n \
-		\ \t require('plotly')(username, api_key);\n"
-
+        let plotly = "var username = 'dragonarmy' \n \
+		\ \t var api_key = 'fokgu2ai5j' \n \
+		\ \t require('plotly')(username, api_key);\n \
+                \ \t require('fs'); \n"
 
         mysqlReq ++ tableReq ++ config ++ plotly
 
@@ -427,10 +430,10 @@ generateForEachFunctions =  "function foreach_filter(rows, key, functions){ \n \
 --if we see (fns[i].name == foreach_fname) we can see the arguments at that index and pass it in
 
 --Other stuff here
-
+{-
 generateBarchartFunction::String
 generateBarchartFunction = "function barchart_display(obj){ \n\
-\  //collect x data \n\
+
 \ var labels = Object.keys(obj) \n \
 \ //collect y data \n\
 \ var vals = Object.values(obj) \n \
@@ -445,6 +448,26 @@ generateBarchartFunction = "function barchart_display(obj){ \n\
 \plotly.plot(data, graphOptions, function (err, msg) { \n\
 \    console.log(msg); \n\
 \}); }"
+-}
+
+--object.values function retrieved from http://stackoverflow.com/questions/14791917/object-values-in-jquery
+generateBarchartFunction::String
+generateBarchartFunction = "function barchart_display(obj,fname){ \n\
+\  //collect x data \n\
+\ Object.values = function(object) { \n \
+\  var values = []; \n \
+\  for(var property in object) { \n \
+\    values.push(object[property]);\n \
+\  } \n \
+\  return values; \n\
+\} \n \
+\ var labels = Object.keys(obj) \n \
+\ //collect y data \n\
+\ var vals = Object.values(obj) \n \
+\ var js = 'var data = [{x: [' + labels + '],y: ['+ vals + '], type: \"bar\"}]; Plotly.newPlot(\"myDiv\", data);' \n \
+\ create_html(js, fname); \n \
+\}; "
+
 
 
 --rows are all the rows, el is the element you want to count occurrences of.
@@ -475,7 +498,24 @@ generateDisplayTable = "function display_table(rows, key){\n \
     \ \n\t\t\t\t\t OccurrencesOfVal[string] =  1;} \n \
     \ \n\t\t\t\t }\n\
     \ \n return OccurrencesOfVal\n \
-    \ }" 
+    \ }"
 --iterate over all rows
 ---- get all values for the key in the row
 ----look at each element returned from the row
+
+generateHTMLPage::String
+generateHTMLPage = "function create_html(js, fname){\n \
+\var html = '<head> <!-- Plotly.js -->'  \n \ 
+\ + '<script src=\"https://cdn.plot.ly/plotly-latest.min.js\"></script>' \n \
+\ + '</head>' \n \
+\+  '<body> <p> ' + fname + ' Graph </p>' \n \
+\+  '<div id=\"myDiv\" style=\"width: 480px; height: 400px;\"><!-- Plotly chart will be drawn inside this DIV --></div>' \n \
+\+ '<script>' + js + '</script>'  \n \
+\+ '</body>'; \n \
+\ var write = require(\"fs\").writeFile  \n \
+\write(__dirname + '/' + fname +'.html', html , function(err) { \n \
+\    if(err) { \n \
+\        return console.log(err);\n \
+\    } \n \
+\    console.log(\"The file was saved!\"); \n \
+\});}"
