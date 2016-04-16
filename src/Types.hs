@@ -109,6 +109,7 @@ data LexError   = FieldNameError String | FilterNameError String | AllowedTypeEr
                 | TypeError String | IncorrectEvent String
                 | NotFoundInSymbolTable String
                 | RecursiveGroups String
+                | NonsensicalForeach String
                 | ComputationTypeMismatch String | ComputationWrongScope String deriving (Show, Eq)
 
 --we should also define a list of aliases perhaps that we pass

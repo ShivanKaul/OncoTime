@@ -75,6 +75,8 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
         let grpAllFilesContents = map (readFile) (useFilesToParse)
         newGroups <- sequence (map (getGroupDefs) (grpAllFilesContents))
 
+        -- check for Diagnosis -> Patient -> Doctor
+
         let allGroups = (concat (newGroups)) ++ groupDefs
         --may need a function to annotate everything
 
@@ -96,6 +98,10 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
         case (checkIfValidGroupTypes groupTypesList validTypes) of
             True -> putStrLn $ "Group types valid!"
             False -> hPrint stderr "Group Type invalid!" >> exitFailure
+
+        case (weirdForeachesExist comps) of
+            False -> putStrLn $ "Weird foreaches don't exist!"
+            True -> hPrint stderr (NonsensicalForeach "Foreach doesn't exist: Diagnosis -> Patient -> Doctor") >> exitFailure
 
 
         let symbolTableHeaders = buildHeadSymbolTable hdr
@@ -171,6 +177,23 @@ weed file symTabFun prg@(Program hdr@(Header _ paramList)  docs useList groupDef
 
                     putStrLn "Weeded successfully!"
                     return ((Program hdr docs [] (expandedGroups) filtersWithVarsReplaced (annComps)),conf)
+
+weirdForeachesExist :: [Computation Annotation] -> Bool
+weirdForeachesExist comps =
+    do
+        foldl (\acc cur -> case cur of
+            Foreach (ForEachFilter fname _) comps1 _ -> if (fname == "diagnosis") then (case (checkHeadForFiltername comps1 "patient") of
+                Nothing -> acc
+                Just comps2 -> case (checkHeadForFiltername comps2 "doctor") of
+                    Nothing -> acc
+                    Just _ -> True)
+            else acc) False comps
+
+checkHeadForFiltername :: [Computation Annotation] -> String -> Maybe ([Computation Annotation])
+checkHeadForFiltername comps filtername =
+    do
+        case (head comps) of
+            Foreach (ForEachFilter fname _) comps _ -> if fname == filtername then (Just comps) else Nothing
 
 -- get grouptypes of all groupvars for a group
 checkIfGroupTypesOfVarsBelong :: HashMap.HashMap (Var Annotation) (GroupType, [GroupItem Annotation]) -> GroupDefs Annotation -> Bool
@@ -325,18 +348,18 @@ readConfig file =
     do
         program <- readFile file
         path <- getExecutablePath
-        readData <- readFile $ (dropFileName path) ++"config.conf" 
+        readData <- readFile $ (dropFileName path) ++"config.conf"
         let l= lines readData
         let totalMap = configListToMap $ map makeConfig l
         return $ Config totalMap
 
 
 readDBConfig::String->IO (DBConfig)
-readDBConfig file = 
+readDBConfig file =
     do
         program <- readFile file
         path <- getExecutablePath
-        readData <- readFile $ (dropFileName path) ++"database.conf" 
+        readData <- readFile $ (dropFileName path) ++"database.conf"
         let l= lines readData
         let totalMap = dbConfigListToMap $ map makeDBConfig l
         return $ DBConfig  totalMap
@@ -347,7 +370,7 @@ readDBConfig file =
 populateDefaultValuesFilters :: [Filter Annotation] -> (Config Annotation)-> [Filter Annotation]
 populateDefaultValuesFilters filters config =
     do
-        map (findDefaultValuesFilt config) (filters) 
+        map (findDefaultValuesFilt config) (filters)
 
 findDefaultValuesFilt :: (Config Annotation)-> Filter Annotation -> Filter Annotation
 findDefaultValuesFilt (Config conf) (Filter fname defs) =
@@ -652,7 +675,7 @@ compareFieldTypes (FieldType "Date" (Annotation an)) fm hm gd =
         (GroupValString s (Annotation a)) ->
             if a == an then Right $ (GroupValString s (Annotation an))
             else Left (TypeError ("Date Error. Field Type mismatch. Between " ++ show an ++ " And " ++ show a))
-        
+
 
 
 compareFieldTypes (FieldVar fv (Annotation an)) fm hm (GroupVar v@(Var gv (Annotation a))) =
@@ -877,7 +900,7 @@ weedForEach conf symtable newcomp pos (ForEachFilter filterName var@(Var iname _
 
             Right (symtable,intSymRep,(Foreach (ForEachFilter filterName (Var
                                  iname (Annotation filterName))) annComps pos) )
-            
+
     else Left $  FieldNameError $ ""++
             filterName++" is not a valid loopable Filter at line " ++ (show $sourceLine pos)
 
