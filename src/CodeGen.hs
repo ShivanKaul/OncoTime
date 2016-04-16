@@ -33,7 +33,8 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
 
         let helperFunctions = generateSortFunction ++ "\n" ++ generateCountKeyFunction ++ "\n" ++ generateDisplayTable
 
-        scaff ++ (intercalate "\n" queries)  ++ computationFunctions ++ helperFunctions 
+        scaff ++ (intercalate "\n" queries)++ "db.end(); \n" ++ computationFunctions ++ helperFunctions 
+--
             
 generatePrettyRowFunction :: String
 generatePrettyRowFunction = "function generatePrettyRow(row) {\n\
@@ -75,7 +76,7 @@ generateComps filterList conf (dbconfmap@(DBConfig dbconf)) joinconf comp =
                     case def of
                         ForEachFilter filtName v -> filtName++"_functions = ["++ (intercalate ",\n"(map (genForEachFilter dbconfmap) compList)) ++ "]\n"  ++ "foreach_filter(rows, \""++ (dbconfmap `getNameInDatabase` (filtName ++ "_loop")) ++"\", " ++ filtName++ "_functions" ++ ");\n" ++ "\n "
                         _ -> ""
-                (Table v filtName fieldName) -> "console.log(count(rows, \"" ++ (dbconfmap `getNameInDatabase` (fieldName++ "_loop" )) ++ "\" )); \n"
+                (Table v filtName fieldName) -> "console.log(countKey(rows, \"" ++ (dbconfmap `getNameInDatabase` (fieldName++ "_loop" )) ++ "\" )); \n"
                 (List v seqFieldList) -> ""
                 (Print p) -> ""
                 (Barchart v) -> "CAN'T EXIST WITH NO SCOPE"
@@ -275,9 +276,9 @@ genFullDBQuery selectStatement  genCode =
         let dbQueryLeft = "\t\tdb.query('"
         let dbQueryRight = "', function(err, rows, fields) {\n\
             \\t\t\tif (err) throw err;\n else{"
-        let dbQueryEnd = "\n} db.end() });" --});" --This goes around each one?
+        let dbQueryEnd = "\n} \n });" --This goes around each one?
         dbQueryLeft ++ selectStatement ++ dbQueryRight ++ genCode ++ dbQueryEnd
-
+--db.end() });
 
 genForEachFilter::DBConfig->Computation Annotation->String
 genForEachFilter dbconfmap (Foreach def compList _) = 
@@ -296,7 +297,7 @@ genForEachFilter _ (List v seqList) = ""
 --use the var given!!!
 genPrintInForeach::PrintAction Annotation ->DBConfig->String
 genPrintInForeach (PrintVar (Var v (Annotation an))) db = "function PrintVar("++ v ++"){"++v++".forEach(function(entry){console.log(entry[\"" ++ (db `getNameInDatabase`((map toLower an) ++ "_loop"))++ "\"])}\n)}"--vanilla case
-genPrintInForeach (PrintLength (Var v (Annotation an))) db = "function CountVar("++v++"){console.log(count(v, "++ (db `getNameInDatabase` an) ++")) });"--count???
+genPrintInForeach (PrintLength (Var v (Annotation an))) db = "function CountVar("++v++"){console.log(countKey(v, "++ (db `getNameInDatabase` an) ++")) });"--count???
 genPrintInForeach (PrintFilters filts v@(Var varName an)) db = "function PrintFilters(row){" ++ (genPrintFilterString v filts db) ++ "console.log(" ++ varName ++")}"--like print id,sex of. --needs to be anonymous, otherwise I can't do it 
 genPrintInForeach (PrintElement (Var index a) (Var tab an)) _ = "function PrintElement("++ index ++ ", "++ tab ++"){console.log("++ tab ++"["++index++ "])}"
 
