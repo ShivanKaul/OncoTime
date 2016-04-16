@@ -51,7 +51,9 @@ languageDef =
                 "[",
                 "]",
                 "(",
-                ")"
+                ")",
+                "ToJoinOn",
+                "JoinableFields"
 
             ]
 

@@ -85,8 +85,8 @@ codeGen :: (Program Annotation) -> String -> (Config Annotation)-> IO()
 codeGen prog file weedconf =
     do
         dbConf <- readDBConfig file
-        conf <- readConfig file
-        let contents = (generateSQL prog dbConf weedconf)
+        joinConf <- readJoinConfig file
+        let contents = (generateSQL prog dbConf weedconf joinConf)
         let fname = (replaceExtension file ".js")
         writeFile fname contents
         putStrLn ("Printed to \n" ++ fname)

@@ -184,11 +184,13 @@ weirdForeachesExist comps =
     do
         foldl (\acc cur -> case cur of
             Foreach (ForEachFilter fname _) comps1 _ -> if (fname == "diagnosis") then (case (checkHeadForFiltername comps1 "patient") of
-                Nothing -> acc
-                Just comps2 -> case (checkHeadForFiltername comps2 "doctor") of
                     Nothing -> acc
-                    Just _ -> True)
-            else acc) False comps
+                    Just comps2 -> case (checkHeadForFiltername comps2 "doctor") of
+                        Nothing -> acc
+                        Just _ -> True)
+                else acc
+            _ -> acc
+            ) False comps
 
 checkHeadForFiltername :: [Computation Annotation] -> String -> Maybe ([Computation Annotation])
 checkHeadForFiltername comps filtername =
@@ -381,6 +383,17 @@ readDBConfig file =
         let l= lines readData
         let totalMap = dbConfigListToMap $ map makeDBConfig l
         return $ DBConfig  totalMap
+
+readJoinConfig::String->IO (JoinConfig)
+readJoinConfig file = 
+    do
+        program <- readFile file
+        path <- getExecutablePath
+        readData <- readFile $ (dropFileName path) ++"join.conf" 
+        let l= lines readData
+        let joined =  makeJoinConfig $ concat l
+        print joined
+        return $ joined 
 
 
 
@@ -805,7 +818,7 @@ isNowInTopScope  symtable  = (null $ tail symtable)
 --evaluateInTopScope :: CompSymTable
 evaluateInTopScope symtable f = if isNowInTopScope symtable
     then f symtable
-    else Left $ ComputationWrongScope "Can only be in top scope"
+else Left $ ComputationWrongScope $" Can only be in top scope\nCurrent scope: "++(show symtable)
 
 
 emptyScope :: HashMap.HashMap (Var Annotation) ComputationType
@@ -940,7 +953,9 @@ weedForEach config symtable newcomp pos (ForEachSequence memberVar@(Var mname _ 
                 newsym <- (addToSymTable (sym++[emptyScope]) memberVar TSequence)
                 s <- foldl' foldWeedList (Right newsym) undefSequence
                 (intSymRep,annComps) <- (weedFold config s newcomp pos)
-                Right (s,intSymRep, (Foreach((ForEachSequence  (Var mname (Annotation "sequence member") srcpos)
+
+                Right (sym,intSymRep, (Foreach((ForEachSequence  (Var mname (Annotation "member") srcpos)
+
                  undefSequence) ) annComps pos))
 
 
@@ -953,8 +968,9 @@ weedForEach config symtable newcomp pos (ForEachList memberVar@(Var mname _ posM
                 Just TList -> do
                     newsym <-(addToSymTable (sym++[emptyScope])   memberVar TSequence)
                     (intSymRep,annComps) <- (weedFold config newsym newcomp pos)
-                    Right (sym,intSymRep,Foreach (ForEachList (Var mname  (Annotation"sequence member") posM)
+                    Right (sym,intSymRep,Foreach (ForEachList (Var mname  (Annotation"member") posM)
                                  (Var lname (Annotation"List") posL)) annComps pos)
+
                 Just t-> Left ( ComputationTypeMismatch $
                         "CAnnot Go through loop for "++ (prettyPrint listVar)++
                         ". It is a " ++ (prettyPrint t) ++ "Not a List at scope ending in line " ++ (show $sourceLine pos))

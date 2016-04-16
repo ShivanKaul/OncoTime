@@ -1,0 +1,13 @@
+script test()
+
+/*ohai*/
+{
+
+foreach sequence s like []{
+print s
+}
+list S = sequences like []
+foreach member s1 in S{
+ print s1
+}
+}

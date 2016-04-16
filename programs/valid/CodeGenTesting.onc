@@ -1,0 +1,46 @@
+script CodeGenTesting(Sex g)
+/**
+We use this test file to make sure that groups are properly used and expanded
+This file also shows off type inferencing.
+ */
+
+// ---- Change data in this group file ----
+use myGroups.grp, ExtraGroups.grp
+
+group Id moreIds = {1000, 15 to 30}
+
+// ---- We can add or change Filters here ----
+patient is
+	Id: 10 to 1000
+	//Sex: F//<myGenders>
+        Birthyear: 1960 to 1970
+	//Diagnosis: <myDiagnosis>
+	//PostalCode: //H2X
+        Diagnosis: Breast, Lung
+
+//Here's what I need:
+// - way to join doctor table to population and diagnosis tables
+// a way to iterate over the specific thing in for loops e.g. when looping over patients, how to loop over their diagnoses
+
+doctors are
+    id: after 50
+
+//events are
+//	Events: ct_sim_booked, patient_arrives
+
+// --- Computations ---
+{
+        table x = count Doctors by oncologist
+       
+        print x
+	foreach Patient p
+	{
+            foreach doctors q{
+	    print p
+                foreach Diagnosis d
+                {
+                print d
+	        }
+            }
+        }
+}
