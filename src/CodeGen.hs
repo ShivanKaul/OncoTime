@@ -22,7 +22,7 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
         let displayFunction = generateDisplayFunction comps dbconf weedconf diagnosis
         let eventQueries =  ["db.query('"++(intercalate " ; " (composeEvents filt dbconf))++"',function(err, rows, fields) {\
             \if (err) throw err;\
-             \\nvar flattenedrows = rows.reduce(function(a, b){    \
+             \\nvar flattenedrows = rows.reduce(function(a, b){\
                 \\nreturn a.concat(b);\
              \});\
             \/*console.log(rows);*/\
@@ -30,6 +30,7 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
             \console.log(flattenedrows);\
         \});"]    --generateEventQueries filt comps
         --trace (intercalate " ; " (composeEvents filt dbconf)) 
+
         generateScaffoldingJSV2 eventQueries ""
 
 
@@ -62,8 +63,8 @@ explodeSequences seqs =[]
 --     do
 --         map (\x -> [Bar [x]]) (events)
 
-generateEventQueries :: [Filter Annotation] -> [Computation Annotation] -> [String]
-generateEventQueries filters computations =
+generateEventQueries :: [Filter Annotation] ->DBConfig-> [Computation Annotation] -> [String]
+generateEventQueries filt dbconf computations  =
    ["db.query('"++(intercalate " ; " (composeEvents filt dbconf))++"',function(err, rows, fields) {\
             \if (err) throw err;\
              \\nvar flattenedrows = rows.reduce(function(a, b){    \
@@ -71,7 +72,7 @@ generateEventQueries filters computations =
              \});\
             \/*console.log(rows);*/\
             
-            \console.log(flattenedrows);\
+            \/*console.log(flattenedrows);*/\
         \});"]
 
         
@@ -79,9 +80,16 @@ generateEventQueries filters computations =
 displaySequence:: [Computation Annotation]->String
 displaySequence computations= 
     do
-        let dbDisplayFunctionStart = "function displaySequence(rows) {\n"
-        let dbDisplayFunctionEnd = "}\n" 
-        ""
+        foldl' (\prev comp -> case comp of  
+            Foreach (ForEachSequence (Var v1 an) seqList) comps _ -> (prev ++ "\nvar "++v1++" = arrangeSequences(flattenedrows,"++ (show $ getEventNames seqList)++");\n")
+            Print(PrintVar (Var val (Annotation "Member"))) -> (prev ++ "console.log("++val++");")
+            _ -> prev) "" computations
+getEventNames :: [(SeqField a)] -> [String]
+getEventNames seqList =  nub $ concat $ map (\seqfield -> case seqfield of 
+    Bar x -> map (\(Event eventname a) -> eventname ) x
+    Comma x -> map (\(Event eventname a) -> eventname ) x
+    _ -> []
+    ) seqList
 
 collectWHEREs :: [Filter Annotation] -> [SeqField Annotation] -> String
 collectWHEREs filters events = undefined
@@ -417,7 +425,7 @@ generateScaffoldingJSV2 dbQueryList dbDisplayFunction =
 
         mysqlReq ++ tableReq ++ config ++ dbConnect ++ (concat dbQueryList) ++ dbEnd ++
             generatePrettyRowFunction ++ dbDisplayFunctionStart ++ dbDisplayFunction ++
-            dbDisplayFunctionEnd
+            dbDisplayFunctionEnd ++sequencePrinterFunction
 
 
 
@@ -426,3 +434,56 @@ generateScaffoldingJSV2 dbQueryList dbDisplayFunction =
         -- mysqlReq ++ tableReq ++ config ++ dbConnect ++ (concat formatQueryList) ++
         --     " \t }\n" ++
         --     dbEnd ++ generatePrettyRowFunction ++ dbDisplayFunctionStart ++ dbDisplayFunction ++ dbDisplayFunctionEnd
+
+
+
+sequencePrinterFunction :: String
+sequencePrinterFunction = 
+    "\tfunction arrangeSequences (flattenedrows,current_sequence){\n\
+    \\tvar events_by_patient={/*1234:{ev:[{1234}],ev1:[{1234}],ev2:[{1234}],*/};\n\
+    \\tfor (var i_seq = 0; i_seq  < flattenedrows.length; i_seq++) {\n\
+    \\t    var current_pat = flattenedrows[i_seq].PatientSerNum;\n\
+    \\t    var patientevents = events_by_patient[current_pat];\n\
+    \\t    if (patientevents==undefined){\n\
+    \\t        patientevents={};\n\
+    \\t        patientevents[flattenedrows[i_seq].eventname] = flattenedrows[i_seq];\n\
+    \\t        events_by_patient[current_pat]=patientevents;\n\
+    \\t        }\n\
+    \\t    else{\n\
+    \\t        var current_events_of_type = patientevents[flattenedrows[i_seq].eventname];\n\
+    \\t        if (current_events_of_type == undefined){\n\
+    \\t            current_events_of_type=flattenedrows[i_seq];\n\
+    \\t            patientevents[flattenedrows[i_seq].eventname] = current_events_of_type ;\n\
+    \\t        } else{\n\
+    \\t            if(flattenedrows[i_seq].eventtimestamp<current_events_of_type.eventtimestamp){\n\
+    \\t                //current_events_of_type.pop();\n\
+    \\t                //current_events_of_type.push(flattenedrows[i_seq]);\n\
+    \\t                patientevents[flattenedrows[i_seq].eventname]=flattenedrows[i_seq];\n\
+    \\t            }\n\
+    \\t            //current_events_of_type.push(flattenedrows[i_seq]);\n\
+    \\t        }\n\
+    \\t    }\n\
+    \\t}\n\
+    \\treturn filterSequences(events_by_patient);\n\
+\\t}\n\n\
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
+\\tfunction filterSequences(events_by_patient,current_sequence){\n\
+\\t    var to_return ={};\n\
+\\t    for (var patientSerNum in events_by_patient){\n\
+\\t        var to_save = {};\n\
+\\t        var passes_all_checks = true;\n\
+\\t        for(var i_seq = 0; i_seq  < current_sequence.length; i_seq++) {\n\
+\\t            var current_event = current_sequence[i_seq];\n\
+\\t            if( events_by_patient[patientSerNum][current_event]==undefined){\n\
+\\t                passes_all_checks = false;\n\
+\\t                break;\n\
+\\t            }else{\n\
+\\t                to_save[current_event]=events_by_patient[patientSerNum][current_event];\n\
+\\t            }\n\
+\\t        }\n\
+\\t        if (passes_all_checks){\n\
+\\t            to_return[patientSerNum] = to_save;\n\
+\\t        }\n\
+\\t    }\n\
+\\t    return to_return;\n\
+\\t}\n"
