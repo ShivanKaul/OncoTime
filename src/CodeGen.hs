@@ -51,7 +51,7 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
         let queries = generateComputations filt weedconf dbconf joinconf comps varMap
         let scaff = generateScaffoldingJS
         let computationFunctions = generateForEachFunctions 
-        let helperFunctions = generateSortFunction ++ "\n" ++ generateCountKeyFunction ++ "\n" ++ generateDisplayTable ++ "\n" ++sequencePrinterFunction++ generateBarchartFunction ++ "\n" ++ generateHTMLPage
+        let helperFunctions = "\n"++generateSortFunction ++ "\n" ++ generateCountKeyFunction ++ "\n" ++ generateDisplayTable ++ "\n" ++sequencePrinterFunction++ generateBarchartFunction ++ "\n" ++ generateHTMLPage++"\n"++generateDisplayTableLength
         scaff ++ (intercalate "\n" queries)++ "db.end(); \n" ++ computationFunctions ++ helperFunctions 
 --
             
@@ -199,7 +199,7 @@ eachEvent eventyouwant = case eventyouwant of
     "ct_sim_completed" -> ("SELECT Appointment.PatientSerNum, Appointment.ScheduledStartTime, Appointment.ScheduledEndTime, \"ct_sim_completed\" as eventname, \
             \ Appointment.scheduledendtime as eventtimestamp from  Appointment  inner join "
             ,"on population.PatientSerNum = Appointment.PatientSerNum where Appointment.`status` =\"Manually Completed\" and Appointment.AliasSerNum = 3 ")
-    "patient_arrives" -> ("SELECT Appointment.PatientSerNum, PatientLocation.ResourceSer, PatientLocation.CheckedInFlag, \"patient_arrives\" as eventname, \
+    "patient_arrives" -> ("SELECT Appointment.PatientSerNum, PatientLocation.ResourceSer, PatientLocation.CheckedInFlag, \"patient_arrived\" as eventname, \
             \ PatientLocation.ArrivalDateTime as eventtimestamp from  PatientLocation inner join Appointment \
             \on PatientLocation.AppointmentSerNum = Appointment.AppointmentSerNum inner join "
             ," on population.PatientSerNum = Appointment.PatientSerNum ")
@@ -216,10 +216,12 @@ eachEvent eventyouwant = case eventyouwant of
 
 getPopulation :: [Filter Annotation]->DBConfig-> String
 getPopulation filterlist dbconf@(DBConfig dbconfmap) =
-    let
-        population = filter(\(Filter filtName fdefList)-> filtName=="population" || filtName=="patient" || filtName=="patients") filterlist
-        populationQuery = "  ( "++( intercalate " " $ lines(head $ generateQueries population dbconf Nothing))++" ) as population "
-    in populationQuery
+    do
+        let population = filter(\(Filter filtName fdefList)-> filtName=="population" || filtName=="patient" || filtName=="patients") filterlist
+        let test =  generateQueries population dbconf Nothing
+        if null test then "( SELECT PatientSerNum from Patient) as population "
+        else "  ( "++( intercalate " " $ lines(head  test))++" ) as population "
+
 
 
 periodF :: [Filter Annotation]->DBConfig-> String
@@ -481,7 +483,9 @@ fieldDefToWhere sqlName db@(DBConfig dbconf) (FieldDef fname fvals) =
         
 
 fieldValToWhere::String->FieldVal Annotation->String
-fieldValToWhere sqlName (GroupValString str an ) = "( " ++ sqlName  ++ " like \"" ++ str ++ "%\"" ++ " )" 
+fieldValToWhere sqlName (GroupValString str an ) = if "Description" `isInfixOf` sqlName 
+    then "( " ++ sqlName  ++ " like \"%" ++ str ++ "%\"" ++ " )" 
+    else "( " ++ sqlName  ++ " like \"" ++ str ++ "%\"" ++ " )" 
 fieldValToWhere sqlName (GroupRange (Before i a )) = "( " ++ sqlName ++ " <" ++ show i ++ " )" 
 fieldValToWhere sqlName (GroupRange (After i a )) = "( " ++ sqlName ++ "> " ++ show i ++ " )" 
 fieldValToWhere sqlName (GroupRange (Between i j a )) = "( " ++ sqlName ++ " > " ++ show i ++ " AND " ++ sqlName ++ "< " ++ show j ++ " )" --HOW?
@@ -515,10 +519,12 @@ genForEachFilter _ (List v seqList) = ""
 --use the var given!!!
 
 genPrint::DBConfig->M.Map (Var Annotation) [String]->PrintAction Annotation ->String
-genPrint db varMap (PrintVar var@(Var v (Annotation an) _)) = case (M.lookup var varMap) of
+genPrint db varMap (PrintVar var@(Var v (Annotation "Table") _)) = case (M.lookup var varMap) of
     Nothing -> ""
     Just m -> v ++ "= display_table(rows, \"" ++ (db `getNameInDatabase` ((map toLower (m!!1))++"_table"))++"\", false); console.log("++v++")"
-genPrint db _ (PrintLength (Var v (Annotation an) _)) =  "function CountVar("++v++"){console.log(countKey(v, "++ (db `getNameInDatabase` an) ++")) });"--count???
+genPrint db varMap (PrintLength var@(Var tab a _ )) =  case (M.lookup var varMap) of
+    Nothing -> ""
+    Just m -> "display_table_length(rows, \"" ++ (db `getNameInDatabase` ((map toLower (m!!1))++"_table"))++"\", true);"
 genPrint db _ (PrintFilters filts v@(Var varName an _)) = "function PrintFilters(row){" ++ (genPrintFilterString v filts db) ++ "console.log(" ++ varName ++")}"--like print id,sex of. --needs to be anonymous, otherwise I can't do it 
 genPrint db varMap (PrintElement var@(Var tab a _ ) (Var index an _)) = case (M.lookup var varMap) of
     Nothing -> ""
@@ -776,13 +782,28 @@ generateDisplayTable = "function display_table(rows, key, printRow){\n \
     \ \n\tfor(i =0; i < rows.length; i++){\n \ 
     \ \n\t\t string = rows[i][key] \n\
     \ \n\t\t\t\t if(OccurrencesOfVal.hasOwnProperty(string)){\n \ 
-    \ \n\t\t\t\t\t OccurrencesOfVal[string] += 1;} \n \
-     \ if(printRow){ console.log(string) \n \
-      \} \n \
-    \ \n\t\t\t\t else{\n \
-    \ \n\t\t\t\t\t OccurrencesOfVal[string] =  1;} \n \
+    \ \n\t\t\t\t\t OccurrencesOfVal[string] += 1; \n \
+    \ \n\t\t\t\t }else{\n \
+    \ \n\t\t\t\t\t OccurrencesOfVal[string] =  1; \n \
     \ \n\t\t\t\t }\n\
+    \ \n\t}\n\
+    \ \nif(printRow){console.log(OccurrencesOfVal)}\n\
     \ \n return OccurrencesOfVal\n \
+    \ }"
+generateDisplayTableLength::String
+generateDisplayTableLength = "function display_table_length(rows, key){\n \
+    \ \n var len = 0;\n \  
+    \ \n OccurrencesOfVal = new Object()\n \    
+    \ \n\tfor(i =0; i < rows.length; i++){\n \ 
+    \ \n\t\t string = rows[i][key] \n\
+    \ \n\t\t\t\t if(OccurrencesOfVal.hasOwnProperty(string)){\n \ 
+    \ \n\t\t\t\t\t OccurrencesOfVal[string] += 1; \n \
+    \ \n\t\t\t\t }else{\n \
+    \ \n\t\t\t\t\t len+=1;\
+    \ \n\t\t\t\t\t OccurrencesOfVal[string] =  1; \n \
+    \ \n\t\t\t\t }\n\
+    \ \n\t }\n\
+    \ \n console.log(\"Table of\",key,\"has length\", len);\n \
     \ }"
 --iterate over all rows
 ---- get all values for the key in the row

@@ -733,13 +733,7 @@ groupTypeToStr (GroupType s _) = s
 
 
 events :: [String]
-events = ["consult_referral_received","initial_consult_booked","initial_consult_completed",
-            "ct_sim_booked","ready_for_ct_sim","ct_sim_completed",
-            "ready_for_initial_contour","ready_for_md_contour",
-            "ready_for_dose_calculation","prescription_approved_by_md",
-            "ready_for_physics_qa","ready_for_treatment", "patient_arrives",
-            "machine_rooms_booked","patient_contacted","patient_scheduled",
-            "patient_arrived","treatment_began","end"]
+events = ["ct_sim_booked","ct_sim_completed","treatment_compled","patient_arrived","end"]
 
 
 weedComputationList :: (Config Annotation)->[(Computation Annotation)]-> SourcePos->Either LexError (String,[(Computation Annotation)])
@@ -787,7 +781,7 @@ printFold symtable =
 
 
 addToSymTable :: CompSymTable -> (Var Annotation) -> ComputationType-> Either LexError CompSymTable
-addToSymTable symtable v@(Var name _ _)  comptype =
+addToSymTable symtable v@(Var name _ pos)  comptype =
     let
         prev = init symtable
         local = last symtable
@@ -795,7 +789,7 @@ addToSymTable symtable v@(Var name _ _)  comptype =
         updated = HashMap.insert v comptype local
     in case errorMayBe of
         Nothing->Right$ prev++[updated]
-        (Just t) ->  Left$ RedecError $ "'"++name++"' has already been declared in this scope as a " ++ prettyPrint t
+        (Just t) ->  Left$ RedecError $ "'"++name++"' has already been declared in this scope as a " ++ prettyPrint t ++ "in line " ++ (show $sourceLine pos)
 
 type Scope = HashMap.HashMap (Var Annotation) ComputationType
 
@@ -833,7 +827,7 @@ weedAndTypeCheckComp conf symtable  (Table variable@(Var name _ pos) constructor
                     newSym <- addToSymTable sym  variable TTable
                     Right $ (newSym,"", Table (Var name (Annotation "Table") pos) constructor  field) --(TFilter constructor)
             else Left . FieldNameError $ "Field "++field++
-                " does not belong to " ++ constructor
+                " does not belong to " ++ constructor++ "in line " ++ (show $sourceLine pos)
 weedAndTypeCheckComp conf symtable (List variable@(Var name _ pos) seqlist) =
     evaluateInTopScope symtable check
     where check sym =
@@ -850,7 +844,7 @@ weedAndTypeCheckComp conf symtable (Barchart variable@(Var name _ pos)) =
                 Just TTable ->  Right (sym,"",Barchart (Var name (Annotation $ "Table") pos))
                 Just t -> Left . ComputationTypeMismatch $
                             "Cannot draw Barchart of "++ (show variable)
-                            ++". It is a " ++ (prettyPrint t) ++ "Not a Table"
+                            ++". It is a " ++ (prettyPrint t) ++ "Not a Table"++ "in line " ++ (show $sourceLine pos)
 
 weedAndTypeCheckComp conf symtable (Print printAction ) =
     weedPrintAction conf symtable printAction
@@ -862,23 +856,26 @@ weedPrintAction :: (Config Annotation)-> CompSymTable -> (PrintAction Annotation
 weedPrintAction _ symtable  (PrintVar var@(Var name _ pos)) =
     case getFromSymbolTable symtable var of
             Nothing -> Left . UndefinedVariable $ prettyPrint  name
+            Just TIndex -> Left . ComputationTypeMismatch $
+                    "Index cannot be printed "++ ((prettyPrint var))++
+                    "on line " ++ ((show $sourceLine pos)) ++ "is an index"++ "in line " ++ (show $sourceLine pos)
             Just t -> Right (symtable, "",
                 Print $ PrintVar $ Var name (Annotation $ prettyPrint t) pos)
 
 weedPrintAction _ symtable (PrintLength var@(Var name _ pos)) =
     case getFromSymbolTable symtable var of
-            Nothing -> Left . UndefinedVariable $ prettyPrint  var
+            Nothing -> Left . UndefinedVariable $ prettyPrint  var++ "in line " ++ (show $sourceLine pos)
             Just TTable ->  Right (symtable, "",
                     Print $ PrintLength $ Var name (Annotation $ prettyPrint TTable) pos)
             Just wrong ->  Left . ComputationTypeMismatch $
                     "Cannot have length of "++ (prettyPrint var)++
-                    ". It is a " ++ (prettyPrint wrong) ++ "Not a Table"
+                    ". It is a " ++ (prettyPrint wrong) ++ "Not a Table" ++ "in line " ++ (show $sourceLine pos)
 
 weedPrintAction _ symtable (PrintElement tableVar@(Var tname _ tpos) indexVar@(Var iname _ ipos) ) =
     case ((getFromSymbolTable symtable tableVar),
         (getFromSymbolTable symtable indexVar)) of
-            (Nothing,_) -> Left . UndefinedVariable $ prettyPrint  tableVar
-            (_,Nothing) -> Left . UndefinedVariable $ prettyPrint  indexVar
+            (Nothing,_) -> Left . UndefinedVariable $ prettyPrint  tableVar++ "in line " ++ (show $sourceLine tpos)
+            (_,Nothing) -> Left . UndefinedVariable $ prettyPrint  indexVar++ "in line " ++ (show $sourceLine ipos)
             (Just TTable, Just TIndex) ->  Right (symtable,"",
                 -- TODO: wat
                     Print ( PrintElement (Var tname (Annotation $ prettyPrint $ TTable) tpos)
@@ -886,24 +883,24 @@ weedPrintAction _ symtable (PrintElement tableVar@(Var tname _ tpos) indexVar@(V
             (Just TTable, Just i)-> Left . ComputationTypeMismatch $
                         "Cannot access "++ (prettyPrint indexVar)++" of table "
                         ++(prettyPrint tableVar)
-                        ++". It is a " ++ (prettyPrint i) ++ "Not an Index"
+                        ++". It is a " ++ (prettyPrint i) ++ "Not an Index" ++ "in line " ++ (show $sourceLine tpos)
             (Just t,Just i) -> Left . ComputationTypeMismatch $
                     "Cannot index "++ (prettyPrint tableVar)++". It is a "
-                    ++ (prettyPrint t) ++ "Not a Table"
+                    ++ (prettyPrint t) ++ "Not a Table"++ " in line " ++ (show $sourceLine tpos)
 
 weedPrintAction config symtable  (PrintFilters fields filterVar@(Var fname _ fpos) ) =
     case (getFromSymbolTable symtable filterVar) of
-            (Nothing) -> Left . UndefinedVariable $ prettyPrint filterVar
+            (Nothing) -> Left . UndefinedVariable $ prettyPrint filterVar++ "in line " ++ (show $sourceLine fpos)
             (Just (TFilter constructor)) ->
                 if all (\s -> subFieldExists config constructor s) fields
                 then Right (symtable,"",
                     Print (PrintFilters fields (Var fname (Annotation constructor) fpos)))
                 else Left . FieldNameError $ "One of the fields "++
                             (show fields)++
-                           " does not belong to " ++ constructor
+                           " does not belong to " ++ constructor++ "in line " ++ (show $sourceLine fpos)
             Just wrong -> Left . ComputationTypeMismatch $
                     "Cannot filter over "++ (prettyPrint filterVar)++
-                    ". It is a " ++ (prettyPrint wrong) ++ " Not a Filter"
+                    ". It is a " ++ (prettyPrint wrong) ++ " Not a Filter"++ "in line " ++ (show $sourceLine fpos)
 
 weedPrintAction _ symtable (PrintTimeLine filterVar@(Var fname _ pos)) =
     case (getFromSymbolTable symtable filterVar) of
@@ -914,7 +911,7 @@ weedPrintAction _ symtable (PrintTimeLine filterVar@(Var fname _ pos)) =
                 Print (PrintTimeLine  (Var fname (Annotation "patients") pos)))
             Just wrong -> Left . ComputationTypeMismatch $
                     "Cannot print TimeLine of "++ (prettyPrint filterVar)++
-                    ". It is a " ++ (prettyPrint wrong) ++ " Not a patient"
+                    ". It is a " ++ (prettyPrint wrong) ++ " Not a patient" ++ "in line " ++ (show $sourceLine pos)
 
 weedForEach :: (Config Annotation)->CompSymTable -> [(Computation Annotation)] ->SourcePos-> (ForEachDef Annotation)
     ->Either LexError (CompSymTable,String,(Computation Annotation))
@@ -943,8 +940,8 @@ weedForEach config symtable newcomp pos (ForEachTable indexVar@(Var iname _ ipos
                                         (Var tname (Annotation "Table") tpos)) annComps pos) )
             Just t-> Left ( ComputationTypeMismatch $
                     "Cannot go through loop for "++ (prettyPrint tableVar)
-                    ++". It is a " ++ (prettyPrint t) ++ "Not a Table at scope ending in line " ++ (show $sourceLine pos))
-                )
+                    ++". It is a " ++ (prettyPrint t) ++ "Not a Table at scope ending in line " ++ (show $sourceLine pos)
+                ))
 weedForEach config symtable newcomp pos (ForEachSequence memberVar@(Var mname _ srcpos) undefSequence) =
     evaluateInTopScope symtable check
     where check sym=
