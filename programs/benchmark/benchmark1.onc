@@ -8,6 +8,7 @@ use vikramPatientData.grp
 
 
 doctors are
+    doctorid: 1
     Oncologist: true
 
 {
