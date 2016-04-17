@@ -527,7 +527,7 @@ genPrint db varMap (PrintElement var@(Var tab a _ ) (Var index an _)) = case (M.
 
 
 genPrintInForeach::PrintAction Annotation ->DBConfig->String
-genPrintInForeach (PrintVar (Var v (Annotation an) _)) db = "function PrintVar("++ v ++"){"++v++".forEach(function(entry){console.log(entry[\"" ++ (db `getNameInDatabase`((map toLower an) ++ "_loop"))++ "\"])}\n)}" --vanilla case
+genPrintInForeach (PrintVar (Var v (Annotation an) _)) db = "function PrintVar("++ v ++"){"++v++".forEach(function(entry){console.log(\"" ++ an ++ ": \" + entry[\"" ++ (db `getNameInDatabase`((map toLower an) ++ "_loop"))++ "\"])}\n)}" --vanilla case
 
 genPrintInForeach (PrintLength (Var v (Annotation an) _)) db =  "function CountVar("++v++"){console.log(countKey(v, "++ (db `getNameInDatabase` an) ++")) });"--count???
 
@@ -665,8 +665,8 @@ sequencePrinterFunction =
 \\t            to_return[patientSerNum] = to_save;\n\
 \\t        }\n\
 \\t    }\n\
-\\t    return to_return;\n\
-\\t}\n"
+\\t    return to_return;\n }\n"
+
 generateSortFunction::String
 generateSortFunction =  "function sortObj(list, key) {  \n \
 \ //Taken from http://stackoverflow.com/questions/2466356/javascript-object-list-sorting-by-object-property \n \
@@ -684,25 +684,29 @@ generateSortFunction =  "function sortObj(list, key) {  \n \
 \  } \n "
 
 generateForEachFunctions::String
-generateForEachFunctions =  "function foreach_filter(rows, key, functions){ \n \
-\ \t var sortedRows = sortObj(rows, key) \n \
-\ \t var arrOf = new Array() \n\
-\ \t var prev_index = 0; \n \
-\ \t for(var i = 0; i < rows.length; i++){ \n \
-\ \t\t   if(arrOf.length == 0){  \n \ 
-\  \t\t\tarrOf[prev_index] = new Array() \n \
-\ \t\t\t arrOf[prev_index].push(sortedRows[i]) \n \
-\ \t\t\t  } else if(arrOf[prev_index][0][key] == sortedRows[i][key] ){ \n \
-\ \t\t\t arrOf[prev_index].push(sortedRows[i]) \n \
-\ \t\t\t } else { \n \  
-\ \t\t\t for(var j = 0; j< functions.length; j++) { \n \
-\ \t\t\t functions[j](arrOf[prev_index]) } \n \
-\ \t\t   prev_index ++ \n \
-\  \t\tarrOf[prev_index] = new Array() \n \
-\  \t\t   arrOf[prev_index].push(sortedRows[i]) \n \
-\ \t } \n \
-\ \t } \n \
-\ }"
+generateForEachFunctions = "function foreach_filter(rows, key, functions){ \n \ 
+\ var sortedRows = sortObj(rows, key)\n \
+\ var arrOf = new Array()\n \
+\ var prev_index = 0;\n \
+\ for(var i = 0; i < rows.length; i++){\n \
+\ if(arrOf.length == 0){ \n \
+\ arrOf[prev_index] = new Array()\n \
+\ arrOf[prev_index].push(sortedRows[i])\n \
+\ } \n \
+\ else if(arrOf[prev_index][0][key] == sortedRows[i][key] ){\n \
+\ arrOf[prev_index].push(sortedRows[i]) \n \
+\ } else { \n \
+\ prev_index ++\n  \
+\ arrOf[prev_index] = new Array() \n \
+\ arrOf[prev_index].push(sortedRows[i]) \n \
+\ } \n \
+\ }\n \
+\ for(var j = 0; j < arrOf.length; j++){\n \
+\ for(var k = 0; k < functions.length; k++){\n \
+\ functions[k](arrOf[j]);\n \
+\ }\n \
+\ }\n \
+\  }"
 
 --code check for an additional argument, it being the arguments that are passed to that particular foreach?
 --ex we have a third argument foreachFns, and it is indexed by the foreachs in the list
