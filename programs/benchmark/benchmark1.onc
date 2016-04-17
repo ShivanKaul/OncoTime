@@ -8,7 +8,7 @@ use vikramPatientData.grp
 
 Patient is
     Id: 1 to 999
-    Gender: male
+    Sex: male
     Birthyear: before 1990
     Diagnosis: brain, lung
     Postalcode: J7V
