@@ -483,9 +483,7 @@ fieldDefToWhere sqlName db@(DBConfig dbconf) (FieldDef fname fvals) =
         
 
 fieldValToWhere::String->FieldVal Annotation->String
-fieldValToWhere sqlName (GroupValString str an ) = if "Description" `isInfixOf` sqlName 
-    then "( " ++ sqlName  ++ " like \"%" ++ str ++ "%\"" ++ " )" 
-    else "( " ++ sqlName  ++ " like \"" ++ str ++ "%\"" ++ " )" 
+fieldValToWhere sqlName (GroupValString str an ) = {-if "Description" `isInfixOf` sqlName   then "( " ++ sqlName  ++ " like \"%" ++ str ++ "%\"" ++ " )" else-} "( " ++ sqlName  ++ " like \"" ++ str ++ "%\"" ++ " )" 
 fieldValToWhere sqlName (GroupRange (Before i a )) = "( " ++ sqlName ++ " <" ++ show i ++ " )" 
 fieldValToWhere sqlName (GroupRange (After i a )) = "( " ++ sqlName ++ "> " ++ show i ++ " )" 
 fieldValToWhere sqlName (GroupRange (Between i j a )) = "( " ++ sqlName ++ " > " ++ show i ++ " AND " ++ sqlName ++ "< " ++ show j ++ " )" --HOW?

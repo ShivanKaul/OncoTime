@@ -6,8 +6,7 @@ script benchmark1()
 
 use vikramPatientData.grp
 
-
-doctors are
+doctor are
     doctorid: 1
     Oncologist: true
 
@@ -18,13 +17,7 @@ doctors are
     //    //print id, PostalCode of p
     //}
 
-    foreach sequence s like [patient_arrived] {
-        print s
-    }
-    list l = sequences like [patient_arrived]
-    foreach member s in l {
-        print s
-    }
+    
 
     foreach Patient p {
     	foreach Doctor d{
