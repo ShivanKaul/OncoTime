@@ -40,6 +40,7 @@ genVarTable ((Print p):xs) m = case p of
     PrintLength v -> genVarTable xs m
     PrintFilters filts v -> genVarTable xs m
     PrintElement ind tab -> genVarTable xs m
+genVarTable (a:as) b = genVarTable as b
 
 generateSQL :: (Program Annotation)->DBConfig ->(Config Annotation)->JoinConfig-> String
 generateSQL program@(Program header docs usefilelist groups filt comps) dbconf weedconf joinconf =
@@ -49,12 +50,8 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
         let varMap = genVarTable comps (M.empty) 
         let queries = generateComputations filt weedconf dbconf joinconf comps varMap
         let scaff = generateScaffoldingJS
-        --let queryElements = map (getQueryElements dbconf) comps
-        --let st = generateScaffoldingJS query (getQueryElements comps) dbconf
         let computationFunctions = generateForEachFunctions 
-
-        let helperFunctions = generateSortFunction ++ "\n" ++ generateCountKeyFunction ++ "\n" ++ generateDisplayTable++"\n" ++sequencePrinterFunction
-
+        let helperFunctions = generateSortFunction ++ "\n" ++ generateCountKeyFunction ++ "\n" ++ generateDisplayTable ++ "\n" ++sequencePrinterFunction++ generateBarchartFunction ++ "\n" ++ generateHTMLPage
         scaff ++ (intercalate "\n" queries)++ "db.end(); \n" ++ computationFunctions ++ helperFunctions 
 --
             
@@ -129,13 +126,22 @@ codeGeneration comp dbconfmap varMap =
         case comp of
             (Foreach def compList _) -> case def of
                 ForEachFilter filtName v -> filtName++"_functions = ["++ (intercalate ",\n"(map (genForEachFilter dbconfmap) compList)) ++ "]\n"  ++ "foreach_filter(rows, \""++ (dbconfmap `getNameInDatabase` (filtName ++ "_loop")) ++"\", " ++ filtName++ "_functions" ++ ");\n" ++ "\n "
+		ForEachTable v1 v2 ->
+                    do
+                          let supportedOps = filter (== Print (PrintElement v1 v2)) compList
+                          let pActions = map (\(Print p) -> p) supportedOps
+                          intercalate "\n" $ map (genPrint dbconfmap varMap) pActions
                 _ -> ""
             (Table (Var v ann _) filtName fieldName) -> "" 
         -- "= (countKey(rows, \" " ++ (dbconfmap `getNameInDatabase` (fieldName++ "_loop" )) ++ "\" )); \n"
             (List v seqFieldList) -> ""
-            (Print p) -> genPrint p dbconfmap varMap 
-            (Barchart v) -> "CAN'T EXIST WITH NO SCOPE"
-
+            (Print p) -> genPrint dbconfmap varMap p
+            (Barchart v@(Var va an _)) -> case (M.lookup v varMap) of
+                Nothing -> ""
+                Just m -> 
+			do
+				let fname = (dbconfmap `getNameInDatabase` ((map toLower (m!!1))))
+				va ++ " = display_table(rows, \"" ++ fname ++"\"); barchart_display(" ++ va++ ", \"" ++ fname ++ "\");"
 
 checkIfDiagnosis :: [Filter Annotation] -> Maybe [String]
 checkIfDiagnosis filters =
@@ -284,6 +290,9 @@ getQueryElements::DBConfig->M.Map (Var Annotation) [String]->Computation Annotat
 getQueryElements dbconf varMap comp = 
     do
         case comp of
+            (Barchart v) -> case M.lookup v varMap of
+                    Nothing->[]
+                    Just l -> l
             (Foreach def compList _)->
                 case def of
                     (ForEachFilter filtName v) -> (map toLower filtName):(accumulateForEach compList dbconf)
@@ -292,46 +301,52 @@ getQueryElements dbconf varMap comp =
             (Print p) -> case p of
                 PrintVar v -> case M.lookup v varMap of
                     Nothing -> []
+                    Just l -> l	
+		PrintElement v1 v2 -> case M.lookup v1 varMap of
+		    Nothing -> []
                     Just l -> l
-             --(Table v filtName fieldName) -> filtName:fieldName:[]
             _ -> []
 
 genFullSQLStatement::[Filter Annotation]->Config Annotation->DBConfig->JoinConfig->Computation Annotation->M.Map (Var Annotation) [String]->String
 genFullSQLStatement filterList conf dbconfmap@(DBConfig dbmap) joinconf comp varMap = 
     do
         let listOfQueryElements = getQueryElements dbconfmap varMap comp
+        --let st = generateScaffoldingJS query (getQueryElements comps) dbconf
+        --let st = generateScaffoldingJS query (getQueryElements comps) dbconf
         --separate the fields from the filters
-        let fieldNameList = getFieldNameList filterList listOfQueryElements 
-
+        let fieldNameList = getFieldNameList filterList listOfQueryElements dbconfmap
         --separate the filters from the filterList
-        let filterNameList = getFilterNameList filterList listOfQueryElements
-
+        let filterNameList = getFilterNameList filterList listOfQueryElements dbconfmap
         --get filters that are loopable
-        let usedFilterNameList = filter (\x-> M.member (x++"SQL") dbmap) filterNameList
+        let usedFilterNameList = filter (\x-> M.member (x++ "SQL") dbmap) filterNameList
         --get fields that are loopable
-
-        let usedFieldNameList = filter (\x-> M.member (x++"SQL") dbmap) fieldNameList
+        let usedFieldNameList = filter (\x-> M.member (x++ "SQL") dbmap) fieldNameList
         --get select from
         let selectStmt = genSelectStatements dbconfmap joinconf usedFilterNameList usedFieldNameList 
-
         --get Joins
         let joinStmt = genJoinStatements dbconfmap joinconf usedFilterNameList usedFieldNameList
-
         --get wheres
-        let whereStmt = genWhereStatements filterList dbconfmap joinconf filterNameList fieldNameList
+        let whereStmt = genWhereStatements filterList dbconfmap joinconf usedFilterNameList usedFieldNameList
 
-        selectStmt ++  joinStmt ++ whereStmt  
-
+        selectStmt ++  joinStmt ++ whereStmt
+        --show listOfQueryElements ++ show fieldNameList ++ show usedFieldNameList ++ show usedFilterNameList
 --FINISH THE THIS BY 9
 
 --get all the filterNames
 --go through the fitler list.
-getFilterNameList::[Filter Annotation]->[String]->[FilterName]
-getFilterNameList filtList queryElements = filter (\filtName-> filtName `elem` queryElements) (getFilterNames filtList)
+getFilterNameList::[Filter Annotation]->[String]->DBConfig->[FilterName]
+getFilterNameList filtList queryElements dbconf = 
+    do
+        let listOfRealNames  = map (getNameInDatabase dbconf) queryElements 
+        filter (\filtName-> filtName `elem` queryElements  || (dbconf `getNameInDatabase` filtName) `elem` listOfRealNames ) (getFilterNames filtList)
 
 --get all the fieldnames 
-getFieldNameList::[Filter Annotation]->[String]->[FieldName]
-getFieldNameList filtList queryElements = filter (\filtName-> filtName `elem` queryElements) (getFieldNames filtList)
+getFieldNameList::[Filter Annotation]->[String]->DBConfig ->[FieldName]
+getFieldNameList filtList queryElements dbconf@(DBConfig db) = 
+    do
+        let listOfRealNames  = map (getNameInDatabase dbconf) queryElements 
+        let includedList = filter (\filtName-> filtName `elem` queryElements  || ((dbconf `getNameInDatabase` filtName) `elem` listOfRealNames ) || ((M.member (filtName ++ "_field")db))) (getFieldNames filtList)
+        includedList
 
 getFilterNames::[Filter Annotation]->[FilterName]
 getFilterNames filts = map (\(Filter filtName fdefs) -> filtName) filts
@@ -493,19 +508,22 @@ genForEachFilter dbconfmap (Foreach def compList _) =
         _ -> "NOT SUPPORTED"
 genForEachFilter dbconfmap (Table (Var v an _)  fil fie) = "" --"function("++fil++"_row){" ++ v ++ "= display_table("++fil++"_row, \"" ++ (dbconfmap `getNameInDatabase` fie)  ++ "\")}\n"
 genForEachFilter db (Print p ) = genPrintInForeach p db
-genForEachFilter _ (Barchart v) = ""
-genForEachFilter _ (List v seqList) = ""
-
+genForEachFilter _ (Barchart v) = "" 
+genForEachFilter _ (List v seqList) = "" 
 
 --How do I generate all these print statements?
 --use the var given!!!
-genPrint::PrintAction Annotation ->DBConfig->M.Map (Var Annotation) [String]->String
-genPrint(PrintVar var@(Var v (Annotation an) _)) db varMap= case (M.lookup var varMap) of
+
+genPrint::DBConfig->M.Map (Var Annotation) [String]->PrintAction Annotation ->String
+genPrint db varMap (PrintVar var@(Var v (Annotation an) _)) = case (M.lookup var varMap) of
     Nothing -> ""
-    Just m -> v ++ "= display_table(rows, \"" ++ (db `getNameInDatabase` ((map toLower (m!!1))++"_table"))++"\"); console.log("++v++")"
-genPrint(PrintLength (Var v (Annotation an) _ )) db _ =  "function CountVar("++v++"){console.log(countKey(v, "++ (db `getNameInDatabase` an) ++")) });"--count???
-genPrint(PrintFilters filts v@(Var varName an _) ) db _ = "function PrintFilters(row){" ++ (genPrintFilterString v filts db) ++ "console.log(" ++ varName ++")}"--like print id,sex of. --needs to be anonymous, otherwise I can't do it 
-genPrint(PrintElement (Var index a _) (Var tab an _)) _ _ = "function PrintElement("++ index ++ ", "++ tab ++"){console.log("++ tab ++"["++index++ "])}"
+    Just m -> v ++ "= display_table(rows, \"" ++ (db `getNameInDatabase` ((map toLower (m!!1))++"_table"))++"\", false); console.log("++v++")"
+genPrint db _ (PrintLength (Var v (Annotation an) _)) =  "function CountVar("++v++"){console.log(countKey(v, "++ (db `getNameInDatabase` an) ++")) });"--count???
+genPrint db _ (PrintFilters filts v@(Var varName an _)) = "function PrintFilters(row){" ++ (genPrintFilterString v filts db) ++ "console.log(" ++ varName ++")}"--like print id,sex of. --needs to be anonymous, otherwise I can't do it 
+genPrint db varMap (PrintElement var@(Var tab a _ ) (Var index an _)) = case (M.lookup var varMap) of
+    Nothing -> ""
+    Just m -> "display_table(rows, \"" ++ (db `getNameInDatabase` ((map toLower (m!!1))++"_table"))++"\", true);"
+
 
 
 genPrintInForeach::PrintAction Annotation ->DBConfig->String
@@ -543,7 +561,12 @@ generateScaffoldingJS = --funcs=  -- dbDisplayFunction =
                 \\tmultipleStatements: true,\n\
                 \\tport: 33306\n\
             \});\n"
-        mysqlReq ++ tableReq ++ config
+        let plotly = "var username = 'dragonarmy' \n \
+		\ \t var api_key = 'fokgu2ai5j' \n \
+		\ \t require('plotly')(username, api_key);\n \
+                \ \t require('fs'); \n"
+
+        mysqlReq ++ tableReq ++ config ++ plotly
 
 
 generateDisplayPrettyFunction::String
@@ -679,16 +702,52 @@ generateForEachFunctions =  "function foreach_filter(rows, key, functions){ \n \
 \  \t\t   arrOf[prev_index].push(sortedRows[i]) \n \
 \ \t } \n \
 \ \t } \n \
-\ } "
+\ }"
 
 --code check for an additional argument, it being the arguments that are passed to that particular foreach?
 --ex we have a third argument foreachFns, and it is indexed by the foreachs in the list
 --if we see (fns[i].name == foreach_fname) we can see the arguments at that index and pass it in
 
 --Other stuff here
-
+{-
 generateBarchartFunction::String
-generateBarchartFunction = "function barchart_display(row){}" 
+generateBarchartFunction = "function barchart_display(obj){ \n\
+
+\ var labels = Object.keys(obj) \n \
+\ //collect y data \n\
+\ var vals = Object.values(obj) \n \
+\ var data = [ \n \
+\  \t{\n \
+\  \t\t x: labels, \n \
+\  \t\t y: vals, \n \
+\  \t\t  type: 'bar'\n \
+\  \t}\n\
+\ ];\n \
+\ var graphOptions = {filename: 'basic-bar', fileopt: 'overwrite'};\n\
+\plotly.plot(data, graphOptions, function (err, msg) { \n\
+\    console.log(msg); \n\
+\}); }"
+-}
+
+--object.values function retrieved from http://stackoverflow.com/questions/14791917/object-values-in-jquery
+generateBarchartFunction::String
+generateBarchartFunction = "function barchart_display(obj,fname){ \n\
+\  //collect x data \n\
+\ Object.values = function(object) { \n \
+\  var values = []; \n \
+\  for(var property in object) { \n \
+\    values.push(object[property]);\n \
+\  } \n \
+\  return values; \n\
+\} \n \
+\ var labels = Object.keys(obj) \n \
+\ //collect y data \n\
+\ var vals = Object.values(obj) \n \
+\ var js = 'var data = [{x: [' + labels + '],y: ['+ vals + '], type: \"bar\"}]; Plotly.newPlot(\"myDiv\", data);' \n \
+\ create_html(js, fname); \n \
+\}; "
+
+
 
 --rows are all the rows, el is the element you want to count occurrences of.
 generateCountKeyFunction::String
@@ -708,17 +767,36 @@ generateCountKeyFunction = "function countKey(rows, el){ \
 --go through and tab all unique elements of a key
 --returns an object
 generateDisplayTable::String
-generateDisplayTable = "function display_table(rows, key){\n \
+generateDisplayTable = "function display_table(rows, key, printRow){\n \
     \ \n OccurrencesOfVal = new Object()\n \    
     \ \n\tfor(i =0; i < rows.length; i++){\n \ 
     \ \n\t\t string = rows[i][key] \n\
     \ \n\t\t\t\t if(OccurrencesOfVal.hasOwnProperty(string)){\n \ 
     \ \n\t\t\t\t\t OccurrencesOfVal[string] += 1;} \n \
+     \ if(printRow){ console.log(string) \n \
+      \} \n \
     \ \n\t\t\t\t else{\n \
     \ \n\t\t\t\t\t OccurrencesOfVal[string] =  1;} \n \
     \ \n\t\t\t\t }\n\
     \ \n return OccurrencesOfVal\n \
-    \ }" 
+    \ }"
 --iterate over all rows
 ---- get all values for the key in the row
 ----look at each element returned from the row
+
+generateHTMLPage::String
+generateHTMLPage = "function create_html(js, fname){\n \
+\var html = '<head> <!-- Plotly.js -->'  \n \ 
+\ + '<script src=\"https://cdn.plot.ly/plotly-latest.min.js\"></script>' \n \
+\ + '</head>' \n \
+\+  '<body> <p> ' + fname + ' Graph </p>' \n \
+\+  '<div id=\"myDiv\" style=\"width: 480px; height: 400px;\"><!-- Plotly chart will be drawn inside this DIV --></div>' \n \
+\+ '<script>' + js + '</script>'  \n \
+\+ '</body>'; \n \
+\ var write = require(\"fs\").writeFile  \n \
+\write(__dirname + '/' + fname +'.html', html , function(err) { \n \
+\    if(err) { \n \
+\        return console.log(err);\n \
+\    } \n \
+\    console.log(\"The file was saved!\"); \n \
+\});}"

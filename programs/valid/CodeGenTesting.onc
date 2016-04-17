@@ -23,7 +23,7 @@ patient is
 // a way to iterate over the specific thing in for loops e.g. when looping over patients, how to loop over their diagnoses
 
 doctors are
-    id: after 50
+    Id: after 50
 
 //events are
 //	Events: ct_sim_booked, patient_arrives
@@ -31,16 +31,18 @@ doctors are
 // --- Computations ---
 {
         table x = count Doctors by oncologist
-       
-        print x
+        foreach element i of x
+        {
+            print x[i]
+        }
+
+        
+
 	foreach Patient p
 	{
-            foreach doctors q{
+            foreach doctors q
+            {
 	    print p
-                foreach Diagnosis d
-                {
-                print d
-	        }
             }
         }
 }

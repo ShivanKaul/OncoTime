@@ -3,16 +3,18 @@ script benchmark1()
  *
  */
 
-patient is
-    Id: 1 to 60
-    Sex: male
-period is
-    years : 2014
-    days : Mon
-    //months : August
+
+use vikramPatientData.grp
+
+Patient is
+    Id: 1 to 999
+    Gender: male
+    Birthyear: before 1990
+    Diagnosis: brain, lung
+    Postalcode: J7V
 
 doctors are
-    oncologist: true
+    Oncologist: true
 
 {
     //foreach Patient p {
