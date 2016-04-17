@@ -115,7 +115,8 @@ generateComps filterList conf (dbconfmap@(DBConfig dbconf)) joinconf  varMap com
         then sequence_statement
         else 
             do 
-                let selectStatement = genFullSQLStatement filterList conf dbconfmap joinconf comp varMap
+                let nonperiod = filter(\(Filter filtName fdefList)-> filtName/="period") filterList
+                let selectStatement = genFullSQLStatement nonperiod conf dbconfmap joinconf comp varMap
                 let generatedCode = (codeGeneration comp dbconfmap varMap) 
                 if(selectStatement == "select * from ") then "" 
                 else  genFullDBQuery selectStatement generatedCode
@@ -483,7 +484,9 @@ fieldDefToWhere sqlName db@(DBConfig dbconf) (FieldDef fname fvals) =
         
 
 fieldValToWhere::String->FieldVal Annotation->String
-fieldValToWhere sqlName (GroupValString str an ) = {-if "Description" `isInfixOf` sqlName   then "( " ++ sqlName  ++ " like \"%" ++ str ++ "%\"" ++ " )" else-} "( " ++ sqlName  ++ " like \"" ++ str ++ "%\"" ++ " )" 
+fieldValToWhere sqlName (GroupValString str an ) = if "Description" `isInfixOf` sqlName   
+    then "( " ++ sqlName  ++ " like \"%" ++ str ++ "%\"" ++ " )" 
+    else "( " ++ sqlName  ++ " like \"" ++ str ++ "%\"" ++ " )" 
 fieldValToWhere sqlName (GroupRange (Before i a )) = "( " ++ sqlName ++ " <" ++ show i ++ " )" 
 fieldValToWhere sqlName (GroupRange (After i a )) = "( " ++ sqlName ++ "> " ++ show i ++ " )" 
 fieldValToWhere sqlName (GroupRange (Between i j a )) = "( " ++ sqlName ++ " > " ++ show i ++ " AND " ++ sqlName ++ "< " ++ show j ++ " )" --HOW?
