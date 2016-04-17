@@ -199,7 +199,7 @@ eachEvent eventyouwant = case eventyouwant of
     "ct_sim_completed" -> ("SELECT Appointment.PatientSerNum, Appointment.ScheduledStartTime, Appointment.ScheduledEndTime, \"ct_sim_completed\" as eventname, \
             \ Appointment.scheduledendtime as eventtimestamp from  Appointment  inner join "
             ,"on population.PatientSerNum = Appointment.PatientSerNum where Appointment.`status` =\"Manually Completed\" and Appointment.AliasSerNum = 3 ")
-    "patient_arrives" -> ("SELECT Appointment.PatientSerNum, PatientLocation.ResourceSer, PatientLocation.CheckedInFlag, \"patient_arrives\" as eventname, \
+    "patient_arrives" -> ("SELECT Appointment.PatientSerNum, PatientLocation.ResourceSer, PatientLocation.CheckedInFlag, \"patient_arrived\" as eventname, \
             \ PatientLocation.ArrivalDateTime as eventtimestamp from  PatientLocation inner join Appointment \
             \on PatientLocation.AppointmentSerNum = Appointment.AppointmentSerNum inner join "
             ," on population.PatientSerNum = Appointment.PatientSerNum ")
@@ -216,10 +216,12 @@ eachEvent eventyouwant = case eventyouwant of
 
 getPopulation :: [Filter Annotation]->DBConfig-> String
 getPopulation filterlist dbconf@(DBConfig dbconfmap) =
-    let
-        population = filter(\(Filter filtName fdefList)-> filtName=="population" || filtName=="patient" || filtName=="patients") filterlist
-        populationQuery = "  ( "++( intercalate " " $ lines(head $ generateQueries population dbconf Nothing))++" ) as population "
-    in populationQuery
+    do
+        let population = filter(\(Filter filtName fdefList)-> filtName=="population" || filtName=="patient" || filtName=="patients") filterlist
+        let test =  generateQueries population dbconf Nothing
+        if null test then "( SELECT PatientSerNum from Patient) as population "
+        else "  ( "++( intercalate " " $ lines(head  test))++" ) as population "
+
 
 
 periodF :: [Filter Annotation]->DBConfig-> String
@@ -344,7 +346,7 @@ getFilterNameList filtList queryElements dbconf =
 getFieldNameList::[Filter Annotation]->[String]->DBConfig ->[FieldName]
 getFieldNameList filtList queryElements dbconf@(DBConfig db) = 
     do
-        let listOfRealNames  = map (getNameInDatabase dbconf) queryElements 
+        let listOfRealNames  = foldr (getNameInDatabase dbconf) queryElements 
         let includedList = filter (\filtName-> filtName `elem` queryElements  || ((dbconf `getNameInDatabase` filtName) `elem` listOfRealNames ) || ((M.member (filtName ++ "_field")db))) (getFieldNames filtList)
         includedList
 

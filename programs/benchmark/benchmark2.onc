@@ -6,8 +6,8 @@ script benchmark2(Id doctorids)
 use vikramPatientData.grp
 
 population is
-    id: <patientGroupOne>
-    gender: female, f
+    id: <patientGroupTwo>
+    sex: female, f
     birthyear: <patientBirthyearRange>
     postalcode: H8N
 
