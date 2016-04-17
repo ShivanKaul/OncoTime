@@ -7,7 +7,7 @@ script benchmark1()
 use vikramPatientData.grp
 
 doctor are
-    doctorid: 1
+    id: 1
     Oncologist: true
 
 {
@@ -17,7 +17,7 @@ doctor are
     //    //print id, PostalCode of p
     //}
 
-    
+
 
     foreach Patient p {
     	foreach Doctor d{
