@@ -42,9 +42,6 @@ genVarTable ((Print p):xs) m = case p of
     PrintElement ind tab -> genVarTable xs m
 genVarTable (a:as) b = genVarTable as b
 
-
-
-
 generateSQL :: (Program Annotation)->DBConfig ->(Config Annotation)->JoinConfig-> String
 generateSQL program@(Program header docs usefilelist groups filt comps) dbconf weedconf joinconf =
     do
