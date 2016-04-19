@@ -1,25 +1,21 @@
-Total: 37/50
+Total: 40/50
 
-Question 1: 8/10
+Question 1: 9/10
 ===============================================================================
 -1 Milestone2TopScopeBarChart has a script name/file name mismatch error instead of a scoping error.
--1 ComputationWrongScope error in Milestone2TopLevelTable.onc does not print out line number and location.
 
 _______________________________________________________________________________
 
-Question 2: 22/30
+Question 2: 23/30
 ===============================================================================
-Semantic Checker: 9/15
--1 grp files are not expanded and made available to the compiler
--1 Use clauses are not inlined. 
+Semantic Checker: 10/15
+-1 grp files cannot handle comments
 -1 Elements common in parent and children group should not be repeated
 -1 Allows for groups declared later in the script to be called prior to definition. Does not expand on them though. 
 -1 Missing hours, start, end fied 
--1 Invalid foreach construction order not allowed  (Diagnosis -> Patient -> Doctor) 
-
+-1 Invalid foreach construction order allowed  (Diagnosis -> Patient -> Doctor)
 
 Symbol Table: 10/10
-
 
 Compiler Quality: 3/5
 -1 No line numbers printed in error messages
@@ -39,7 +35,7 @@ Work breakdown provided for each member.
 _______________________________________________________________________________
 
 
-MISC: -1 
+MISC: 
 ===============================================================================
 * Expansion of use statements is not a conventional part of the "Weeder". 
   The weeder is used to make sure certain checks are in place that the parser is 
@@ -54,7 +50,3 @@ MISC: -1
 
 * Your compiler has potential. Some great ipmplementation techniqiues. However, 
 you missed out on a lot of the key requirements. 
-
-
--1 I am taking an extra point out for the fact that you don't handle group files and did not mention it in your design doc. 
-  All your examples seem to have cleaned out the grp files with actual content. 
