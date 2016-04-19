@@ -10,7 +10,7 @@ Question 2: 13/15
 Code Gen Design Decisions and Implementation List:  5/5  
 
 Code Gen partially implemented: 8/10
--3 The amount of code gen presented is insufficient. Atleast all filters were 
+-2 The amount of code gen presented is insufficient. Atleast all filters were 
   expected.
 
 
