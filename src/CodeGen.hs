@@ -1,4 +1,15 @@
-                    {-# LANGUAGE TypeSynonymInstances #-}
+{-
+OncoTime - Implementation of cancer-research domain-specific language as a project undertaken for
+COMP 520 - Compiler Design in Winter 2016 at McGill University by
+
+Shivan Kaul Sahib
+Yusaira Khan
+Brendan Games Gordon
+
+The course was taught by Laurie Hendren.
+ -}
+
+{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module CodeGen where
@@ -24,14 +35,14 @@ for each elements
 
 --ABLE TO BE ADAPTED
 genVarTable::[Computation Annotation]->(M.Map (Var Annotation) [String])-> (M.Map (Var Annotation) [String])
-genVarTable [] m = m 
+genVarTable [] m = m
 genVarTable ((Foreach fdef compList s):xs) m = case fdef of
     ForEachFilter fn v ->  genVarTable xs m
-    ForEachTable v1 v2 -> genVarTable xs m 
+    ForEachTable v1 v2 -> genVarTable xs m
     ForEachSequence v seqFieldList -> genVarTable xs m
     ForEachList vmem vlist -> genVarTable xs m
-genVarTable ((List v seqFieldList):xs) m = let l = getEventNames seqFieldList in  genVarTable xs (M.insert v l  m) 
-genVarTable ((Table v filtName field):xs) m = 
+genVarTable ((List v seqFieldList):xs) m = let l = getEventNames seqFieldList in  genVarTable xs (M.insert v l  m)
+genVarTable ((Table v filtName field):xs) m =
     do
         let l = (\x y -> x:y:[]) filtName field
         genVarTable xs (M.insert v l  m)
@@ -47,14 +58,14 @@ generateSQL program@(Program header docs usefilelist groups filt comps) dbconf w
     do
         -- let diagnosis = (checkIfDiagnosis filt)
         -- let query = generateQueries filt dbconf diagnosis
-        let varMap = genVarTable comps (M.empty) 
+        let varMap = genVarTable comps (M.empty)
         let queries = generateComputations filt weedconf dbconf joinconf comps varMap
         let scaff = generateScaffoldingJS
-        let computationFunctions = generateForEachFunctions 
+        let computationFunctions = generateForEachFunctions
         let helperFunctions = "\n"++generateSortFunction ++ "\n" ++ generateCountKeyFunction ++ "\n" ++ generateDisplayTable ++ "\n" ++sequencePrinterFunction++ generateBarchartFunction ++ "\n" ++ generateHTMLPage++"\n"++generateDisplayTableLength
-        scaff ++ (intercalate "\n" queries)++ "db.end(); \n" ++ computationFunctions ++ helperFunctions 
+        scaff ++ (intercalate "\n" queries)++ "db.end(); \n" ++ computationFunctions ++ helperFunctions
 --
-            
+
 generatePrettyRowFunction :: String
 generatePrettyRowFunction = "function generatePrettyRow(row) {\n\
             \ \treturn Object.keys(row).map(function (key) {return row[key]});\n\
@@ -76,53 +87,53 @@ generateEventQueries filt dbconf computationString  =
 
 
 displaySequence:: [Filter Annotation] ->DBConfig-> M.Map (Var Annotation) [String]-> Computation Annotation->String
-displaySequence filt dbconf varmap comp = 
-    do 
+displaySequence filt dbconf varmap comp =
+    do
         let evqueryfun = generateEventQueries filt dbconf
-        case comp of  
+        case comp of
             Foreach (ForEachSequence (Var v1 (Annotation an) _) seqList)  [ (Print(PrintVar v ) )] _ -> evqueryfun(
-                "\n\tconsole.log( arrangeSequences(flattenedrows,"++ (show $ getEventNames seqList) 
+                "\n\tconsole.log( arrangeSequences(flattenedrows,"++ (show $ getEventNames seqList)
                     ++"));\n")
             Print(PrintVar vlist@(Var val (Annotation "List") _)) -> evqueryfun("console.log("++" arrangeSequences(flattenedrows,"++ (show(varmap M.!  vlist ))++"));\n")
             Print(PrintVar vmem@(Var val (Annotation "member") _)) -> evqueryfun("console.log("++" arrangeSequences(flattenedrows,"++ (show(varmap M.!  vmem ))++"));\n")
-            Print(PrintTimeLine (Var val (Annotation _)_) ) -> ( "console.log('timelines have not been implemented yet');\n") 
+            Print(PrintTimeLine (Var val (Annotation _)_) ) -> ( "console.log('timelines have not been implemented yet');\n")
             Foreach (ForEachList vm@(Var vmem (Annotation anmem) _) vlist) [(Print(PrintVar _ ))] _ -> evqueryfun(
                 "\n\tconsole.log( arrangeSequences(flattenedrows,"++ (show(varmap M.!  vlist ))++"));\n")
             _ -> ""
 
 getEventNames :: [(SeqField a)] -> [String]
-getEventNames seqList  =  {-if null seqList 
+getEventNames seqList  =  {-if null seqList
     then availableEvents
     else  -}
-        nub $ concat $ map (\seqfield -> case seqfield of 
+        nub $ concat $ map (\seqfield -> case seqfield of
         Bar x -> map (\(Event eventname a) -> if eventname=="end" then "end_of_treatment_note_finished" else eventname ) x
         Comma x -> map (\(Event eventname a) -> eventname ) x
         _ -> []
         ) seqList
-            
+
 generateComputations::[Filter Annotation]->Config Annotation-> DBConfig->JoinConfig-> [Computation Annotation]-> M.Map (Var Annotation) [String]->[String]
-generateComputations filterList conf ( dbconfmap@(DBConfig dbconf)) joinconf comps varMap = 
+generateComputations filterList conf ( dbconfmap@(DBConfig dbconf)) joinconf comps varMap =
     do
         map (generateComps filterList conf dbconfmap joinconf varMap) comps
 
 
 --generates each individual query and computation
 generateComps::[Filter Annotation]->Config Annotation->DBConfig->JoinConfig->M.Map (Var Annotation) [String]->Computation Annotation->String
-generateComps filterList conf (dbconfmap@(DBConfig dbconf)) joinconf  varMap comp = 
+generateComps filterList conf (dbconfmap@(DBConfig dbconf)) joinconf  varMap comp =
     do
         let sequence_statement = displaySequence filterList dbconfmap varMap comp
         if sequence_statement /= ""
         then sequence_statement
-        else 
-            do 
+        else
+            do
                 let nonperiod = filter(\(Filter filtName fdefList)-> filtName/="period") filterList
                 let selectStatement = genFullSQLStatement nonperiod conf dbconfmap joinconf comp varMap
-                let generatedCode = (codeGeneration comp dbconfmap varMap) 
-                if(selectStatement == "select * from ") then "" 
+                let generatedCode = (codeGeneration comp dbconfmap varMap)
+                if(selectStatement == "select * from ") then ""
                 else  genFullDBQuery selectStatement generatedCode
 
 codeGeneration::Computation Annotation->DBConfig->M.Map (Var Annotation) [String]->String
-codeGeneration comp dbconfmap varMap = 
+codeGeneration comp dbconfmap varMap =
     do
         case comp of
             (Foreach def compList _) -> case def of
@@ -133,13 +144,13 @@ codeGeneration comp dbconfmap varMap =
                           let pActions = map (\(Print p) -> p) supportedOps
                           intercalate "\n" $ map (genPrint dbconfmap varMap) pActions
                 _ -> ""
-            (Table (Var v ann _) filtName fieldName) -> "" 
+            (Table (Var v ann _) filtName fieldName) -> ""
         -- "= (countKey(rows, \" " ++ (dbconfmap `getNameInDatabase` (fieldName++ "_loop" )) ++ "\" )); \n"
             (List v seqFieldList) -> ""
             (Print p) -> genPrint dbconfmap varMap p
             (Barchart v@(Var va an _)) -> case (M.lookup v varMap) of
                 Nothing -> ""
-                Just m -> 
+                Just m ->
 			do
 				let fname = (dbconfmap `getNameInDatabase` ((map toLower (m!!1))))
 				va ++ " = display_table(rows, \"" ++ fname ++"\"); barchart_display(" ++ va++ ", \"" ++ fname ++ "\");"
@@ -166,7 +177,7 @@ generateQueries filterList ( dbconf@(DBConfig dbconfmap)) diag =
         let queryString = "select " ++ columns ++ " from "
         --iterate through filter list
         queryList <- map (\(Filter filtName fdefList) ->
-            do 
+            do
                 let fromQuery = case diag of
                         Nothing -> (dbconf `getNameInDatabase` filtName)
                         _ -> (dbconf `getNameInDatabase` filtName) ++ ", Diagnosis"
@@ -251,7 +262,7 @@ composeEvents filterlist dbconf@(DBConfig dbconfmap) =
         -- let  allUSed = null events
         let populationQuery = getPopulation filterlist dbconf
         let periods = periodF filterlist dbconf
-        map (\ev -> let (selectClause, whereClause) = eachEvent ev  
+        map (\ev -> let (selectClause, whereClause) = eachEvent ev
                     in selectClause ++ populationQuery ++ whereClause ++ periods) availableEvents
 
 
@@ -290,7 +301,7 @@ generateFieldValsForWhere fvals fname =
         expanded
 
 getQueryElements::DBConfig->M.Map (Var Annotation) [String]->Computation Annotation->[String]
-getQueryElements dbconf varMap comp = 
+getQueryElements dbconf varMap comp =
     do
         case comp of
             (Barchart v) -> case M.lookup v varMap of
@@ -300,18 +311,18 @@ getQueryElements dbconf varMap comp =
                 case def of
                     (ForEachFilter filtName v) -> (map toLower filtName):(accumulateForEach compList dbconf)
                     _ -> []
-             
+
             (Print p) -> case p of
                 PrintVar v -> case M.lookup v varMap of
                     Nothing -> []
-                    Just l -> l	
+                    Just l -> l
 		PrintElement v1 v2 -> case M.lookup v1 varMap of
 		    Nothing -> []
                     Just l -> l
             _ -> []
 
 genFullSQLStatement::[Filter Annotation]->Config Annotation->DBConfig->JoinConfig->Computation Annotation->M.Map (Var Annotation) [String]->String
-genFullSQLStatement filterList conf dbconfmap@(DBConfig dbmap) joinconf comp varMap = 
+genFullSQLStatement filterList conf dbconfmap@(DBConfig dbmap) joinconf comp varMap =
     do
         let listOfQueryElements = getQueryElements dbconfmap varMap comp
         --let st = generateScaffoldingJS query (getQueryElements comps) dbconf
@@ -325,7 +336,7 @@ genFullSQLStatement filterList conf dbconfmap@(DBConfig dbmap) joinconf comp var
         --get fields that are loopable
         let usedFieldNameList = filter (\x-> M.member (x++ "SQL") dbmap) fieldNameList
         --get select from
-        let selectStmt = genSelectStatements dbconfmap joinconf usedFilterNameList usedFieldNameList 
+        let selectStmt = genSelectStatements dbconfmap joinconf usedFilterNameList usedFieldNameList
         --get Joins
         let joinStmt = genJoinStatements dbconfmap joinconf usedFilterNameList usedFieldNameList
         --get wheres
@@ -338,16 +349,16 @@ genFullSQLStatement filterList conf dbconfmap@(DBConfig dbmap) joinconf comp var
 --get all the filterNames
 --go through the fitler list.
 getFilterNameList::[Filter Annotation]->[String]->DBConfig->[FilterName]
-getFilterNameList filtList queryElements dbconf = 
+getFilterNameList filtList queryElements dbconf =
     do
-        let listOfRealNames  = map (getNameInDatabase dbconf) queryElements 
+        let listOfRealNames  = map (getNameInDatabase dbconf) queryElements
         filter (\filtName-> filtName `elem` queryElements  || (dbconf `getNameInDatabase` filtName) `elem` listOfRealNames ) (getFilterNames filtList)
 
---get all the fieldnames 
+--get all the fieldnames
 getFieldNameList::[Filter Annotation]->[String]->DBConfig ->[FieldName]
-getFieldNameList filtList queryElements dbconf@(DBConfig db) = 
+getFieldNameList filtList queryElements dbconf@(DBConfig db) =
     do
-        let listOfRealNames  = map (getNameInDatabase dbconf) queryElements 
+        let listOfRealNames  = map (getNameInDatabase dbconf) queryElements
         let includedList = filter (\filtName-> filtName `elem` queryElements  || ((dbconf `getNameInDatabase` filtName) `elem` listOfRealNames ) || ((M.member (filtName ++ "_field")db))) (getFieldNames filtList)
         includedList
 
@@ -355,9 +366,9 @@ getFilterNames::[Filter Annotation]->[FilterName]
 getFilterNames filts = map (\(Filter filtName fdefs) -> filtName) filts
 
 getFieldNames::[Filter Annotation]->[FieldName]
-getFieldNames filts = 
+getFieldNames filts =
     do
-        let listOfFieldDefs  = concat (map (\(Filter filtName defList) -> defList) filts) 
+        let listOfFieldDefs  = concat (map (\(Filter filtName defList) -> defList) filts)
         let fieldNames = map (\(FieldDef fname fval)-> fname) listOfFieldDefs
         fieldNames
 
@@ -365,15 +376,15 @@ getFieldDefs::[Filter Annotation]->[FieldDef Annotation]
 getFieldDefs filtList = concat ( map (\(Filter fname fdefs )-> fdefs)filtList)
 
 genSelectStatements::DBConfig->JoinConfig->[String]->[String]->String
-genSelectStatements db@(DBConfig dbconf) joinconf filterNameList fieldNameList = 
+genSelectStatements db@(DBConfig dbconf) joinconf filterNameList fieldNameList =
     do
         let selectStmt = case (length filterNameList) > 0 of
              True -> case (length fieldNameList) > 0 of
-                 True -> (intercalate ", " (map (\filt-> (db `getNameInDatabase` filt) ++ ".*") filterNameList)  ) ++ ", " ++ (intercalate ", " (map (\fie-> (db `getNameInDatabase` fie) ++ ".*") fieldNameList))  
+                 True -> (intercalate ", " (map (\filt-> (db `getNameInDatabase` filt) ++ ".*") filterNameList)  ) ++ ", " ++ (intercalate ", " (map (\fie-> (db `getNameInDatabase` fie) ++ ".*") fieldNameList))
 
-                 False -> (intercalate ", " (map (\filt-> (db `getNameInDatabase` filt) ++ ".*") filterNameList)  ) 
+                 False -> (intercalate ", " (map (\filt-> (db `getNameInDatabase` filt) ++ ".*") filterNameList)  )
              False -> case (length fieldNameList) > 0 of
-                 True -> (intercalate ", " (map (\fie-> (db `getNameInDatabase` fie) ++ ".*") fieldNameList)) 
+                 True -> (intercalate ", " (map (\fie-> (db `getNameInDatabase` fie) ++ ".*") fieldNameList))
                  False -> "*"
 
         "select " ++ selectStmt ++ " from "
@@ -387,9 +398,9 @@ genJoinStatements db joinconf [] [] = ""
 genJoinStatements db@(DBConfig dbconf) (JoinConfig jointo joinableList) [] (fieldNameHead:fieldNameList) =  --case where one exist
     do
         let dbHead = (\filt-> (db `getNameInDatabase` filt)) fieldNameHead
-        let dbFields = map  (\filt-> (db `getNameInDatabase` filt)) fieldNameList 
+        let dbFields = map  (\filt-> (db `getNameInDatabase` filt)) fieldNameList
         let joinStatement = case (length (fieldNameHead:fieldNameList)) > 1 of
-             True -> 
+             True ->
                  do
                     dbHead ++ concat ( map (\field -> " JOIN " ++ field ++ " ON " ++  field ++ "."++ jointo ++ " = " ++ dbHead ++ "."++jointo ++ " "   ) dbFields )
              False -> dbHead
@@ -399,7 +410,7 @@ genJoinStatements db@(DBConfig dbconf) (JoinConfig jointo joinableList) (filterN
         let dbHead = (\filt-> (db `getNameInDatabase` filt)) filterNameHead
         let dbFields = map  (\filt-> (db `getNameInDatabase` filt)) filterNameList
         let joinStatement = case (length (filterNameHead:filterNameList)) > 1 of
-             True -> 
+             True ->
                  do
                     dbHead ++ concat ( map (\field ->" JOIN " ++ field ++ " ON " ++  field ++ "."++ jointo ++ " = " ++ dbHead ++ "."++jointo ++ " "   ) dbFields )
              False -> dbHead
@@ -407,32 +418,32 @@ genJoinStatements db@(DBConfig dbconf) (JoinConfig jointo joinableList) (filterN
 genJoinStatements db@(DBConfig dbconf) (JoinConfig jointo joinableList) filtList@(filterNameHead:filterNameList) fieldList@(fieldNameHead:fieldNameList) =  --case where both exist
     do
         let joinStatement = case (length (filtList) > 1) of
-             True -> 
-                 do 
+             True ->
+                 do
                     let dbHead = (\filt-> (db `getNameInDatabase` filt)) filterNameHead
                     let dbFields = (map  (\filt-> (db `getNameInDatabase` filt)) filterNameList) ++ (map  (\fie-> (db `getNameInDatabase` fie)) fieldList )
                     dbHead ++ concat ( map (\field -> " JOIN " ++ field ++ " ON " ++  field ++ "." ++ jointo ++ " = " ++ dbHead ++ "."++jointo ++ " "   ) dbFields )
 
              False -> case (length fieldList) > 1 of
-                True -> 
+                True ->
                     do
-                        let dbHead = (\filt-> (db `getNameInDatabase` filt)) fieldNameHead 
+                        let dbHead = (\filt-> (db `getNameInDatabase` filt)) fieldNameHead
                         let dbFields = (map  (\filt-> (db `getNameInDatabase` filt)) filterNameList) ++ (map  (\fie-> (db `getNameInDatabase` fie)) fieldList )
                         dbHead ++ concat ( map (\field -> " JOIN " ++ field ++ " ON " ++  field ++ "." ++ jointo ++ " = " ++ dbHead ++ "."++jointo ++ " "   ) dbFields )
-                False -> 
+                False ->
                     do
                         let dbHead = (\filt-> (db `getNameInDatabase` filt)) filterNameHead
                         let dbFields = (map  (\fie-> (db `getNameInDatabase` fie)) fieldList )
                         dbHead ++ concat ( map (\field -> " JOIN " ++ field ++ " ON " ++  field ++ "."++ jointo ++ " = " ++ dbHead ++ "."++jointo ++ " "   ) dbFields )
-                         
+
         joinStatement
 
 genWhereStatements::[Filter Annotation]->DBConfig->JoinConfig->[String]->[String]->String
-genWhereStatements filtList db@(DBConfig dbconf) jc@(JoinConfig jointo joinableList) filterNameList fieldNameList = 
+genWhereStatements filtList db@(DBConfig dbconf) jc@(JoinConfig jointo joinableList) filterNameList fieldNameList =
     do
         --if a filter, get all
         let filterWhere = (filter (not . null) (map (genWhereFilter filtList db jc fieldNameList) filterNameList))
-        -- if a field, 
+        -- if a field,
         let fieldWhere = (filter (not . null) (map (genWhereField filtList db jc) fieldNameList))
 
         case (length filterWhere > 0) of
@@ -441,12 +452,12 @@ genWhereStatements filtList db@(DBConfig dbconf) jc@(JoinConfig jointo joinableL
                 False -> " where " ++ (intercalate " AND " filterWhere)
             False ->case (length fieldWhere > 0) of
                 True-> " where " ++ (intercalate " AND " fieldWhere)
-                False-> "" 
+                False-> ""
 
 --TODOOOOO
 genWhereField::[Filter Annotation]->DBConfig->JoinConfig->String->String
-genWhereField filtList dbconf joinconf fieldName = 
-    do 
+genWhereField filtList dbconf joinconf fieldName =
+    do
         let sqlName = (dbconf `getNameInDatabase` fieldName)
         let fieldDefList = (getFieldDefs filtList) --get the fields associated with that fieldmap
         let field = case (find (\(FieldDef fname fdef) -> fname == fieldName ) fieldDefList) of
@@ -471,31 +482,31 @@ genWhereFilter filtList db@(DBConfig dbconf) joinconf fieldNameList filterName =
 
 
 filterToWhere::Filter Annotation->DBConfig->String->[FieldName]->[String]
-filterToWhere (Filter filt fdef) db@(DBConfig dbconf) sqlName fieldNameList = 
+filterToWhere (Filter filt fdef) db@(DBConfig dbconf) sqlName fieldNameList =
     do
-        let fieldDefsExcludingDeclaredFields = filter (\(FieldDef fname fvalList) -> not (fname `elem` fieldNameList)) fdef 
+        let fieldDefsExcludingDeclaredFields = filter (\(FieldDef fname fvalList) -> not (fname `elem` fieldNameList)) fdef
         map (fieldDefToWhere sqlName db) fieldDefsExcludingDeclaredFields
 
 
 fieldDefToWhere::String->DBConfig->FieldDef Annotation->String
-fieldDefToWhere sqlName db@(DBConfig dbconf) (FieldDef fname fvals) = 
+fieldDefToWhere sqlName db@(DBConfig dbconf) (FieldDef fname fvals) =
     do
         (intercalate " OR " (map (fieldValToWhere (sqlName ++ "." ++ (db `getNameInDatabase` (fname ++ "SQL") ))) fvals))
-        
+
 
 fieldValToWhere::String->FieldVal Annotation->String
-fieldValToWhere sqlName (GroupValString str an ) = if "Description" `isInfixOf` sqlName   
-    then "( " ++ sqlName  ++ " like \"%" ++ str ++ "%\"" ++ " )" 
-    else "( " ++ sqlName  ++ " like \"" ++ str ++ "%\"" ++ " )" 
-fieldValToWhere sqlName (GroupRange (Before i a )) = "( " ++ sqlName ++ " <" ++ show i ++ " )" 
-fieldValToWhere sqlName (GroupRange (After i a )) = "( " ++ sqlName ++ "> " ++ show i ++ " )" 
+fieldValToWhere sqlName (GroupValString str an ) = if "Description" `isInfixOf` sqlName
+    then "( " ++ sqlName  ++ " like \"%" ++ str ++ "%\"" ++ " )"
+    else "( " ++ sqlName  ++ " like \"" ++ str ++ "%\"" ++ " )"
+fieldValToWhere sqlName (GroupRange (Before i a )) = "( " ++ sqlName ++ " <" ++ show i ++ " )"
+fieldValToWhere sqlName (GroupRange (After i a )) = "( " ++ sqlName ++ "> " ++ show i ++ " )"
 fieldValToWhere sqlName (GroupRange (Between i j a )) = "( " ++ sqlName ++ " > " ++ show i ++ " AND " ++ sqlName ++ "< " ++ show j ++ " )" --HOW?
-fieldValToWhere sqlName (GroupRange (SingleInt i a)) = "( " ++ sqlName ++ "= " ++ show i ++ " )" 
+fieldValToWhere sqlName (GroupRange (SingleInt i a)) = "( " ++ sqlName ++ "= " ++ show i ++ " )"
 fieldValToWhere sqlName (GroupDate dd mm yy an) = "( " ++ "HOW?" ++ " )" -- HOW?
-fieldValToWhere _ _ = "" 
+fieldValToWhere _ _ = ""
 
 genFullDBQuery::String->String->String
-genFullDBQuery selectStatement  genCode = 
+genFullDBQuery selectStatement  genCode =
     do
         let dbQueryLeft = "\t\tdb.query('"
         let dbQueryRight = "', function(err, rows, fields) {\n\
@@ -505,7 +516,7 @@ genFullDBQuery selectStatement  genCode =
 --db.end() });
 
 genForEachFilter::DBConfig->Computation Annotation->String
-genForEachFilter dbconfmap (Foreach def compList _) = 
+genForEachFilter dbconfmap (Foreach def compList _) =
     case def of
         ForEachFilter filtName v -> "\t(function(" ++ filtName ++"_row){\n\t" ++ filtName++"_fns = [\n" ++  (intercalate ",\t\n" (map (genForEachFilter dbconfmap) compList)) ++"\n\t ]\n" ++ "foreach_filter("++filtName++"_row,\""++(dbconfmap `getNameInDatabase` (filtName ++ "_loop")) ++"\", " ++ filtName ++"_fns) })"
         ForEachTable v v2 -> "NOT SUPPORTED"
@@ -513,8 +524,8 @@ genForEachFilter dbconfmap (Foreach def compList _) =
         _ -> "NOT SUPPORTED"
 genForEachFilter dbconfmap (Table (Var v an _)  fil fie) = "" --"function("++fil++"_row){" ++ v ++ "= display_table("++fil++"_row, \"" ++ (dbconfmap `getNameInDatabase` fie)  ++ "\")}\n"
 genForEachFilter db (Print p ) = genPrintInForeach p db
-genForEachFilter _ (Barchart v) = "" 
-genForEachFilter _ (List v seqList) = "" 
+genForEachFilter _ (Barchart v) = ""
+genForEachFilter _ (List v seqList) = ""
 
 --How do I generate all these print statements?
 --use the var given!!!
@@ -526,7 +537,7 @@ genPrint db varMap (PrintVar var@(Var v (Annotation "Table") _)) = case (M.looku
 genPrint db varMap (PrintLength var@(Var tab a _ )) =  case (M.lookup var varMap) of
     Nothing -> ""
     Just m -> "display_table_length(rows, \"" ++ (db `getNameInDatabase` ((map toLower (m!!1))++"_table"))++"\", true);"
-genPrint db _ (PrintFilters filts v@(Var varName an _)) = "function PrintFilters(row){" ++ (genPrintFilterString v filts db) ++ "console.log(" ++ varName ++")}"--like print id,sex of. --needs to be anonymous, otherwise I can't do it 
+genPrint db _ (PrintFilters filts v@(Var varName an _)) = "function PrintFilters(row){" ++ (genPrintFilterString v filts db) ++ "console.log(" ++ varName ++")}"--like print id,sex of. --needs to be anonymous, otherwise I can't do it
 genPrint db varMap (PrintElement var@(Var tab a _ ) (Var index an _)) = case (M.lookup var varMap) of
     Nothing -> ""
     Just m -> "display_table(rows, \"" ++ (db `getNameInDatabase` ((map toLower (m!!1))++"_table"))++"\", true);"
@@ -538,7 +549,7 @@ genPrintInForeach (PrintVar (Var v (Annotation an) _)) db = "function PrintVar("
 
 genPrintInForeach (PrintLength (Var v (Annotation an) _)) db =  "function CountVar("++v++"){console.log(countKey(v, "++ (db `getNameInDatabase` an) ++")) });"--count???
 
-genPrintInForeach (PrintFilters filts v@(Var varName an _)) db = "function PrintFilters(row){" ++ (genPrintFilterString v filts db) ++ "console.log(" ++ varName ++")}"--like print id,sex of. --needs to be anonymous, otherwise I can't do it 
+genPrintInForeach (PrintFilters filts v@(Var varName an _)) db = "function PrintFilters(row){" ++ (genPrintFilterString v filts db) ++ "console.log(" ++ varName ++")}"--like print id,sex of. --needs to be anonymous, otherwise I can't do it
 
 genPrintInForeach (PrintElement (Var index a _) (Var tab an _)) _ = "function PrintElement("++ index ++ ", "++ tab ++"){console.log("++ tab ++"["++index++ "])}"
 
@@ -547,9 +558,9 @@ genPrintFilterString (Var v an _) filtList  dbconf= v ++ " = {" ++ (intercalate 
 
 accumulateForEach::[Computation Annotation]->DBConfig->[String]
 accumulateForEach [] _ = []
-accumulateForEach ((Foreach (ForEachFilter fn v) compList  spos):xs) db = fn : (accumulateForEach xs db) ++ (accumulateForEach compList db) 
-accumulateForEach ((Foreach (ForEachTable (Var v1 a1 _) (Var v2 a2 _)) compList  spos):xs) db = (db `getNameInDatabase` v2) : (accumulateForEach xs db) ++ (accumulateForEach compList db) 
-accumulateForEach (x:xs) db= (accumulateForEach xs db)  
+accumulateForEach ((Foreach (ForEachFilter fn v) compList  spos):xs) db = fn : (accumulateForEach xs db) ++ (accumulateForEach compList db)
+accumulateForEach ((Foreach (ForEachTable (Var v1 a1 _) (Var v2 a2 _)) compList  spos):xs) db = (db `getNameInDatabase` v2) : (accumulateForEach xs db) ++ (accumulateForEach compList db)
+accumulateForEach (x:xs) db= (accumulateForEach xs db)
 
 isForEachFilter::(Computation Annotation) -> Bool
 isForEachFilter (Foreach (ForEachFilter _ _) _ _ ) =  True
@@ -625,7 +636,7 @@ generateScaffoldingJSV2 dbQueryList dbDisplayFunction =
 
 
 sequencePrinterFunction :: String
-sequencePrinterFunction = 
+sequencePrinterFunction =
     "\tfunction arrangeSequences (flattenedrows,current_sequence){\n\
     \\tvar events_by_patient={/*1234:{ev:[{1234}],ev1:[{1234}],ev2:[{1234}],*/};\n\
     \\tfor (var i_seq = 0; i_seq  < flattenedrows.length; i_seq++) {\n\
@@ -653,7 +664,7 @@ sequencePrinterFunction =
     \\t}\n\
     \\treturn filterSequences(events_by_patient,current_sequence);\n\
 \\t}\n\n\
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
+
 \\tfunction filterSequences(events_by_patient,current_sequence){\n\
 \\t    var to_return ={};\n\
 \\t    for (var patientSerNum in events_by_patient){\n\
@@ -685,13 +696,13 @@ generateSortFunction =  "function sortObj(list, key) {  \n \
 \ \t\t      var result; \n\
 \   \t\t   if (type === 'string') result = a.localeCompare(b); \n\
 \    \t\t  else result = a - b; \n\
-\     \t\t return result; \n\ 
+\     \t\t return result; \n\
 \   \t } \n\
 \   \t return list.sort(compare); \n\
 \  } \n "
 
 generateForEachFunctions::String
-generateForEachFunctions = "function foreach_filter(rows, key, functions){ \n \ 
+generateForEachFunctions = "function foreach_filter(rows, key, functions){ \n \
 \ var sortedRows = sortObj(rows, key)\n \
 \ var arrOf = new Array()\n \
 \ var prev_index = 0;\n \
@@ -764,7 +775,7 @@ generateBarchartFunction = "function barchart_display(obj,fname){ \n\
 generateCountKeyFunction::String
 generateCountKeyFunction = "function countKey(rows, el){ \
     \ var count = 0; \n \
-    \ \tfor(var i =0; i < rows.length; i++){\n \ 
+    \ \tfor(var i =0; i < rows.length; i++){\n \
     \ \t\t for(key in rows[i]){ \n\
     \ \t\t\t if(el == key){ \n\
     \ \t\t\t\tcount++ \n\
@@ -779,10 +790,10 @@ generateCountKeyFunction = "function countKey(rows, el){ \
 --returns an object
 generateDisplayTable::String
 generateDisplayTable = "function display_table(rows, key, printRow){\n \
-    \ \n OccurrencesOfVal = new Object()\n \    
-    \ \n\tfor(i =0; i < rows.length; i++){\n \ 
+    \ \n OccurrencesOfVal = new Object()\n \
+    \ \n\tfor(i =0; i < rows.length; i++){\n \
     \ \n\t\t string = rows[i][key] \n\
-    \ \n\t\t\t\t if(OccurrencesOfVal.hasOwnProperty(string)){\n \ 
+    \ \n\t\t\t\t if(OccurrencesOfVal.hasOwnProperty(string)){\n \
     \ \n\t\t\t\t\t OccurrencesOfVal[string] += 1; \n \
     \ \n\t\t\t\t }else{\n \
     \ \n\t\t\t\t\t OccurrencesOfVal[string] =  1; \n \
@@ -793,11 +804,11 @@ generateDisplayTable = "function display_table(rows, key, printRow){\n \
     \ }"
 generateDisplayTableLength::String
 generateDisplayTableLength = "function display_table_length(rows, key){\n \
-    \ \n var len = 0;\n \  
-    \ \n OccurrencesOfVal = new Object()\n \    
-    \ \n\tfor(i =0; i < rows.length; i++){\n \ 
+    \ \n var len = 0;\n \
+    \ \n OccurrencesOfVal = new Object()\n \
+    \ \n\tfor(i =0; i < rows.length; i++){\n \
     \ \n\t\t string = rows[i][key] \n\
-    \ \n\t\t\t\t if(OccurrencesOfVal.hasOwnProperty(string)){\n \ 
+    \ \n\t\t\t\t if(OccurrencesOfVal.hasOwnProperty(string)){\n \
     \ \n\t\t\t\t\t OccurrencesOfVal[string] += 1; \n \
     \ \n\t\t\t\t }else{\n \
     \ \n\t\t\t\t\t len+=1;\
@@ -812,7 +823,7 @@ generateDisplayTableLength = "function display_table_length(rows, key){\n \
 
 generateHTMLPage::String
 generateHTMLPage = "function create_html(js, fname){\n \
-\var html = '<head> <!-- Plotly.js -->'  \n \ 
+\var html = '<head> <!-- Plotly.js -->'  \n \
 \ + '<script src=\"https://cdn.plot.ly/plotly-latest.min.js\"></script>' \n \
 \ + '</head>' \n \
 \+  '<body> <p> ' + fname + ' Graph </p>' \n \

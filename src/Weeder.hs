@@ -1,3 +1,14 @@
+{-
+OncoTime - Implementation of cancer-research domain-specific language as a project undertaken for
+COMP 520 - Compiler Design in Winter 2016 at McGill University by
+
+Shivan Kaul Sahib
+Yusaira Khan
+Brendan Games Gordon
+
+The course was taught by Laurie Hendren.
+ -}
+
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleInstances #-}
 
@@ -385,14 +396,14 @@ readDBConfig file =
         return $ DBConfig  totalMap
 
 readJoinConfig::String->IO (JoinConfig)
-readJoinConfig file = 
+readJoinConfig file =
     do
         program <- readFile file
         path <- getExecutablePath
-        readData <- readFile $ (dropFileName path) ++"join.conf" 
+        readData <- readFile $ (dropFileName path) ++"join.conf"
         let l= lines readData
         let joined =  makeJoinConfig $ concat l
-        return $ joined 
+        return $ joined
 
 
 

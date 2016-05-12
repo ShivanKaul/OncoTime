@@ -1,3 +1,14 @@
+{-
+OncoTime - Implementation of cancer-research domain-specific language as a project undertaken for
+COMP 520 - Compiler Design in Winter 2016 at McGill University by
+
+Shivan Kaul Sahib
+Yusaira Khan
+Brendan Games Gordon
+
+The course was taught by Laurie Hendren.
+ -}
+
 module Lexer where
 
 import System.FilePath
@@ -13,7 +24,7 @@ import Text.ParserCombinators.Parsec.Language
 import Text.ParserCombinators.Parsec.Char
 import qualified Text.ParserCombinators.Parsec.Token as Token
 
-languageDef = 
+languageDef =
     emptyDef {
             Token.commentLine = "//"
             ,Token.identStart = letter <|> char '_' <?> "start of identifier"
@@ -39,7 +50,7 @@ languageDef =
                 "of",
                 "in",
                 "sequences",
-                "sequence",         
+                "sequence",
                 "member",
                 "before",
                 "length",
@@ -82,9 +93,9 @@ parens = Token.parens lexer
 lexeme = Token.lexeme lexer
 commaSep1OrMore = Token.commaSep1 lexer
 symbol = Token.symbol lexer
-bar = symbol "|" 
-arrow = symbol "->" 
-star = symbol "*" 
-equal = symbol "=" 
+bar = symbol "|"
+arrow = symbol "->"
+star = symbol "*"
+equal = symbol "="
 semi = symbol ";" <?> "newline" -- parses a semicolon
 date_sep = symbol "-" <?> "Date separator \"-\""

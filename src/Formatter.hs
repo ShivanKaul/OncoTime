@@ -1,3 +1,14 @@
+{-
+OncoTime - Implementation of cancer-research domain-specific language as a project undertaken for
+COMP 520 - Compiler Design in Winter 2016 at McGill University by
+
+Shivan Kaul Sahib
+Yusaira Khan
+Brendan Games Gordon
+
+The course was taught by Laurie Hendren.
+ -}
+
 module Formatter(formatFile, removeNewLines) where
 
 import Text.Regex.Posix
@@ -48,7 +59,7 @@ formatFile contents =
         h1 =  (removeNewLines h )
         p1 =  (removeNewLines p )
         all = (h1 ++ d ++ p1)
-    in {- trace (addLineNumbers all)-} all 
+    in {- trace (addLineNumbers all)-} all
 
 addLineNumbers contents=
   addnums 1 (lines contents)

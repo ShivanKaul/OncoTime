@@ -1,3 +1,14 @@
+{-
+OncoTime - Implementation of cancer-research domain-specific language as a project undertaken for
+COMP 520 - Compiler Design in Winter 2016 at McGill University by
+
+Shivan Kaul Sahib
+Yusaira Khan
+Brendan Games Gordon
+
+The course was taught by Laurie Hendren.
+ -}
+
 module TypeUtils where
 
 import Types
@@ -30,14 +41,14 @@ makeConfig str =
 
 
 makeDBConfig::String->(DBConfig)
-makeDBConfig str = 
-    case parse (dbConfigParser <* eof) "" str of 
+makeDBConfig str =
+    case parse (dbConfigParser <* eof) "" str of
         Left e-> error $ show e
         Right r -> r
 
 makeJoinConfig::String->(JoinConfig)
-makeJoinConfig str = 
-    case parse (joinConfigParser <* eof) "" str of 
+makeJoinConfig str =
+    case parse (joinConfigParser <* eof) "" str of
         Left e-> error $ show e
         Right r -> r
 
@@ -85,7 +96,7 @@ fieldval name = lexeme $
     do
         --p <-( squares  (sepBy (some (choice[alphaNum, (oneOf "-_+.")] ) ) comma) )
         p <-( squares  (sepBy (some (validChar)) comma) )
-        return $ FieldValue  (map (map toLower) p) (Annotation (map toLower name)) 
+        return $ FieldValue  (map (map toLower) p) (Annotation (map toLower name))
 
 --validChar = ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z'] ++ ['!','-','_','.','+']
 
@@ -110,7 +121,7 @@ configParser = lexeme $
         fieldName <- identifier
         colon
         --typeMapList <- squares $ sepBy fieldMapMaker comma
-        b <- optionMaybe (oneOf "{") 
+        b <- optionMaybe (oneOf "{")
         let c = case b of
                 Just a -> True
                 Nothing -> False
@@ -132,18 +143,18 @@ configParser = lexeme $
 
 dbConfigParser:: Parser (DBConfig)
 dbConfigParser = lexeme $
-    do 
+    do
         whiteSpace
-        cf <- identifier 
+        cf <- identifier
         colon
-        db <- stringLit 
+        db <- stringLit
 
         semi
         return $ DBConfig (M.singleton cf db)
 
 joinConfigParser:: Parser (JoinConfig)
 joinConfigParser = lexeme $
-    do 
+    do
         whiteSpace
         reserved "ToJoinOn"
         colon

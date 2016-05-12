@@ -1,3 +1,14 @@
+{-
+OncoTime - Implementation of cancer-research domain-specific language as a project undertaken for
+COMP 520 - Compiler Design in Winter 2016 at McGill University by
+
+Shivan Kaul Sahib
+Yusaira Khan
+Brendan Games Gordon
+
+The course was taught by Laurie Hendren.
+ -}
+
 module Types where
 
 import qualified Data.Map as M
@@ -13,7 +24,7 @@ type TypeAn = String
 
 data JoinConfig = JoinConfig Joinable [JoinableFields] deriving(Show, Eq)
 type Joinable = String
-type JoinableFields = String 
+type JoinableFields = String
 
 
 --TEST PROGRAM
