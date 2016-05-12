@@ -3,6 +3,7 @@ OncoTime
 
 OncoTime is an experimental Domain Specific Language which allows for easy analysis and visualization of patient treament paths in radiation oncology.
 
+This implementation was undertaken as the project for COMP 520: Compiler Design taught by [Laurie Hendren](https://en.wikipedia.org/wiki/Laurie_Hendren) at McGill University. Our compiler is written in Haskell using the [Parsec](https://wiki.haskell.org/Parsec) parser combinator library and compiles OncoTime programs down to JavaScript.
 
 Group Name: Dragon Army
 
