@@ -5,11 +5,7 @@ OncoTime is an experimental Domain Specific Language which allows for easy analy
 
 This implementation was undertaken as the project for COMP 520: Compiler Design taught by [Laurie Hendren](https://en.wikipedia.org/wiki/Laurie_Hendren) at McGill University. Our compiler is written in Haskell using the [Parsec](https://wiki.haskell.org/Parsec) parser combinator library and compiles OncoTime programs down to JavaScript.
 
-Group Name: Dragon Army
-
-- Brendan Games Gordon - 260529254
-- Shivan Kaul Sahib - 260512593
-- Yusaira Khan - 260526007
+Our compiler's name is Doc.
 
 We have set up a number of scripts to help with building and running. We have
 
@@ -29,9 +25,6 @@ cabal build
 
 # To install node dependencies
 npm install
-
-# To open SSH tunnel to remote database
-ssh -N -p 22 cs520@hig.cs.mcgill.ca -L 33306:localhost:3306
 ```
 
 The flags are supported and can be used thusly:
